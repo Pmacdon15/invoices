@@ -10,6 +10,9 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@tanstack/react-form": "^1.28.3",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-table": "^8.21.3",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
