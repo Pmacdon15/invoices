@@ -103,7 +103,7 @@ export async function createInvoiceDal(
   if (!validation.success) {
     return { data: null, error: validation.error.issues[0].message };
   }
-
+ 
   const sql = neon(process.env.DATABASE_URL);
 
   try {
