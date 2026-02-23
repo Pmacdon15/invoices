@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { getInvoices } from "@/dal/invoices";
-import { InvoicesTable } from "./invoices-table";
+import { InvoicesTable } from "../../components/invoices-table";
 
 export default async function InvoicesPage() {
   const invoicesPromise = getInvoices();

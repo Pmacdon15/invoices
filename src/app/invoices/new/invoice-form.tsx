@@ -3,7 +3,7 @@
 import { useForm } from "@tanstack/react-form";
 import { ChevronLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import * as React from "react";
+import { use } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,16 +22,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Customer, Product } from "@/dal/types";
-import { createInvoiceAction } from "../actions";
+import type { Customer, Product, Result } from "@/dal/types";
+import { useCreateInvoice } from "@/mutations/invoices";
 
 interface InvoiceFormProps {
-  customers: Customer[];
-  products: Product[];
+  customersPromise: Promise<Result<Customer[]>>;
+  productsPromise: Promise<Result<Product[]>>;
 }
 
-export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
-  const [isPending, setIsPending] = React.useState(false);
+export function InvoiceForm({
+  customersPromise,
+  productsPromise,
+}: InvoiceFormProps) {
+  const { data: customers, error: customerError } = use(customersPromise);
+  const { data: products, error: productsError } = use(productsPromise);
+
+  const { mutate, isPending } = useCreateInvoice();
 
   const form = useForm({
     defaultValues: {
@@ -40,14 +46,18 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
       items: [{ product_id: "", quantity: 1, unit_price: 0 }],
     },
     onSubmit: async ({ value }) => {
-      setIsPending(true);
-      try {
-        await createInvoiceAction(value);
-      } finally {
-        setIsPending(false);
-      }
+      await mutate(value);
     },
   });
+  if (productsError !== null)
+    return (
+      <div>
+        Please add product{" "}
+        <Button>
+          <Link href={"/invoices/new"}>Add Products</Link>
+        </Button>
+      </div>
+    );
 
   return (
     <Card className="max-w-4xl mx-auto">
@@ -64,6 +74,7 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
           Generate a new invoice by selecting a customer and adding products.
         </CardDescription>
       </CardHeader>
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -73,58 +84,55 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
       >
         <CardContent className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <form.Field
-                name="customer_id"
-                children={(field) => (
-                  <>
-                    <Label htmlFor={field.name}>Customer</Label>
-                    <Select
-                      onValueChange={field.handleChange}
-                      defaultValue={field.state.value}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((customer) => (
+            {/* Customer Selection */}
+            <form.Field name="customer_id">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Customer</Label>
+                  <Select
+                    onValueChange={field.handleChange}
+                    defaultValue={field.state.value}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customerError === null &&
+                        customers.map((customer) => (
                           <SelectItem key={customer.id} value={customer.id}>
                             {customer.name}
                           </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <form.Field
-                name="status"
-                children={(field) => (
-                  <>
-                    <Label htmlFor={field.name}>Status</Label>
-                    <Select
-                      onValueChange={(value) =>
-                        field.handleChange(value as any)
-                      }
-                      defaultValue={field.state.value}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="sent">Sent</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-              />
-            </div>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </form.Field>
+
+            {/* Status Selection */}
+            <form.Field name="status">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Status</Label>
+                  <Select
+                    onValueChange={(value) => field.handleChange(value as any)}
+                    defaultValue={field.state.value}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="sent">Sent</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </form.Field>
           </div>
 
+          {/* Line Items Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Line Items</h3>
@@ -162,16 +170,15 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <form.Field
-                    name="items"
-                    children={(field) => (
+                  <form.Field name="items">
+                    {(field) => (
                       <>
                         {field.state.value.map((_, i) => (
+                          // biome-ignore lint/suspicious/noArrayIndexKey: Its ok here because the index is important
                           <tr key={i}>
                             <td className="p-2">
-                              <form.Field
-                                name={`items[${i}].product_id`}
-                                children={(subField) => (
+                              <form.Field name={`items[${i}].product_id`}>
+                                {(subField) => (
                                   <Select
                                     onValueChange={(val) => {
                                       subField.handleChange(val);
@@ -202,12 +209,11 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
                                     </SelectContent>
                                   </Select>
                                 )}
-                              />
+                              </form.Field>
                             </td>
                             <td className="p-2">
-                              <form.Field
-                                name={`items[${i}].quantity`}
-                                children={(subField) => (
+                              <form.Field name={`items[${i}].quantity`}>
+                                {(subField) => (
                                   <Input
                                     type="number"
                                     min="1"
@@ -220,12 +226,11 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
                                     }
                                   />
                                 )}
-                              />
+                              </form.Field>
                             </td>
                             <td className="p-2">
-                              <form.Field
-                                name={`items[${i}].unit_price`}
-                                children={(subField) => (
+                              <form.Field name={`items[${i}].unit_price`}>
+                                {(subField) => (
                                   <Input
                                     type="number"
                                     step="0.01"
@@ -238,7 +243,7 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
                                     }
                                   />
                                 )}
-                              />
+                              </form.Field>
                             </td>
                             <td className="p-2 text-right font-medium">
                               {new Intl.NumberFormat("en-US", {
@@ -269,11 +274,12 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
                         ))}
                       </>
                     )}
-                  />
+                  </form.Field>
                 </tbody>
               </table>
             </div>
 
+            {/* Total Section */}
             <div className="flex justify-end pr-14 py-4">
               <div className="flex flex-col gap-1 items-end">
                 <span className="text-sm text-muted-foreground uppercase font-semibold">
@@ -296,13 +302,20 @@ export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
             </div>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between border-t p-6">
-          <Button asChild variant="ghost">
+
+        <CardFooter className="flex justify-between border-t p-6 mt-4">
+          <Button asChild variant="ghost" type="button">
             <Link href="/invoices">Cancel</Link>
           </Button>
           <Button type="submit" size="lg" disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Invoice
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Invoice"
+            )}
           </Button>
         </CardFooter>
       </form>

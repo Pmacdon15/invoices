@@ -1,7 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import type { CreateInvoiceInput, Invoice } from "./types";
-
-const ORG_ID = "org001a";
+import type { CreateInvoiceInput, Invoice, Result } from "./types";
 
 export async function getInvoices(): Promise<
   [data: Invoice[] | null, error: string | null]
@@ -20,39 +18,60 @@ export async function getInvoices(): Promise<
     return [null, "Database error occurred while fetching invoices."];
   }
 }
-
-// export async function getInvoices(): Promise<Invoice[]> {
-//   await new Promise((resolve) => setTimeout(resolve, 500));
-//   return invoices.filter((i) => i.org_id === ORG_ID);
-// }
-
-export async function createInvoice(
+export async function createInvoiceDal(
   input: CreateInvoiceInput,
-): Promise<Invoice> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+): Promise<Result<Invoice>> {
+  if (!process.env.DATABASE_URL) {
+    return { data: null, error: "Configuration error" };
+  }
 
-  const total = input.items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
-    0,
-  );
+  const sql = neon(process.env.DATABASE_URL);
 
-  const newInvoice: Invoice = {
-    ...input,
-    id: Math.random().toString(36).substring(7),
-    total,
-    org_id: ORG_ID,
-    created_at: new Date().toISOString(),
-    items: input.items.map((item) => ({
-      ...item,
-      id: Math.random().toString(36).substring(7),
-      invoice_id: "temp", // Updated below
-    })),
-  };
+  try {
+    // 1. Calculate the total from the form items
+    const totalAmount = input.items.reduce(
+      (sum, item) => sum + item.quantity * item.unit_price,
+      0,
+    );
 
-  newInvoice.items?.forEach((item) => {
-    item.invoice_id = newInvoice.id;
-  });
+    // 2. Run the single-statement CTE
+    const [data] = (await sql`
+      WITH new_invoice AS (
+        INSERT INTO invoices (customer_id, status, org_id, total)
+        VALUES (
+          ${input.customer_id}::uuid, 
+          ${input.status}, 
+          ${"org001a"}, 
+          ${totalAmount}
+        )
+        RETURNING id, customer_id, total, status, org_id, created_at
+      ),
+      inserted_items AS (
+        INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price)
+        SELECT 
+          new_invoice.id, 
+          items.product_id, 
+          items.quantity, 
+          items.unit_price
+        FROM new_invoice
+        CROSS JOIN UNNEST(
+          ${input.items.map((i) => i.product_id)}::uuid[],
+          ${input.items.map((i) => i.quantity)}::int[],
+          ${input.items.map((i) => i.unit_price)}::numeric[]
+        ) AS items(product_id, quantity, unit_price)
+      )
+      SELECT * FROM new_invoice;
+    `) as Invoice[];
 
-  invoices.push(newInvoice);
-  return newInvoice;
+    return { data, error: null };
+  } catch (e: unknown) {
+    console.error("SQL Error:", e);
+    
+    // Check if the error is specifically about the UUID format
+    const errorMessage = e instanceof Error && e.message.includes("invalid input syntax for type uuid")
+      ? "Please select a valid customer."
+      : "Database failed to create invoice.";
+
+    return { data: null, error: errorMessage };
+  }
 }

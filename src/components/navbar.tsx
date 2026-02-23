@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, ReceiptText } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ export function Navbar() {
                     asChild
                     className={navigationMenuTriggerStyle()}
                   >
-                    <Link href={item.href}>{item.title}</Link>
+                    <Link href={item.href as Route}>{item.title}</Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
               ))}
@@ -74,7 +75,7 @@ export function Navbar() {
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right">
+            <SheetContent side="right" className="p-8">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   <ReceiptText className="h-5 w-5" />
@@ -85,7 +86,7 @@ export function Navbar() {
                 {navItems.map((item) => (
                   <Link
                     key={item.title}
-                    href={item.href}
+                    href={item.href as Route}
                     className="text-lg font-medium hover:text-primary transition-colors"
                     onClick={() => setIsOpen(false)}
                   >
