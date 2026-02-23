@@ -5,7 +5,7 @@ import { MoreHorizontal } from "lucide-react";
 import { use } from "react";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
-import type { Customer } from "@/dal/types";
+import type { Customer, Result } from "@/dal/types";
 
 export const columns: ColumnDef<Customer>[] = [
   { accessorKey: "name", header: "Name" },
@@ -21,25 +21,22 @@ export const columns: ColumnDef<Customer>[] = [
 ];
 
 interface CustomersTableProps {
-  resultsPromise: Promise<[Customer[] | null, string | null]>;
+  resultsPromise: Promise<Result<Customer[]>>;
 }
 
 export function CustomersTable({ resultsPromise }: CustomersTableProps) {
-  const results = use(resultsPromise);
+   const {data, error}= use(resultsPromise);
 
-  const [customers, error] = results;
-
-  if (error) {
+  if (error!== null) {
     return <div className="text-destructive">Error: {error}</div>;
   }
-
-  if ((customers && customers.length < 1) || !customers) {
+  if (data.length < 1) {
     return <div>Please add customers...</div>;
   }
 
   return (
     <div className="py-4">
-      <DataTable columns={columns} data={customers} />
+      <DataTable columns={columns} data={data} />
     </div>
   );
 }

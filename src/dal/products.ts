@@ -1,16 +1,22 @@
-import type { CreateProductInput, Product } from "./types";
+import { neon } from "@neondatabase/serverless";
+import type { CreateProductInput, Product, Result } from "./types";
 
 const ORG_ID = "org001a";
+export async function getProducts(): Promise<Result<Product[]>> {
+  if (!process.env.DATABASE_URL) {
+    return { data: null, error: "Configuration error" };
+  }
+  try {
+    const sql = neon(process.env.DATABASE_URL);
 
-// Mock database
-const products: Product[] = [
-  { id: "p1", name: "Service A", price: 100, org_id: ORG_ID },
-  { id: "p2", name: "Product B", price: 50, org_id: ORG_ID },
-];
+    const data = (await sql`SELECT * FROM products`) as Product[];
 
-export async function getProducts(): Promise<Product[]> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return products.filter((p) => p.org_id === ORG_ID);
+    return { data, error: null };
+
+  } catch (e: unknown) {
+    console.error("Database Fetch Error:", e);
+   return { data: null, error: "Database error occurred." };
+  }
 }
 
 export async function createProduct(

@@ -1,32 +1,32 @@
 import { neon } from "@neondatabase/serverless";
-import type { CreateCustomerInput, Customer } from "./types";
+import type { CreateCustomerInput, Customer, Result } from "./types";
 
-export async function getCustomers(): Promise<
-  [data: Customer[] | null, error: string | null]
-> {
+export async function getCustomers(): Promise<Result<Customer[]>> {
   if (!process.env.DATABASE_URL) {
-    return [null, "Configuration error"];
+    return { data: null, error: "Configuration error" };
   }
   try {
     const sql = neon(process.env.DATABASE_URL);
 
     const data = (await sql`SELECT * FROM customers`) as Customer[];
 
-    return [data, null];
+    return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
-    return [null, "Database error occurred while fetching customers."];
+    return {
+      data: null,
+      error: "Database error occurred while fetching customers.",
+    };
   }
 }
 
 export async function createCustomerDal(
   input: CreateCustomerInput,
 ): Promise<[data: Customer | null, error: string | null]> {
-  
   if (!process.env.DATABASE_URL) {
     return [null, "Configuration error"];
   }
-  
+
   try {
     const sql = neon(process.env.DATABASE_URL);
 

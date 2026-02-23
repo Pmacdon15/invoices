@@ -40,3 +40,7 @@ export type CreateInvoiceInput = Omit<
 > & {
   items: Omit<InvoiceItem, "id" | "invoice_id">[];
 };
+
+export type Result<T> = 
+  | { data: T; error: null } 
+  | { data: null; error: string };

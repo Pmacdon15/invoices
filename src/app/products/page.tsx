@@ -1,11 +1,12 @@
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { getProducts } from "@/dal/products";
 import { ProductsTable } from "./products-table";
 
 export default async function ProductsPage() {
-  const data = await getProducts();
+  const data = getProducts();
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -22,7 +23,9 @@ export default async function ProductsPage() {
           </Link>
         </Button>
       </div>
-      <ProductsTable data={data} />
+      <Suspense>
+        <ProductsTable dataPromise={data} />
+      </Suspense>
     </div>
   );
 }

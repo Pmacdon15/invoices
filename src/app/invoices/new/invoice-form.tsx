@@ -30,7 +30,7 @@ interface InvoiceFormProps {
   products: Product[];
 }
 
-export function InvoiceForm({ customers, products }: InvoiceFormProps) {
+export function InvoiceForm({ dataPromise }: InvoiceFormProps) {
   const [isPending, setIsPending] = React.useState(false);
 
   const form = useForm({
