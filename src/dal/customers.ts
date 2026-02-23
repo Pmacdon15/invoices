@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { CreateCustomerSchema } from "./schema";
 import type { CreateCustomerInput, Customer, Result } from "./types";
 
 export async function getCustomers(): Promise<Result<Customer[]>> {
@@ -22,9 +23,14 @@ export async function getCustomers(): Promise<Result<Customer[]>> {
 
 export async function createCustomerDal(
   input: CreateCustomerInput,
-): Promise<[data: Customer | null, error: string | null]> {
+): Promise<Result<Customer>> {
   if (!process.env.DATABASE_URL) {
-    return [null, "Configuration error"];
+    return { data: null, error: "Configuration error" };
+  }
+
+  const validation = CreateCustomerSchema.safeParse(input);
+  if (!validation.success) {
+    return { data: null, error: validation.error.issues[0].message };
   }
 
   try {
@@ -36,9 +42,29 @@ export async function createCustomerDal(
       RETURNING *
     `) as Customer[];
 
-    return [newCustomer, null];
+    return { data: newCustomer, error: null };
   } catch (e: unknown) {
     console.error("Database Insert Error:", e);
-    return [null, "Failed to create customer. Please try again."];
+    return {
+      data: null,
+      error: "Failed to create customer. Please try again.",
+    };
+  }
+}
+
+export async function deleteCustomerDal(id: string): Promise<Result<void>> {
+  if (!process.env.DATABASE_URL) {
+    return { data: null, error: "Configuration error" };
+  }
+
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+
+    await sql`DELETE FROM customers WHERE id = ${id}`;
+
+    return { data: undefined, error: null };
+  } catch (e: unknown) {
+    console.error("Database Delete Error:", e);
+    return { data: null, error: "Failed to delete customer." };
   }
 }

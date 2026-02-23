@@ -81,7 +81,10 @@ export default function Home() {
                 variant="link"
                 className="p-0 group-hover:translate-x-1 transition-transform"
               >
-                <Link href={action.href} className="flex items-center gap-1">
+                <Link
+                  href={action.href as any}
+                  className="flex items-center gap-1"
+                >
                   Go to {action.title} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>

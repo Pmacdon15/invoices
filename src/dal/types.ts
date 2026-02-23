@@ -1,46 +1,23 @@
-export interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  org_id: string;
-}
+import type { z } from "zod";
+import type {
+  CreateCustomerSchema,
+  CreateInvoiceSchema,
+  CreateProductSchema,
+  CustomerSchema,
+  InvoiceItemSchema,
+  InvoiceSchema,
+  ProductSchema,
+} from "./schema";
 
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  org_id: string;
-}
+export type Customer = z.infer<typeof CustomerSchema>;
+export type Product = z.infer<typeof ProductSchema>;
+export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
+export type Invoice = z.infer<typeof InvoiceSchema>;
 
-export interface InvoiceItem {
-  id: string;
-  invoice_id: string;
-  product_id: string;
-  quantity: number;
-  unit_price: number;
-  product?: Product;
-}
+export type CreateCustomerInput = z.infer<typeof CreateCustomerSchema>;
+export type CreateProductInput = z.infer<typeof CreateProductSchema>;
+export type CreateInvoiceInput = z.infer<typeof CreateInvoiceSchema>;
 
-export interface Invoice {
-  id: string;
-  customer_id: string;
-  total: number;
-  status: "draft" | "sent" | "paid";
-  org_id: string;
-  created_at: string;
-  customer?: Customer;
-  items?: InvoiceItem[];
-}
-
-export type CreateCustomerInput = Omit<Customer, "id" | "org_id">;
-export type CreateProductInput = Omit<Product, "id" | "org_id">;
-export type CreateInvoiceInput = Omit<
-  Invoice,
-  "id" | "org_id" | "created_at" | "total"
-> & {
-  items: Omit<InvoiceItem, "id" | "invoice_id">[];
-};
-
-export type Result<T> = 
-  | { data: T; error: null } 
+export type Result<T> =
+  | { data: T; error: null }
   | { data: null; error: string };

@@ -1,12 +1,19 @@
-import { useMutation } from "@tanstack/react-query";
-import { createProductAction } from "@/actions/products";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createProductAction, deleteProductAction } from "@/actions/products";
+import type { CreateProductInput } from "@/dal/types";
 
-//MARK: Cancel subscription
 export const useCreateProduct = () => {
   return useMutation({
-    mutationFn: (data: any) => createProductAction(data),
+    mutationFn: (data: CreateProductInput) => createProductAction(data),
+  });
+};
+
+export const useDeleteProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteProductAction(id),
     onSuccess: () => {
-      //   revalidatePathAction("/billing/manage/subscriptions");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 };

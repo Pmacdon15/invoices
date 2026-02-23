@@ -1,12 +1,19 @@
-import { useMutation } from "@tanstack/react-query";
-import { createInvoiceAction } from "@/actions/invoices";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createInvoiceAction, deleteInvoiceAction } from "@/actions/invoices";
+import type { CreateInvoiceInput } from "@/dal/types";
 
-//MARK: Cancel subscription
 export const useCreateInvoice = () => {
   return useMutation({
-    mutationFn: (data: any) => createInvoiceAction(data),
+    mutationFn: (data: CreateInvoiceInput) => createInvoiceAction(data),
+  });
+};
+
+export const useDeleteInvoice = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteInvoiceAction(id),
     onSuccess: () => {
-      //   revalidatePathAction("/billing/manage/subscriptions");
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
   });
 };
