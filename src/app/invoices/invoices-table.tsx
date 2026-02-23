@@ -2,33 +2,47 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
+import { use } from "react";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Invoice, Customer } from "@/dal/types";
+import type { Invoice } from "@/dal/types";
 
 interface InvoicesTableProps {
-  data: Invoice[];
-  customers: Customer[];
+  // This correctly matches your DAL return type
+  invoicesPromise: Promise<[data: Invoice[] | null, error: string | null]>;
 }
 
-export function InvoicesTable({ data, customers }: InvoicesTableProps) {
+export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
+ 
+  const [data, error] = use(invoicesPromise);
+
+ 
+  if (error) {
+    return <div className="p-4 text-destructive bg-destructive/10 rounded">Error: {error}</div>;
+  }
+
+  // 3. Fallback to an empty array if data is null (prevents the 'not assignable' error)
+  const invoices = data ?? [];
+
   const columns: ColumnDef<Invoice>[] = [
     {
       accessorKey: "id",
       header: "Invoice #",
       cell: ({ row }) => (
-        <span className="font-mono uppercase">{row.original.id}</span>
+        <span className="font-mono uppercase text-xs">{row.original.id}</span>
       ),
     },
     {
-      accessorKey: "customer_id",
+      accessorKey: "customer",
       header: "Customer",
       cell: ({ row }) => {
-        const customer = customers.find(
-          (c) => c.id === row.original.customer_id,
+        const customer = row.original.customer;
+        return (
+          <span className="font-medium">
+            {customer ? customer.name : "Unknown"}
+          </span>
         );
-        return customer ? customer.name : "Unknown";
       },
     },
     {
@@ -41,12 +55,10 @@ export function InvoicesTable({ data, customers }: InvoicesTableProps) {
       header: "Total",
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("total") as string);
-        const formatted = new Intl.NumberFormat("en-US", {
+        return new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
         }).format(amount);
-
-        return <div className="font-medium">{formatted}</div>;
       },
     },
     {
@@ -55,6 +67,7 @@ export function InvoicesTable({ data, customers }: InvoicesTableProps) {
       cell: ({ row }) => (
         <Badge
           variant={row.original.status === "paid" ? "default" : "secondary"}
+          className="capitalize"
         >
           {row.original.status}
         </Badge>
@@ -62,15 +75,13 @@ export function InvoicesTable({ data, customers }: InvoicesTableProps) {
     },
     {
       id: "actions",
-      cell: ({ row }) => {
-        return (
-          <Button variant="ghost" size="icon">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        );
-      },
+      cell: () => (
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      ),
     },
   ];
 
-  return <DataTable columns={columns} data={data} />;
+  return <DataTable columns={columns} data={invoices} />;
 }

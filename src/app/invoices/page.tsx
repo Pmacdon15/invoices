@@ -1,15 +1,12 @@
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { getCustomers } from "@/dal/customers";
 import { getInvoices } from "@/dal/invoices";
 import { InvoicesTable } from "./invoices-table";
 
 export default async function InvoicesPage() {
-  const [invoices, customers] = await Promise.all([
-    getInvoices(),
-    getCustomers(),
-  ]);
+  const invoicesPromise = getInvoices();
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -26,7 +23,9 @@ export default async function InvoicesPage() {
           </Link>
         </Button>
       </div>
-      <InvoicesTable data={invoices} customers={customers} />
+      <Suspense>
+        <InvoicesTable invoicesPromise={invoicesPromise} />
+      </Suspense>
     </div>
   );
 }

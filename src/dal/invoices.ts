@@ -1,39 +1,30 @@
+import { neon } from "@neondatabase/serverless";
 import type { CreateInvoiceInput, Invoice } from "./types";
 
 const ORG_ID = "org001a";
 
-// Mock database
-const invoices: Invoice[] = [
-  {
-    id: "inv1",
-    customer_id: "1",
-    total: 150,
-    status: "draft",
-    org_id: ORG_ID,
-    created_at: new Date().toISOString(),
-    items: [
-      {
-        id: "item1",
-        invoice_id: "inv1",
-        product_id: "p1",
-        quantity: 1,
-        unit_price: 100,
-      },
-      {
-        id: "item2",
-        invoice_id: "inv1",
-        product_id: "p2",
-        quantity: 1,
-        unit_price: 50,
-      },
-    ],
-  },
-];
+export async function getInvoices(): Promise<
+  [data: Invoice[] | null, error: string | null]
+> {
+  if (!process.env.DATABASE_URL) {
+    return [null, "Configuration error"];
+  }
+  try {
+    const sql = neon(process.env.DATABASE_URL);
 
-export async function getInvoices(): Promise<Invoice[]> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return invoices.filter((i) => i.org_id === ORG_ID);
+    const data = (await sql`SELECT * FROM invoices`) as Invoice[];
+
+    return [data, null];
+  } catch (e: unknown) {
+    console.error("Database Fetch Error:", e);
+    return [null, "Database error occurred while fetching invoices."];
+  }
 }
+
+// export async function getInvoices(): Promise<Invoice[]> {
+//   await new Promise((resolve) => setTimeout(resolve, 500));
+//   return invoices.filter((i) => i.org_id === ORG_ID);
+// }
 
 export async function createInvoice(
   input: CreateInvoiceInput,
