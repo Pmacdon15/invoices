@@ -2,9 +2,9 @@ import { z } from "zod";
 
 // --- Customer ---
 export const CustomerSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
+  email: z.email("Invalid email address"),
   org_id: z.string(),
 });
 
@@ -15,7 +15,7 @@ export const CreateCustomerSchema = CustomerSchema.omit({
 
 // --- Product ---
 export const ProductSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(2, "Product name must be at least 2 characters"),
   price: z.number().positive("Price must be positive"),
   org_id: z.string(),
@@ -28,9 +28,9 @@ export const CreateProductSchema = ProductSchema.omit({
 
 // --- Invoice Item ---
 export const InvoiceItemSchema = z.object({
-  id: z.string().uuid(),
-  invoice_id: z.string().uuid(),
-  product_id: z.string().uuid("Please select a product"),
+  id: z.uuid(),
+  invoice_id: z.uuid(),
+  product_id: z.uuid("Please select a product"),
   quantity: z.number().int().positive("Quantity must be at least 1"),
   unit_price: z.number().nonnegative("Price cannot be negative"),
   product: ProductSchema.optional(),
@@ -45,8 +45,8 @@ export const CreateInvoiceItemSchema = InvoiceItemSchema.omit({
 export const InvoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 
 export const InvoiceSchema = z.object({
-  id: z.string().uuid(),
-  customer_id: z.string().uuid("Please select a customer"),
+  id: z.uuid(),
+  customer_id: z.uuid("Please select a customer"),
   total: z.number().nonnegative(),
   status: InvoiceStatusSchema,
   org_id: z.string(),
@@ -63,7 +63,7 @@ export const CreateInvoiceSchema = InvoiceSchema.omit({
   customer: true,
   items: true,
 }).extend({
-  customer_id: z.string().uuid("Please select a customer"),
+  customer_id: z.uuid("Please select a customer"),
   items: z
     .array(CreateInvoiceItemSchema)
     .min(1, "Invoice must have at least one item"),

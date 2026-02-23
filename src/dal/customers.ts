@@ -65,6 +65,6 @@ export async function deleteCustomerDal(id: string): Promise<Result<void>> {
     return { data: undefined, error: null };
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
-    return { data: null, error: "Failed to delete customer." };
+    return { data: null, error: "Database Error" };
   }
 }

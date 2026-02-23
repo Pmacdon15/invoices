@@ -1,13 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { revalidatePathAction } from "@/actions/actions";
 import { createInvoiceAction, deleteInvoiceAction } from "@/actions/invoices";
 import type { CreateInvoiceInput } from "@/dal/types";
-import { revalidatePathAction } from "@/actions/actions";
 
 export const useCreateInvoice = () => {
   const router = useRouter();
-
   return useMutation({
     mutationFn: async (input: CreateInvoiceInput) => {
       const { data: result, error } = await createInvoiceAction(input);
@@ -21,8 +20,8 @@ export const useCreateInvoice = () => {
     onSuccess: (data) => {
       toast.success("Invoice has been created");
 
-       //TODO: change this to update tag once auth is in
-      revalidatePathAction("/invoices")
+      //TODO: change this to update tag once auth is in
+      revalidatePathAction("/invoices");
       if (data?.id) {
         router.push(`/invoices/${data.id}`);
       }
@@ -32,7 +31,7 @@ export const useCreateInvoice = () => {
     },
   });
 };
-export const useDeleteInvoice = () => { 
+export const useDeleteInvoice = () => {
   return useMutation({
     mutationFn: async (id: string) => {
       const { data: result, error } = await deleteInvoiceAction(id);
@@ -47,7 +46,7 @@ export const useDeleteInvoice = () => {
     onSuccess: () => {
       toast.success("Invoice has been deleted");
       //TODO: change this to update tag once auth is in
-      revalidatePathAction("/invoices")    
+      revalidatePathAction("/invoices");
     },
     onError: (error) => {
       toast.error(error.message);
