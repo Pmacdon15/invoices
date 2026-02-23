@@ -1,14 +1,14 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Eye, Loader2, Trash2 } from "lucide-react";
+import { Eye } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Invoice, Result } from "@/dal/types";
-import { useDeleteInvoice } from "@/mutations/invoices";
+import DeleteInvoiceButton from "./buttons/delete-invoice-button";
 
 interface InvoicesTableProps {
   invoicesPromise: Promise<Result<Invoice[]>>;
@@ -16,7 +16,7 @@ interface InvoicesTableProps {
 
 export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
   const { data, error } = use(invoicesPromise);
-  const { mutate: deleteInvoice, isPending: isDeleting } = useDeleteInvoice();
+  // const { mutate: deleteInvoice, isPending: isDeleting } = useDeleteInvoice();
 
   if (error) {
     return (
@@ -90,23 +90,7 @@ export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
               <Eye className="h-4 w-4" />
             </Link>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => {
-              if (confirm("Are you sure you want to delete this invoice?")) {
-                deleteInvoice(row.original.id);
-              }
-            }}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
+          <DeleteInvoiceButton rowId={row.original.id} />
         </div>
       ),
     },

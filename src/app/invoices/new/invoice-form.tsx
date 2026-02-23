@@ -40,13 +40,12 @@ export function InvoiceForm({
   customersPromise,
   productsPromise,
 }: InvoiceFormProps) {
-  // 1. Resolve promises at the TOP (Always call hooks in the same order)
+  
   const { data: customers, error: customerError } = use(customersPromise);
   const { data: products, error: productsError } = use(productsPromise);
 
   const { mutate, isPending } = useCreateInvoice();
-
-  // 2. Initialize the form (Using the updated validator pattern)
+  
   const form = useForm({
     defaultValues: {
       customer_id: "",
