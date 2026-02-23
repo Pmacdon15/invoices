@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { revalidatePathAction } from "@/actions/actions";
+import { updateTagAction } from "@/actions/actions";
 import { createProductAction, deleteProductAction } from "@/actions/products";
 import type { CreateProductInput } from "@/dal/types";
 
@@ -20,9 +20,7 @@ export const useCreateProduct = () => {
     onSuccess: () => {
       toast.success("Product has been created");
 
-      //TODO: change this to update tag once auth is in
-      revalidatePathAction("/products");
-
+      updateTagAction("products");
       router.push(`/products`);
     },
     onError: (error) => {
@@ -45,8 +43,7 @@ export const useDeleteProduct = () => {
     },
     onSuccess: () => {
       toast.success("Product has been deleted");
-      //TODO: change this to update tag once auth is in
-      revalidatePathAction("/invoices");
+      updateTagAction("products");
     },
     onError: (error) => {
       toast.error(error.message);

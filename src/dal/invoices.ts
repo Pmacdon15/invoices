@@ -1,8 +1,13 @@
+import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
+import { cacheTag } from "next/cache";
 import { CreateInvoiceSchema } from "./schema";
 import type { CreateInvoiceInput, Invoice, Result } from "./types";
 
 export async function getInvoices(): Promise<Result<Invoice[]>> {
+  "use cache: private";
+  cacheTag("invoices");
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -14,8 +19,9 @@ export async function getInvoices(): Promise<Result<Invoice[]>> {
         i.*,
         c.name as customer_name,
         c.email as customer_email
-      FROM invoices i
+      FROM invoices i 
       JOIN customers c ON i.customer_id = c.id
+      WHERE i.org_id = ${orgId}
       ORDER BY i.created_at DESC
     `) as (Invoice & { customer_name: string; customer_email: string })[];
 
@@ -37,6 +43,7 @@ export async function getInvoices(): Promise<Result<Invoice[]>> {
 }
 
 export async function getInvoiceById(id: string): Promise<Result<Invoice>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -50,7 +57,7 @@ export async function getInvoiceById(id: string): Promise<Result<Invoice>> {
         c.email as customer_email
       FROM invoices i
       JOIN customers c ON i.customer_id = c.id
-      WHERE i.id = ${id}
+      WHERE i.id = ${id} AND i.org_id = ${orgId}
     `) as (Invoice & { customer_name: string; customer_email: string })[];
 
     if (!invoice) return { data: null, error: "Invoice not found" };
@@ -94,6 +101,7 @@ export async function getInvoiceById(id: string): Promise<Result<Invoice>> {
 export async function createInvoiceDal(
   input: CreateInvoiceInput,
 ): Promise<Result<Invoice>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -103,7 +111,7 @@ export async function createInvoiceDal(
   if (!validation.success) {
     return { data: null, error: validation.error.issues[0].message };
   }
- 
+
   const sql = neon(process.env.DATABASE_URL);
 
   try {
@@ -120,7 +128,7 @@ export async function createInvoiceDal(
         VALUES (
           ${customerId}::uuid, 
           ${input.status}, 
-          ${"org001a"}, 
+          ${orgId}, 
           ${totalAmount}
         )
         RETURNING id, customer_id, total, status, org_id, created_at
@@ -150,6 +158,7 @@ export async function createInvoiceDal(
 }
 
 export async function deleteInvoiceDal(id: string): Promise<Result<void>> {
+  await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
