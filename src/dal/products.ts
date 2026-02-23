@@ -9,7 +9,7 @@ export async function getProducts(): Promise<Result<Product[]>> {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    const productsFromDb = (await sql`SELECT * FROM products`) as any[];
+    const productsFromDb = (await sql`SELECT * FROM products WHERE deleted = false`) as any[];
     const data = productsFromDb.map((product) => ({
       ...product,
       price: parseFloat(product.price),
@@ -58,7 +58,9 @@ export async function deleteProductDal(id: string): Promise<Result<void>> {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    await sql`DELETE FROM products WHERE id = ${id}`;
+    await sql`UPDATE products 
+      SET deleted = true 
+      WHERE id = ${id}`;
 
     return { data: undefined, error: null };
   } catch (e: unknown) {

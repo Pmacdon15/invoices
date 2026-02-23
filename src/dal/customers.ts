@@ -9,7 +9,8 @@ export async function getCustomers(): Promise<Result<Customer[]>> {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    const data = (await sql`SELECT * FROM customers`) as Customer[];
+    const data =
+      (await sql`SELECT * FROM customers WHERE deleted = false`) as Customer[];
 
     return { data, error: null };
   } catch (e: unknown) {
@@ -60,7 +61,11 @@ export async function deleteCustomerDal(id: string): Promise<Result<void>> {
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    await sql`DELETE FROM customers WHERE id = ${id}`;
+    await sql`
+      UPDATE customers 
+      SET deleted = true 
+      WHERE id = ${id}
+    `;
 
     return { data: undefined, error: null };
   } catch (e: unknown) {

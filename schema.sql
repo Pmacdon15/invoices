@@ -1,15 +1,22 @@
+DROP TABLE IF EXISTS invoice_items;
+DROP TABLE IF EXISTS invoices;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS customers;
+
 CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT NOT NULL,
-    org_id TEXT NOT NULL DEFAULT 'org001a'
+    org_id TEXT NOT NULL DEFAULT 'org001a',
+    deleted BOOLEAN NOT NULL DEFAULT False
 );
 
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    org_id TEXT NOT NULL DEFAULT 'org001a'
+    org_id TEXT NOT NULL DEFAULT 'org001a',
+    deleted BOOLEAN NOT NULL DEFAULT False
 );
 
 CREATE TABLE invoices (
