@@ -1,5 +1,5 @@
 "use client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { revalidatePathAction } from "@/actions/actions";
@@ -35,26 +35,25 @@ export const useCreateCustomer = () => {
   });
 };
 
-export const useDeleteCustomer = () => { 
+export const useDeleteCustomer = () => {
   return useMutation({
     mutationFn: async (id: string) => {
-          const { data: result, error } = await deleteCustomerAction(id);
-    
-          if (error !== null) {
-            // If error is an object, ensure you grab the message string
-            throw new Error(error || "Failed to delete customer");
-          }
-    
-          return result; // This result is passed to onSuccess
-        },
-        onSuccess: () => {
-          toast.success("Customer has been deleted");
-          //TODO: change this to update tag once auth is in
-          revalidatePathAction("/customers");
-        },
-        onError: (error) => {
-          toast.error(error.message);
-        },
-    
+      const { data: result, error } = await deleteCustomerAction(id);
+
+      if (error !== null) {
+        // If error is an object, ensure you grab the message string
+        throw new Error(error || "Failed to delete customer");
+      }
+
+      return result; // This result is passed to onSuccess
+    },
+    onSuccess: () => {
+      toast.success("Customer has been deleted");
+      //TODO: change this to update tag once auth is in
+      revalidatePathAction("/customers");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
 };

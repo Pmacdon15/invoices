@@ -31,6 +31,7 @@ export const useCreateInvoice = () => {
     },
   });
 };
+
 export const useDeleteInvoice = () => {
   return useMutation({
     mutationFn: async (id: string) => {
