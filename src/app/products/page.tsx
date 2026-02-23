@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { getProducts } from "@/dal/products";
-import { ProductsTable } from "./products-table";
+import { ProductsTable } from "../../components/products-table";
 
 export default async function ProductsPage() {
   const data = getProducts();

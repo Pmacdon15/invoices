@@ -19,15 +19,40 @@ export async function getProducts(): Promise<Result<Product[]>> {
   }
 }
 
-export async function createProduct(
+// export async function createProduct(
+//   input: CreateProductInput,
+// ): Promise<Product> {
+//   await new Promise((resolve) => setTimeout(resolve, 500));
+//   const newProduct: Product = {
+//     ...input,
+//     id: Math.random().toString(36).substring(7),
+//     org_id: ORG_ID,
+//   };
+//   products.push(newProduct);
+//   return newProduct;
+// }
+
+
+
+export async function createProductDal(
   input: CreateProductInput,
-): Promise<Product> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const newProduct: Product = {
-    ...input,
-    id: Math.random().toString(36).substring(7),
-    org_id: ORG_ID,
-  };
-  products.push(newProduct);
-  return newProduct;
+): Promise<[data: Product | null, error: string | null]> {
+  if (!process.env.DATABASE_URL) {
+    return [null, "Configuration error"];
+  }
+
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+
+    const [newCustomer] = (await sql`
+      INSERT INTO products (name, price, org_id)
+      VALUES (${input.name}, ${input.price}, ${"org001a"})
+      RETURNING *
+    `) as Product[];
+
+    return [newCustomer, null];
+  } catch (e: unknown) {
+    console.error("Database Insert Error:", e);
+    return [null, "Failed to create product. Please try again."];
+  }
 }

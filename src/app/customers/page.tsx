@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { getCustomers } from "@/dal/customers";
-import { CustomersTable } from "./customer-table";
+import { CustomersTable } from "../../components/customer-table";
 
 export default async function CustomersPage() {
   const dataPromise = getCustomers();

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createProduct } from "@/dal/products";
+import { createProductDal } from "@/dal/products";
 import type { CreateProductInput } from "@/dal/types";
 
 export async function createProductAction(input: CreateProductInput) {
@@ -11,7 +11,7 @@ export async function createProductAction(input: CreateProductInput) {
     ...input,
     price: Number(input.price),
   };
-  await createProduct(data);
+  await createProductDal(data);
   revalidatePath("/products");
   redirect("/products");
 }
