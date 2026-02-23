@@ -30,7 +30,6 @@ import type {
   Result,
 } from "@/dal/types";
 import { useCreateInvoice } from "@/mutations/invoices";
-import form from "next/form";
 
 interface InvoiceFormProps {
   customersPromise: Promise<Result<Customer[]>>;
@@ -58,7 +57,7 @@ export function InvoiceForm({
       onSubmit: ({ value }) => {
         const result = CreateInvoiceSchema.safeParse(value);
         if (!result.success) {
-         console.log("error message: ", result.error.issues)
+          console.log("error message: ", result.error.issues);
           return result.error.issues[0].message;
         }
         return undefined;
@@ -295,7 +294,7 @@ export function InvoiceForm({
                                 {(subField) => (
                                   <Input
                                     type="number"
-                                    // step="0.01"
+                                    step="0.01"
                                     className="border-none shadow-none focus:ring-0 bg-transparent"
                                     value={subField.state.value}
                                     onChange={(e) =>
@@ -308,13 +307,22 @@ export function InvoiceForm({
                               </form.Field>
                             </td>
                             <td className="md:px-4 md:py-3 py-2 text-right font-semibold">
-                              {new Intl.NumberFormat("en-US", {
-                                style: "currency",
-                                currency: "USD",
-                              }).format(
-                                (field.state.value[i].quantity || 0) *
-                                  (field.state.value[i].unit_price || 0),
-                              )}
+                              {/* Wrap the calculation in a Subscribe for that specific row */}
+                              <form.Subscribe
+                                selector={(state) => state.values.items[i]}
+                              >
+                                {(item) => (
+                                  <>
+                                    {new Intl.NumberFormat("en-US", {
+                                      style: "currency",
+                                      currency: "USD",
+                                    }).format(
+                                      (item?.quantity || 0) *
+                                        (item?.unit_price || 0),
+                                    )}
+                                  </>
+                                )}
+                              </form.Subscribe>
                             </td>
                             <td className="p-2 text-center">
                               <Button
@@ -338,19 +346,32 @@ export function InvoiceForm({
               </table>
             </div>
 
-            <div className="flex justify-end p-6 bg-muted/20 border rounded-xl">
-              <div className="flex flex-col gap-1 items-end">
-                <span className="text-xs text-muted-foreground uppercase font-black tracking-widest">
-                  Grand Total
-                </span>
-                <span className="text-4xl font-black text-primary">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                  }).format(totalAmount)}
-                </span>
-              </div>
-            </div>
+            {/* Place this where you want the total to appear */}
+            <form.Subscribe selector={(state) => state.values.items}>
+              {(items) => {
+                const total = items.reduce(
+                  (sum, item) =>
+                    sum + (item.quantity || 0) * (item.unit_price || 0),
+                  0,
+                );
+
+                return (
+                  <div className="flex justify-end p-6 bg-muted/20 border rounded-xl">
+                    <div className="flex flex-col gap-1 items-end">
+                      <span className="text-xs text-muted-foreground uppercase font-black tracking-widest">
+                        Grand Total
+                      </span>
+                      <span className="text-4xl font-black text-primary">
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(total)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }}
+            </form.Subscribe>
           </div>
         </CardContent>
 
