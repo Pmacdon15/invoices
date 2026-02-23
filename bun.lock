@@ -12,7 +12,7 @@
         "@tanstack/zod-form-adapter": "^0.42.1",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "html2canvas": "^1.4.1",
+        "html2canvas-pro": "^2.0.0",
         "jspdf": "^4.2.0",
         "lucide-react": "^0.575.0",
         "next": "16.1.6",
@@ -681,6 +681,8 @@
     "hono": ["hono@4.12.1", "", {}, "sha512-hi9afu8g0lfJVLolxElAZGANCTTl6bewIdsRNhaywfP9K8BPf++F2z6OLrYGIinUwpRKzbZHMhPwvc0ZEpAwGw=="],
 
     "html2canvas": ["html2canvas@1.4.1", "", { "dependencies": { "css-line-break": "^2.1.0", "text-segmentation": "^1.0.3" } }, "sha512-fPU6BHNpsyIhr8yyMpTLLxAbkaK8ArIBcmZIRiBLiDhjeqvXolaEmDGmELFuX9I4xDcaKKcJl+TKZLqruBbmWA=="],
+
+    "html2canvas-pro": ["html2canvas-pro@2.0.0", "", { "dependencies": { "css-line-break": "^2.1.0", "text-segmentation": "^1.0.3" } }, "sha512-PmpzJERnezedeiMku0ijTuAzrparJvcH2j/ZDG4U4TFHfezax3gKh0eCGa5t5wdT2MjCsPBtqENw/Xw8C4s0Rw=="],
 
     "http-errors": ["http-errors@2.0.1", "", { "dependencies": { "depd": "~2.0.0", "inherits": "~2.0.4", "setprototypeof": "~1.2.0", "statuses": "~2.0.2", "toidentifier": "~1.0.1" } }, "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ=="],
 
