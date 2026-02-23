@@ -279,12 +279,24 @@ export function InvoiceForm({
                                   <Input
                                     type="number"
                                     className="border-none shadow-none focus:ring-0 bg-transparent"
-                                    value={subField.state.value}
-                                    onChange={(e) =>
-                                      subField.handleChange(
-                                        e.target.valueAsNumber || 0,
-                                      )
+                                    // If value is 0, show empty string so user doesn't see "0"
+                                    value={
+                                      subField.state.value === 0
+                                        ? ""
+                                        : subField.state.value
                                     }
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      // If empty, set to 0, otherwise parse the number
+                                      subField.handleChange(
+                                        val === "" ? 0 : Number(val),
+                                      );
+                                    }}
+                                    // Optional: ensures the field doesn't stay empty on blur
+                                    onBlur={() => {
+                                      if (!subField.state.value)
+                                        subField.handleChange(0);
+                                    }}
                                   />
                                 )}
                               </form.Field>
@@ -294,14 +306,25 @@ export function InvoiceForm({
                                 {(subField) => (
                                   <Input
                                     type="number"
-                                    step="0.01"
                                     className="border-none shadow-none focus:ring-0 bg-transparent"
-                                    value={subField.state.value}
-                                    onChange={(e) =>
-                                      subField.handleChange(
-                                        e.target.valueAsNumber || 0,
-                                      )
+                                    // If value is 0, show empty string so user doesn't see "0"
+                                    value={
+                                      subField.state.value === 0
+                                        ? ""
+                                        : subField.state.value
                                     }
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      // If empty, set to 0, otherwise parse the number
+                                      subField.handleChange(
+                                        val === "" ? 0 : Number(val),
+                                      );
+                                    }}
+                                    // Optional: ensures the field doesn't stay empty on blur
+                                    onBlur={() => {
+                                      if (!subField.state.value)
+                                        subField.handleChange(0);
+                                    }}
                                   />
                                 )}
                               </form.Field>
