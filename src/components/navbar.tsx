@@ -34,7 +34,6 @@ const navItems = [
   { title: "Customers", href: "/customers" },
   { title: "Products", href: "/products" },
   { title: "Invoices", href: "/invoices" },
-  { title: "Brandings", href: "/brandings" },
 ];
 
 export function Navbar() {
@@ -99,7 +98,10 @@ export function Navbar() {
                   InvoicePro
                 </SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-4 mt-8">
+              <nav className="flex flex-col gap-4 ">
+                <SignedIn>
+                  <OrganizationSwitcher />
+                </SignedIn>
                 {navItems.map((item) => (
                   <Link
                     key={item.title}

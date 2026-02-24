@@ -1,16 +1,14 @@
-import { auth } from "@clerk/nextjs/server";
 import { ChevronLeft, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { InvoiceDetails } from "@/components/invoice-details";
 import { Button } from "@/components/ui/button";
-import { getBranding } from "@/dal/brandings";
+
 import { getInvoiceById } from "@/dal/invoices";
 
 export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
   const invoicePromise = props.params.then((p) => getInvoiceById(p.id));
-  const brandingPromise = getBranding();
- 
+
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl">
       <div className="mb-6">
@@ -32,10 +30,7 @@ export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
           </div>
         }
       >
-        <InvoiceDetails
-          invoicePromise={invoicePromise}
-          brandingPromise={brandingPromise}
-        />
+        <InvoiceDetails invoicePromise={invoicePromise} />
       </Suspense>
     </div>
   );

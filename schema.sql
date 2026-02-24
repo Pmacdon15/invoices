@@ -36,10 +36,10 @@ CREATE TABLE invoice_items (
     unit_price DECIMAL(10, 2) NOT NULL
 );
 
-CREATE TABLE brandings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id TEXT NOT NULL UNIQUE DEFAULT 'org001a',
-    logo_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- CREATE TABLE brandings (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     org_id TEXT NOT NULL UNIQUE DEFAULT 'org001a',
+--     logo_url TEXT,
+--     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
 

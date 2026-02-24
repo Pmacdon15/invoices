@@ -11,21 +11,21 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { use } from "react";
-import type { Branding, FullInvoice, Result } from "@/dal/types";
+import type { FullInvoice, Result } from "@/dal/types";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 export function InvoiceDetails({
   invoicePromise,
-  brandingPromise,
 }: {
   invoicePromise: Promise<Result<FullInvoice>>;
-  brandingPromise: Promise<Result<Branding>>;
 }) {
   const { data: invoice, error } = use(invoicePromise);
-  const { data: branding, error: _brandingError } = use(brandingPromise);
+
   const { organization } = useOrganization();
+
+  // console.log(organization?.hasImage)
 
   // FIX: Show error if there IS an error or NO data
   if (error !== null || !invoice) {
@@ -83,10 +83,10 @@ export function InvoiceDetails({
             Error loading branding {brandingError}
           </div>
         )} */}
-        {<h1>{organization?.name}</h1>}
-        {branding?.logo_url && (
+        {<h1 className="text-2xl font-bold">{organization?.name}</h1>}
+        {organization?.imageUrl && !!organization?.hasImage && (
           <Image
-            src={branding.logo_url}
+            src={organization?.imageUrl}
             alt="Organization Logo"
             width={200}
             height={100}
