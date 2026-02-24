@@ -32,7 +32,7 @@ export default async function BrandingsForm({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {error && <div className="text-destructive">{error}</div>}
+        {/* {error && <div className="text-destructive">{error}</div>} */}
         {logoUrl && (
           <div className="relative bg-muted/30 p-4 rounded-lg flex items-center justify-center border border-muted/50">
             <DeleteLogoButton />
