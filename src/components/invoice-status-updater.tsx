@@ -18,13 +18,13 @@ export function InvoiceStatusUpdater({
 }) {
   const { mutate, isPending } = useUpdateInvoiceStatus();
 
-  const handleStatusChange = (newStatus: string) => {
-    mutate({ id: invoiceId, status: newStatus as "draft" | "sent" | "paid" });
+  const handleStatusChange = (newStatus: "draft" | "sent" | "paid") => {
+    mutate({ id: invoiceId, status: newStatus });
   };
 
   return (
     <Select
-      value={currentStatus}
+      defaultValue={currentStatus}
       onValueChange={handleStatusChange}
       disabled={isPending}
     >
