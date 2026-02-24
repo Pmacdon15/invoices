@@ -94,7 +94,10 @@ export async function uploadLogoDal(
   }
 
   try {
-    const blob = await put(file.name, file, { access: "private" });
+    const blob = await put(file.name, file, {
+      access: "private",
+      addRandomSuffix: true,
+    });
 
     const input = {
       orgId,
