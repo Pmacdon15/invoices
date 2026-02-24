@@ -67,7 +67,7 @@ export function Navbar() {
             </NavigationMenuList>
           </NavigationMenu>
           <div>
-            <SignedOut>
+            {/* <SignedOut>
               <SignInButton>
                 <Button>Sign in</Button>
               </SignInButton>
@@ -78,7 +78,7 @@ export function Navbar() {
                 <UserButton />
                 <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
               </div>
-            </SignedIn>
+            </SignedIn> */}
           </div>
         </div>
 

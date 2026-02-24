@@ -2,7 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
 import { CreateInvoiceSchema } from "./schema";
-import type { CreateInvoiceInput, Invoice, Result } from "./types";
+import type {
+  CreateInvoiceInput,
+  FullInvoice,
+  Invoice,
+  Result,
+} from "./types";
 
 export async function getInvoices(): Promise<Result<Invoice[]>> {
   "use cache: private";
@@ -42,7 +47,7 @@ export async function getInvoices(): Promise<Result<Invoice[]>> {
   }
 }
 
-export async function getInvoiceById(id: string): Promise<Result<Invoice>> {
+export async function getInvoiceById(id: string): Promise<Result<FullInvoice>> {
   const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
