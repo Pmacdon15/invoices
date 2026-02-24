@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "postbuild": "next-sitemap --config next-sitemap.config.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.38.2",
@@ -23,6 +24,7 @@
     "jspdf": "^4.2.0",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
+    "next-sitemap": "^4.2.3",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react": "19.2.4",
