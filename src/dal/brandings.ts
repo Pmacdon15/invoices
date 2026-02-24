@@ -117,7 +117,7 @@ export async function uploadLogoDal(
     `) as Branding[];
 
     return { data: updatedBranding, error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Upload error:", err);
     return { data: null, error: "Failed to upload logo and update branding." };
   }
@@ -136,7 +136,7 @@ export async function deleteLogoDal(
     const data =
       (await sql`SELECT * FROM brandings WHERE org_id = ${org_id} LIMIT 1`) as Branding[];
 
-    if (data && data[0] && data[0].logo_url) {
+    if (data[0].logo_url) {
       await del(data[0].logo_url);
     }
 
