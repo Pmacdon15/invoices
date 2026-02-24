@@ -1,9 +1,9 @@
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { CustomersTable } from "@/components/tables/customer-table";
 import { Button } from "@/components/ui/button";
 import { getCustomers } from "@/dal/customers";
-import { CustomersTable } from "../../components/customer-table";
 
 export default async function CustomersPage() {
   const dataPromise = getCustomers();

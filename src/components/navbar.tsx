@@ -33,6 +33,7 @@ const navItems = [
   { title: "Customers", href: "/customers" },
   { title: "Products", href: "/products" },
   { title: "Invoices", href: "/invoices" },
+  { title: "Brandings", href: "/brandings" },
 ];
 
 export function Navbar() {

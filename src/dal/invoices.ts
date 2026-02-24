@@ -175,3 +175,27 @@ export async function deleteInvoiceDal(id: string): Promise<Result<void>> {
     return { data: null, error: "Failed to delete invoice." };
   }
 }
+
+export async function updateInvoiceStatusDal(
+  id: string,
+  status: "draft" | "sent" | "paid",
+): Promise<Result<void>> {
+  if (!process.env.DATABASE_URL) {
+    return { data: null, error: "Configuration error" };
+  }
+
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+
+    await sql`
+      UPDATE invoices 
+      SET status = ${status}
+      WHERE id = ${id}
+    `;
+
+    return { data: undefined, error: null };
+  } catch (e: unknown) {
+    console.error("Database Update Error:", e);
+    return { data: null, error: "Failed to update invoice status." };
+  }
+}

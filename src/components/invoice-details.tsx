@@ -8,18 +8,22 @@ import {
   Package,
   User,
 } from "lucide-react";
+import Image from "next/image";
 import { use } from "react";
-import type { FullInvoice, Result } from "@/dal/types";
-import { DownloadPDFButton } from "./download-pdf-button";
+import type { Branding, FullInvoice, Result } from "@/dal/types";
+import { DownloadPDFButton } from "./buttons/download-pdf-button";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 export function InvoiceDetails({
   invoicePromise,
+  brandingPromise,
 }: {
   invoicePromise: Promise<Result<FullInvoice>>;
+  brandingPromise: Promise<Result<Branding>>;
 }) {
   const { data: invoice, error } = use(invoicePromise);
+  const { data: branding, error: brandingError } = use(brandingPromise);
 
   // FIX: Show error if there IS an error or NO data
   if (error !== null || !invoice) {
@@ -72,6 +76,20 @@ export function InvoiceDetails({
         id="invoice-content"
         className="space-y-6 bg-background p-8 rounded-xl border border-transparent"
       >
+        {brandingError && (
+          <div className="text-destructive">
+            Error loading branding {brandingError}
+          </div>
+        )}
+        {branding?.logo_url && (
+          <Image
+            src={branding.logo_url}
+            alt="Organization Logo"
+            width={200}
+            height={100}
+            className="h-16 w-auto object-contain mb-4"
+          />
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="shadow-sm border-muted/50">
             <CardHeader className="pb-2">

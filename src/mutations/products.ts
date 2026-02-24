@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { revalidatePathAction, updateTagAction } from "@/actions/actions";
 import { createProductAction, deleteProductAction } from "@/actions/products";
+import { revalidatePathAction } from "@/actions/revalidate";
 import type { CreateProductInput } from "@/dal/types";
 
 export const useCreateProduct = () => {
@@ -43,7 +43,7 @@ export const useDeleteProduct = () => {
     },
     onSuccess: () => {
       toast.success("Product has been deleted");
-     revalidatePathAction("/products");
+      revalidatePathAction("/products");
     },
     onError: (error) => {
       toast.error(error.message);

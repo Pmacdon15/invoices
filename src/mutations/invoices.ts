@@ -1,8 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { revalidatePathAction } from "@/actions/actions";
-import { createInvoiceAction, deleteInvoiceAction } from "@/actions/invoices";
+import {
+  createInvoiceAction,
+  deleteInvoiceAction,
+  updateInvoiceStatusAction,
+} from "@/actions/invoices";
+import { revalidatePathAction } from "@/actions/revalidate";
 import type { CreateInvoiceInput } from "@/dal/types";
 
 export const useCreateInvoice = () => {
@@ -46,6 +50,36 @@ export const useDeleteInvoice = () => {
     onSuccess: () => {
       toast.success("Invoice has been deleted");
       //TODO: change this to update tag once auth is in
+      revalidatePathAction("/invoices");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+};
+
+export const useUpdateInvoiceStatus = () => {
+  return useMutation({
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: "draft" | "sent" | "paid";
+    }) => {
+      const { data: result, error } = await updateInvoiceStatusAction(
+        id,
+        status,
+      );
+
+      if (error !== null) {
+        throw new Error(error || "Failed to update invoice status");
+      }
+
+      return result;
+    },
+    onSuccess: () => {
+      toast.success("Invoice status has been updated");
       revalidatePathAction("/invoices");
     },
     onError: (error) => {

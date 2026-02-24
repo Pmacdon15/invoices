@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getCustomers } from "@/dal/customers";
 import { getProducts } from "@/dal/products";
-import { InvoiceForm } from "./invoice-form";
+import { InvoiceForm } from "../../../components/forms/invoice-form";
 
 export default async function NewInvoicePage() {
   const customersPromise = getCustomers();
