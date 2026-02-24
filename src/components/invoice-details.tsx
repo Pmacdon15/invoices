@@ -1,20 +1,11 @@
 "use client";
 import { useOrganization } from "@clerk/nextjs";
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  CreditCard,
-  FileText,
-  Package,
-  User,
-} from "lucide-react";
+import { Calendar, CreditCard, Package, User } from "lucide-react";
 import Image from "next/image";
 import { use } from "react";
 import type { FullInvoice, Result } from "@/dal/types";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
 import { InvoiceStatusUpdater } from "./invoice-status-updater";
-import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 export function InvoiceDetails({
@@ -37,11 +28,11 @@ export function InvoiceDetails({
     );
   }
 
-  const statusIcons = {
-    draft: <Clock className="h-4 w-4" />,
-    sent: <FileText className="h-4 w-4" />,
-    paid: <CheckCircle2 className="h-4 w-4" />,
-  };
+  // const statusIcons = {
+  //   draft: <Clock className="h-4 w-4" />,
+  //   sent: <FileText className="h-4 w-4" />,
+  //   paid: <CheckCircle2 className="h-4 w-4" />,
+  // };
 
   return (
     <div className="space-y-6">
