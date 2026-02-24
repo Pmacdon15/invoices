@@ -5,6 +5,7 @@ import {
   SignedIn,
   SignedOut,
   SignInButton,
+  SignOutButton,
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
@@ -67,20 +68,19 @@ export function Navbar() {
               ))}
             </NavigationMenuList>
           </NavigationMenu>
-          <div>
-            {/* <SignedOut>
-              <SignInButton>
-                <Button>Sign in</Button>
-              </SignInButton>
-              <SignUpButton />
-            </SignedOut>
-            <SignedIn>
-              <div className="flex items-center gap-4">
-                <UserButton />
-                <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
-              </div>
-            </SignedIn> */}
-          </div>
+
+          <SignedOut>
+            <SignInButton>
+              <Button>Sign in</Button>
+            </SignInButton>
+            <SignUpButton />
+          </SignedOut>
+          <SignedIn>
+            <div className="flex items-center gap-4">
+              <UserButton />
+              <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
+            </div>
+          </SignedIn>
         </div>
 
         {/* Mobile Navigation */}
@@ -111,10 +111,17 @@ export function Navbar() {
                   </Link>
                 ))}
                 <hr className="my-2" />
-                <Button className="w-full">Sign Up</Button>
-                <Button variant="outline" className="w-full">
-                  Login
-                </Button>
+                <SignedOut>
+                  <SignInButton>
+                    <Button>Sign in</Button>
+                  </SignInButton>
+                  <SignUpButton />
+                </SignedOut>
+                <SignedIn>
+                  <div className="flex items-center gap-4">
+                    <SignOutButton />
+                  </div>
+                </SignedIn>
               </nav>
             </SheetContent>
           </Sheet>

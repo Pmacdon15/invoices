@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { ChevronLeft, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -9,7 +10,7 @@ import { getInvoiceById } from "@/dal/invoices";
 export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
   const invoicePromise = props.params.then((p) => getInvoiceById(p.id));
   const brandingPromise = getBranding();
-
+ 
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl">
       <div className="mb-6">

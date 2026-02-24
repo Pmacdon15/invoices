@@ -1,4 +1,5 @@
 "use client";
+import { useOrganization } from "@clerk/nextjs";
 import {
   Calendar,
   CheckCircle2,
@@ -23,7 +24,8 @@ export function InvoiceDetails({
   brandingPromise: Promise<Result<Branding>>;
 }) {
   const { data: invoice, error } = use(invoicePromise);
-  const { data: branding, error: brandingError } = use(brandingPromise);
+  const { data: branding, error: _brandingError } = use(brandingPromise);
+  const { organization } = useOrganization();
 
   // FIX: Show error if there IS an error or NO data
   if (error !== null || !invoice) {
@@ -81,6 +83,7 @@ export function InvoiceDetails({
             Error loading branding {brandingError}
           </div>
         )} */}
+        {<h1>{organization?.name}</h1>}
         {branding?.logo_url && (
           <Image
             src={branding.logo_url}
