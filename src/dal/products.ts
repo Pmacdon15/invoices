@@ -1,15 +1,21 @@
+import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
 import { CreateProductSchema } from "./schema";
 import type { CreateProductInput, Product, Result } from "./types";
 
 export async function getProducts(): Promise<Result<Product[]>> {
+  // "use cache: private";
+  // cacheTag("products");
+  const { orgId } = await auth.protect();
+
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
   try {
     const sql = neon(process.env.DATABASE_URL);
 
-    const productsFromDb = (await sql`SELECT * FROM products WHERE deleted = false`) as any[];
+    const productsFromDb =
+      (await sql`SELECT * FROM products WHERE deleted = false AND org_id = ${orgId}`) as any[];
     const data = productsFromDb.map((product) => ({
       ...product,
       price: parseFloat(product.price),
@@ -25,6 +31,7 @@ export async function getProducts(): Promise<Result<Product[]>> {
 export async function createProductDal(
   input: CreateProductInput,
 ): Promise<Result<Product>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -39,7 +46,7 @@ export async function createProductDal(
 
     const [newProduct] = (await sql`
       INSERT INTO products (name, price, org_id)
-      VALUES (${input.name}, ${input.price}, ${"org001a"})
+      VALUES (${input.name}, ${input.price}, ${orgId})
       RETURNING *
     `) as Product[];
 
@@ -51,6 +58,7 @@ export async function createProductDal(
 }
 
 export async function deleteProductDal(id: string): Promise<Result<void>> {
+  await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }

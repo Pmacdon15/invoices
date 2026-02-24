@@ -1,11 +1,11 @@
+import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
 import { del, get, put } from "@vercel/blob";
 import { CreateBrandingSchema } from "./schema";
 import type { Branding, CreateBrandingInput, Result } from "./types";
 
-export async function getBranding(
-  org_id: string = "org001a",
-): Promise<Result<Branding | null>> {
+export async function getBranding(): Promise<Result<Branding>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -13,8 +13,8 @@ export async function getBranding(
     const sql = neon(process.env.DATABASE_URL);
 
     const data =
-      (await sql`SELECT * FROM brandings WHERE org_id = ${org_id} LIMIT 1`) as Branding[];
-    
+      (await sql`SELECT * FROM brandings WHERE org_id = ${orgId} LIMIT 1`) as Branding[];
+
     if (!data || data.length === 0 || !data[0].logo_url)
       return {
         data: null,
@@ -23,7 +23,7 @@ export async function getBranding(
     const blogData = await get(data[0].logo_url, {
       access: "private",
     });
-    
+
     let logo_url = data[0].logo_url;
     if (blogData?.stream) {
       const response = new Response(blogData.stream);
@@ -37,7 +37,7 @@ export async function getBranding(
       org_id: data[0].org_id,
       logo_url: logo_url,
     };
-    return { data: brandingDataToSend || null, error: null };
+    return { data: brandingDataToSend, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
     return {
@@ -135,7 +135,7 @@ export async function deleteLogoDal(
 
     const data =
       (await sql`SELECT * FROM brandings WHERE org_id = ${org_id} LIMIT 1`) as Branding[];
-    
+
     if (data && data[0] && data[0].logo_url) {
       await del(data[0].logo_url);
     }

@@ -20,9 +20,7 @@ export const useCreateProduct = () => {
     onSuccess: () => {
       toast.success("Product has been created");
 
-      //TODO: change this to update tag once auth is in
       revalidatePathAction("/products");
-
       router.push(`/products`);
     },
     onError: (error) => {
@@ -45,8 +43,7 @@ export const useDeleteProduct = () => {
     },
     onSuccess: () => {
       toast.success("Product has been deleted");
-      //TODO: change this to update tag once auth is in
-      revalidatePathAction("/invoices");
+      revalidatePathAction("/products");
     },
     onError: (error) => {
       toast.error(error.message);

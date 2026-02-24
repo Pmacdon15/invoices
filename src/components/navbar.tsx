@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  OrganizationSwitcher,
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
 import { Menu, ReceiptText } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -32,7 +40,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center space-x-2">
@@ -59,11 +67,19 @@ export function Navbar() {
               ))}
             </NavigationMenuList>
           </NavigationMenu>
-          <div className="flex items-center gap-2 ml-4">
-            <Button variant="ghost" size="sm">
-              Login
-            </Button>
-            <Button size="sm">Sign Up</Button>
+          <div>
+            {/* <SignedOut>
+              <SignInButton>
+                <Button>Sign in</Button>
+              </SignInButton>
+              <SignUpButton />
+            </SignedOut>
+            <SignedIn>
+              <div className="flex items-center gap-4">
+                <UserButton />
+                <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
+              </div>
+            </SignedIn> */}
           </div>
         </div>
 

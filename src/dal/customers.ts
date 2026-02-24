@@ -1,8 +1,12 @@
+import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
 import { CreateCustomerSchema } from "./schema";
 import type { CreateCustomerInput, Customer, Result } from "./types";
 
 export async function getCustomers(): Promise<Result<Customer[]>> {
+  // "use cache: private";
+  // cacheTag("customers");
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -10,7 +14,7 @@ export async function getCustomers(): Promise<Result<Customer[]>> {
     const sql = neon(process.env.DATABASE_URL);
 
     const data =
-      (await sql`SELECT * FROM customers WHERE deleted = false`) as Customer[];
+      (await sql`SELECT * FROM customers WHERE deleted = false AND org_id = ${orgId}`) as Customer[];
 
     return { data, error: null };
   } catch (e: unknown) {
@@ -25,6 +29,7 @@ export async function getCustomers(): Promise<Result<Customer[]>> {
 export async function createCustomerDal(
   input: CreateCustomerInput,
 ): Promise<Result<Customer>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -39,7 +44,7 @@ export async function createCustomerDal(
 
     const [newCustomer] = (await sql`
       INSERT INTO customers (name, email, org_id)
-      VALUES (${input.name}, ${input.email}, ${"org001a"})
+      VALUES (${input.name}, ${input.email}, ${orgId})
       RETURNING *
     `) as Customer[];
 
@@ -54,6 +59,7 @@ export async function createCustomerDal(
 }
 
 export async function deleteCustomerDal(id: string): Promise<Result<void>> {
+  await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
