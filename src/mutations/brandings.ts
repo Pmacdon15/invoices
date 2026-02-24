@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { uploadLogoAction } from "@/actions/brandings";
+import { deleteLogoAction, uploadLogoAction } from "@/actions/brandings";
 import { revalidatePathAction } from "@/actions/revalidate";
 
 export const useUploadLogo = () => {
@@ -16,6 +16,25 @@ export const useUploadLogo = () => {
     },
     onSuccess: () => {
       toast.success("Logo has been uploaded successfully");
+      revalidatePathAction("/brandings" as any);
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+};
+
+export const useDeleteLogo = () => {
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await deleteLogoAction();
+
+      if (error) {
+        throw new Error(error || "Failed to delete logo");
+      }
+    },
+    onSuccess: () => {
+      toast.success("Logo has been deleted successfully");
       revalidatePathAction("/brandings" as any);
     },
     onError: (error) => {

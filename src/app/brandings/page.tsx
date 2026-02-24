@@ -10,8 +10,9 @@ import {
 } from "@/components/ui/card";
 import { getBranding } from "@/dal/brandings";
 import { UploadLogoForm } from "../../components/forms/upload-logo-form";
+import { DeleteLogoButton } from "@/components/buttons/delete-logo-button";
 
-export default async function BrandingsPage() {
+export default function BrandingsPage() {
   return (
     <div className="container mx-auto py-10 px-4 max-w-2xl">
       <h1 className="text-4xl font-black mb-6 tracking-tight">BRANDING</h1>
@@ -39,7 +40,8 @@ async function BrandingForm() {
       </CardHeader>
       <CardContent className="space-y-6">
         {logoUrl && (
-          <div className="bg-muted/30 p-4 rounded-lg flex items-center justify-center border border-muted/50">
+          <div className="relative bg-muted/30 p-4 rounded-lg flex items-center justify-center border border-muted/50">
+            <DeleteLogoButton />
             <Image
               width={600}
               height={600}

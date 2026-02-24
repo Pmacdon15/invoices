@@ -8,6 +8,7 @@ import {
   Package,
   User,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -67,23 +68,16 @@ async function InvoiceDetails({
   const { data: branding } = await getBranding(invoice.org_id);
   const logoUrl = branding?.logo_url;
 
-  const statusIcons = {
-    draft: <Clock className="h-4 w-4" />,
-    sent: <FileText className="h-4 w-4" />,
-    paid: <CheckCircle2 className="h-4 w-4" />,
-  };
+  // const statusIcons = {
+  //   draft: <Clock className="h-4 w-4" />,
+  //   sent: <FileText className="h-4 w-4" />,
+  //   paid: <CheckCircle2 className="h-4 w-4" />,
+  // };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          {logoUrl && (
-            <img
-              src={logoUrl}
-              alt="Organization Logo"
-              className="h-16 object-contain mb-4"
-            />
-          )}
           <h1 className="text-4xl font-black mb-2 uppercase tracking-tight">
             Invoice
           </h1>
@@ -94,7 +88,7 @@ async function InvoiceDetails({
           <div className="flex flex-col items-end gap-2">
             <InvoiceStatusUpdater
               invoiceId={invoice.id}
-              currentStatus={invoice.status as any}
+              currentStatus={invoice.status}
             />
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4" />
@@ -112,6 +106,15 @@ async function InvoiceDetails({
         id="invoice-content"
         className="space-y-6 bg-background p-8 rounded-xl border border-transparent"
       >
+        {logoUrl && (
+          <Image
+            src={logoUrl}
+            alt="Organization Logo"
+            width={200}
+            height={100}
+            className="h-16 w-auto object-contain mb-4"
+          />
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="shadow-sm border-muted/50">
             <CardHeader className="pb-2">

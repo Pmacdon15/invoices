@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { get, put } from "@vercel/blob";
+import { del, get, put } from "@vercel/blob";
 import { CreateBrandingSchema } from "./schema";
 import type { Branding, CreateBrandingInput, Result } from "./types";
 
@@ -14,10 +14,11 @@ export async function getBranding(
 
     const data =
       (await sql`SELECT * FROM brandings WHERE org_id = ${org_id} LIMIT 1`) as Branding[];
-    if (!data[0].logo_url)
+    
+    if (!data || data.length === 0 || !data[0].logo_url)
       return {
         data: null,
-        error: "Database error occurred while fetching branding.",
+        error: "Branding not found or missing logo.",
       };
     const blogData = await get(data[0].logo_url, {
       access: "private",
@@ -119,5 +120,35 @@ export async function uploadLogoDal(
   } catch (err: any) {
     console.error("Upload error:", err);
     return { data: null, error: "Failed to upload logo and update branding." };
+  }
+}
+
+export async function deleteLogoDal(
+  org_id: string = "org001a",
+): Promise<Result<null>> {
+  if (!process.env.DATABASE_URL) {
+    return { data: null, error: "Configuration error" };
+  }
+
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+
+    const data =
+      (await sql`SELECT * FROM brandings WHERE org_id = ${org_id} LIMIT 1`) as Branding[];
+    
+    if (data && data[0] && data[0].logo_url) {
+      await del(data[0].logo_url);
+    }
+
+    await sql`
+      UPDATE brandings 
+      SET logo_url = NULL 
+      WHERE org_id = ${org_id}
+    `;
+
+    return { data: null, error: null };
+  } catch (e: unknown) {
+    console.error("Delete logo error:", e);
+    return { data: null, error: "Failed to delete logo." };
   }
 }
