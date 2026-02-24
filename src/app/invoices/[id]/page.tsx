@@ -11,11 +11,12 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { DownloadPDFButton } from "@/components/download-pdf-button";
-import { Badge } from "@/components/ui/badge";
+import { DownloadPDFButton } from "@/components/buttons/download-pdf-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getBranding } from "@/dal/brandings";
 import { getInvoiceById } from "@/dal/invoices";
+import { InvoiceStatusUpdater } from "./status-updater";
 
 export default async function InvoicePage({
   params,
@@ -63,6 +64,9 @@ async function InvoiceDetails({
     notFound();
   }
 
+  const { data: branding } = await getBranding(invoice.org_id);
+  const logoUrl = branding?.logo_url;
+
   const statusIcons = {
     draft: <Clock className="h-4 w-4" />,
     sent: <FileText className="h-4 w-4" />,
@@ -73,6 +77,13 @@ async function InvoiceDetails({
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt="Organization Logo"
+              className="h-16 object-contain mb-4"
+            />
+          )}
           <h1 className="text-4xl font-black mb-2 uppercase tracking-tight">
             Invoice
           </h1>
@@ -81,13 +92,10 @@ async function InvoiceDetails({
         <div className="flex items-center gap-3">
           <DownloadPDFButton invoiceId={invoice.id} />
           <div className="flex flex-col items-end gap-2">
-            <Badge
-              variant={invoice.status === "paid" ? "default" : "secondary"}
-              className="px-4 py-1 text-sm capitalize flex items-center gap-2"
-            >
-              {statusIcons[invoice.status as keyof typeof statusIcons]}
-              {invoice.status}
-            </Badge>
+            <InvoiceStatusUpdater
+              invoiceId={invoice.id}
+              currentStatus={invoice.status as any}
+            />
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               {new Date(invoice.created_at).toLocaleDateString("en-US", {

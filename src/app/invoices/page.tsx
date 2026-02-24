@@ -1,9 +1,9 @@
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { InvoicesTable } from "@/components/tables/invoices-table";
 import { Button } from "@/components/ui/button";
 import { getInvoices } from "@/dal/invoices";
-import { InvoicesTable } from "../../components/invoices-table";
 
 export default async function InvoicesPage() {
   const invoicesPromise = getInvoices();

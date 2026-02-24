@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { use } from "react";
-import { DataTable } from "@/components/data-table";
+import { DataTable } from "@/components/tables/data-table";
 import type { Customer, Result } from "@/dal/types";
 import DeleteCustomerButton from "./buttons/delete-customer-button";
 

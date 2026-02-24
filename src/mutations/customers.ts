@@ -2,11 +2,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { revalidatePathAction } from "@/actions/actions";
 import {
   createCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
+import { revalidatePathAction } from "@/actions/revalidate";
 import type { CreateCustomerInput } from "@/dal/types";
 
 export const useCreateCustomer = () => {

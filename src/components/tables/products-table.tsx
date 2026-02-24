@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Loader2, Trash2 } from "lucide-react";
 import { use } from "react";
-import { DataTable } from "@/components/data-table";
+import { DataTable } from "@/components/tables/data-table";
 import { Button } from "@/components/ui/button";
 import type { Product, Result } from "@/dal/types";
 import { useDeleteProduct } from "@/mutations/products";
