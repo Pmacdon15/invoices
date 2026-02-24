@@ -13,6 +13,7 @@ import Image from "next/image";
 import { use } from "react";
 import type { FullInvoice, Result } from "@/dal/types";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
+import { InvoiceStatusUpdater } from "./invoice-status-updater";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
@@ -55,13 +56,10 @@ export function InvoiceDetails({
           {/* FIX: Use invoice.id consistently */}
           <DownloadPDFButton invoiceId={invoice.id} />
           <div className="flex flex-col items-end gap-2">
-            <Badge
-              variant={invoice.status === "paid" ? "default" : "secondary"}
-              className="px-4 py-1 text-sm capitalize flex items-center gap-2"
-            >
-              {statusIcons[invoice.status as keyof typeof statusIcons]}
-              {invoice.status}
-            </Badge>
+            <InvoiceStatusUpdater
+              invoiceId={invoice.id}
+              currentStatus={invoice.status as "draft" | "sent" | "paid"}
+            />
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               {new Date(invoice.created_at).toLocaleDateString("en-US", {

@@ -180,6 +180,7 @@ export async function updateInvoiceStatusDal(
   id: string,
   status: "draft" | "sent" | "paid",
 ): Promise<Result<void>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -190,7 +191,7 @@ export async function updateInvoiceStatusDal(
     await sql`
       UPDATE invoices 
       SET status = ${status}
-      WHERE id = ${id}
+      WHERE id = ${id} AND org_id = ${orgId}
     `;
 
     return { data: undefined, error: null };
