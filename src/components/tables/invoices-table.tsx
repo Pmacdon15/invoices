@@ -4,11 +4,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
-import { DataTable } from "@/components/data-table";
+import { DataTable } from "@/components/tables/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Invoice, Result } from "@/dal/types";
-import DeleteInvoiceButton from "./buttons/delete-invoice-button";
+import DeleteInvoiceButton from "../buttons/delete-invoice-button";
 
 interface InvoicesTableProps {
   invoicesPromise: Promise<Result<Invoice[]>>;

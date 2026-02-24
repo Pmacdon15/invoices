@@ -41,6 +41,19 @@ export const CreateInvoiceItemSchema = InvoiceItemSchema.omit({
   invoice_id: true,
 });
 
+// --- Branding ---
+export const BrandingSchema = z.object({
+  id: z.uuid(),
+  org_id: z.string(),
+  logo_url: z.string().nullable().optional(),
+  created_at: z.string().optional(),
+});
+
+export const CreateBrandingSchema = BrandingSchema.omit({
+  id: true,
+  created_at: true,
+});
+
 // --- Invoice ---
 export const InvoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 
