@@ -100,20 +100,23 @@ export async function uploadLogoDal(
     });
 
     const input = {
-      orgId,
+      org_id: orgId,
       logo_url: blob.url,
     };
 
     const validation = CreateBrandingSchema.safeParse(input);
     if (!validation.success) {
-      return { data: null, error: validation.error.issues[0].message };
+      return {
+        data: null,
+        error: `Validation Error ${validation.error.issues[0].message}`,
+      };
     }
 
     const sql = neon(process.env.DATABASE_URL);
 
     const [updatedBranding] = (await sql`
       INSERT INTO brandings (org_id, logo_url)
-      VALUES (${input.orgId}, ${input.logo_url})
+      VALUES (${input.org_id}, ${input.logo_url})
       ON CONFLICT (org_id) DO UPDATE 
       SET logo_url = EXCLUDED.logo_url
       RETURNING *
