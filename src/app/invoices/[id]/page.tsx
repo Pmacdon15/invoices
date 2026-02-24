@@ -1,12 +1,11 @@
-import { ChevronLeft, CreditCard } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
 import { InvoiceDetails } from "@/components/invoice-details";
 import { Button } from "@/components/ui/button";
 import { getInvoiceById } from "@/dal/invoices";
 
 export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
-  // const invoicePromise = props.params.then((p) => getInvoiceById(p.id));
+  const invoicePromise = props.params.then((p) => getInvoiceById(p.id));
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl">
@@ -22,7 +21,7 @@ export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
         </Button>
       </div>
 
-    
+      <InvoiceDetails invoicePromise={invoicePromise} />
     </div>
   );
 }
