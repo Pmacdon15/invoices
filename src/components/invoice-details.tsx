@@ -76,11 +76,11 @@ export function InvoiceDetails({
         id="invoice-content"
         className="space-y-6 bg-background p-8 rounded-xl border border-transparent"
       >
-        {brandingError && (
+        {/* {brandingError && (
           <div className="text-destructive">
             Error loading branding {brandingError}
           </div>
-        )}
+        )} */}
         {branding?.logo_url && (
           <Image
             src={branding.logo_url}
