@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   typedRoutes:true,
-  cacheComponents:true
+  // cacheComponents:true
 };
 
 export default nextConfig;

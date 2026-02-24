@@ -1,12 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
-import { cacheTag } from "next/cache";
 import { CreateCustomerSchema } from "./schema";
 import type { CreateCustomerInput, Customer, Result } from "./types";
 
 export async function getCustomers(): Promise<Result<Customer[]>> {
-  "use cache: private";
-  cacheTag("customers");
+  // "use cache: private";
+  // cacheTag("customers");
   const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };

@@ -2,7 +2,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updateTagAction } from "@/actions/actions";
+import { revalidatePathAction } from "@/actions/actions";
 import {
   createCustomerAction,
   deleteCustomerAction,
@@ -24,7 +24,7 @@ export const useCreateCustomer = () => {
     onSuccess: () => {
       toast.success("Customer has been created");
 
-      updateTagAction("customers");
+      revalidatePathAction("/customers");
       router.push(`/customers`);
     },
     onError: (error) => {
@@ -47,7 +47,7 @@ export const useDeleteCustomer = () => {
     },
     onSuccess: () => {
       toast.success("Customer has been deleted");
-      updateTagAction("customers");
+      revalidatePathAction("/customers");
     },
     onError: (error) => {
       toast.error(error.message);

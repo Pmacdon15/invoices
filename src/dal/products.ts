@@ -1,12 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
-import { cacheTag } from "next/cache";
 import { CreateProductSchema } from "./schema";
 import type { CreateProductInput, Product, Result } from "./types";
 
 export async function getProducts(): Promise<Result<Product[]>> {
-  "use cache: private";
-  cacheTag("products");
+  // "use cache: private";
+  // cacheTag("products");
   const { orgId } = await auth.protect();
 
   if (!process.env.DATABASE_URL) {

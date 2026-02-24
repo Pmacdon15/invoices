@@ -19,8 +19,7 @@ export const useCreateInvoice = () => {
     },
     onSuccess: (data) => {
       toast.success("Invoice has been created");
-
-      //TODO: change this to update tag once auth is in
+   
       revalidatePathAction("/invoices");
       if (data?.id) {
         router.push(`/invoices/${data.id}`);
