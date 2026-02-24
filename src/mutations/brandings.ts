@@ -16,7 +16,7 @@ export const useUploadLogo = () => {
     },
     onSuccess: () => {
       toast.success("Logo has been uploaded successfully");
-      revalidatePathAction("/brandings" as any);
+      revalidatePathAction("/brandings");
     },
     onError: (error) => {
       toast.error(error.message);
@@ -35,7 +35,7 @@ export const useDeleteLogo = () => {
     },
     onSuccess: () => {
       toast.success("Logo has been deleted successfully");
-      revalidatePathAction("/brandings" as any);
+      revalidatePathAction("/brandings");
     },
     onError: (error) => {
       toast.error(error.message);

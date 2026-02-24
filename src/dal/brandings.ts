@@ -83,6 +83,7 @@ export async function upsertBranding(
 export async function uploadLogoDal(
   formData: FormData,
 ): Promise<Result<Branding>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -94,10 +95,9 @@ export async function uploadLogoDal(
 
   try {
     const blob = await put(file.name, file, { access: "private" });
-    const org_id = "org001a";
 
     const input = {
-      org_id,
+      orgId,
       logo_url: blob.url,
     };
 
@@ -110,7 +110,7 @@ export async function uploadLogoDal(
 
     const [updatedBranding] = (await sql`
       INSERT INTO brandings (org_id, logo_url)
-      VALUES (${input.org_id}, ${input.logo_url})
+      VALUES (${input.orgId}, ${input.logo_url})
       ON CONFLICT (org_id) DO UPDATE 
       SET logo_url = EXCLUDED.logo_url
       RETURNING *
@@ -123,9 +123,8 @@ export async function uploadLogoDal(
   }
 }
 
-export async function deleteLogoDal(
-  org_id: string = "org001a",
-): Promise<Result<null>> {
+export async function deleteLogoDal(): Promise<Result<null>> {
+  const { orgId } = await auth.protect();
   if (!process.env.DATABASE_URL) {
     return { data: null, error: "Configuration error" };
   }
@@ -134,7 +133,7 @@ export async function deleteLogoDal(
     const sql = neon(process.env.DATABASE_URL);
 
     const data =
-      (await sql`SELECT * FROM brandings WHERE org_id = ${org_id} LIMIT 1`) as Branding[];
+      (await sql`SELECT * FROM brandings WHERE org_id = ${orgId} LIMIT 1`) as Branding[];
 
     if (data[0].logo_url) {
       await del(data[0].logo_url);
@@ -143,7 +142,7 @@ export async function deleteLogoDal(
     await sql`
       UPDATE brandings 
       SET logo_url = NULL 
-      WHERE org_id = ${org_id}
+      WHERE org_id = ${orgId}
     `;
 
     return { data: null, error: null };
