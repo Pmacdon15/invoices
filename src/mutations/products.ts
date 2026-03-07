@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProductAction, deleteProductAction } from "@/actions/products";
-import { revalidatePathAction } from "@/actions/revalidate";
+import { updateTagAction } from "@/actions/revalidate";
 import type { CreateProductInput } from "@/dal/types";
 
 export const useCreateProduct = () => {
@@ -17,11 +17,10 @@ export const useCreateProduct = () => {
 
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Product has been created");
-
-      revalidatePathAction("/products");
-      router.push(`/products`);
+      updateTagAction(`products-${result.org_id}`);
+      router.push("/products");
     },
     onError: (error) => {
       toast.error(error.message);
@@ -39,11 +38,11 @@ export const useDeleteProduct = () => {
         throw new Error(error || "Failed to delete product");
       }
 
-      return result; // This result is passed to onSuccess
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Product has been deleted");
-      revalidatePathAction("/products");
+      updateTagAction(`products-${result.org_id}`);
     },
     onError: (error) => {
       toast.error(error.message);

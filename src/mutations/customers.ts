@@ -6,7 +6,7 @@ import {
   createCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
-import { revalidatePathAction } from "@/actions/revalidate";
+import { updateTagAction } from "@/actions/revalidate";
 import type { CreateCustomerInput } from "@/dal/types";
 
 export const useCreateCustomer = () => {
@@ -21,10 +21,10 @@ export const useCreateCustomer = () => {
 
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Customer has been created");
 
-      revalidatePathAction("/customers");
+      updateTagAction(`customers-${result.org_id}`);
       router.push(`/customers`);
     },
     onError: (error) => {
@@ -43,11 +43,11 @@ export const useDeleteCustomer = () => {
         throw new Error(error || "Failed to delete customer");
       }
 
-      return result; // This result is passed to onSuccess
+      return result; 
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Customer has been deleted");
-      revalidatePathAction("/customers");
+      updateTagAction(`customers-${result.org_id}`);
     },
     onError: (error) => {
       toast.error(error.message);
