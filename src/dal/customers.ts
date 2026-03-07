@@ -1,21 +1,20 @@
 import { auth } from "@clerk/nextjs/server";
-import { neon } from "@neondatabase/serverless";
+import {
+  createCustomerDb,
+  deleteCustomerDb,
+  fetchingCustomersDb,
+} from "@/db/customers";
 import { CreateCustomerSchema } from "./schema";
 import type { CreateCustomerInput, Customer, Result } from "./types";
 
 export async function getCustomers(): Promise<Result<Customer[]>> {
-  // "use cache: private";
-  // cacheTag("customers");
   const { orgId } = await auth.protect();
-  if (!process.env.DATABASE_URL) {
-    return { data: null, error: "Configuration error" };
+
+  if (!orgId) {
+    return { data: null, error: "No org" };
   }
   try {
-    const sql = neon(process.env.DATABASE_URL);
-
-    const data =
-      (await sql`SELECT * FROM customers WHERE deleted = false AND org_id = ${orgId}`) as Customer[];
-
+    const data = await fetchingCustomersDb(orgId);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
@@ -30,8 +29,9 @@ export async function createCustomerDal(
   input: CreateCustomerInput,
 ): Promise<Result<Customer>> {
   const { orgId } = await auth.protect();
-  if (!process.env.DATABASE_URL) {
-    return { data: null, error: "Configuration error" };
+
+  if (!orgId) {
+    return { data: null, error: "No org" };
   }
 
   const validation = CreateCustomerSchema.safeParse(input);
@@ -40,15 +40,8 @@ export async function createCustomerDal(
   }
 
   try {
-    const sql = neon(process.env.DATABASE_URL);
-
-    const [newCustomer] = (await sql`
-      INSERT INTO customers (name, email, org_id)
-      VALUES (${input.name}, ${input.email}, ${orgId})
-      RETURNING *
-    `) as Customer[];
-
-    return { data: newCustomer, error: null };
+    const data = await createCustomerDb(input, orgId);
+    return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Insert Error:", e);
     return {
@@ -60,19 +53,8 @@ export async function createCustomerDal(
 
 export async function deleteCustomerDal(id: string): Promise<Result<void>> {
   await auth.protect();
-  if (!process.env.DATABASE_URL) {
-    return { data: null, error: "Configuration error" };
-  }
-
   try {
-    const sql = neon(process.env.DATABASE_URL);
-
-    await sql`
-      UPDATE customers 
-      SET deleted = true 
-      WHERE id = ${id}
-    `;
-
+    await deleteCustomerDb(id);
     return { data: undefined, error: null };
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
