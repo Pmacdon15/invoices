@@ -6,7 +6,7 @@ import {
   deleteInvoiceAction,
   updateInvoiceStatusAction,
 } from "@/actions/invoices";
-import { revalidatePathAction } from "@/actions/revalidate";
+import { updateTagAction } from "@/actions/revalidate";
 import type { CreateInvoiceInput } from "@/dal/types";
 
 export const useCreateInvoice = () => {
@@ -23,8 +23,8 @@ export const useCreateInvoice = () => {
     },
     onSuccess: (data) => {
       toast.success("Invoice has been created");
-   
-      revalidatePathAction("/invoices");
+
+      updateTagAction(`invoices-${data.org_id}`);
       if (data?.id) {
         router.push(`/invoices/${data.id}`);
       }
@@ -45,12 +45,12 @@ export const useDeleteInvoice = () => {
         throw new Error(error || "Failed to delete invoice");
       }
 
-      return result; // This result is passed to onSuccess
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Invoice has been deleted");
-      //TODO: change this to update tag once auth is in
-      revalidatePathAction("/invoices");
+      updateTagAction(`invoices-${result.org_id}`);
+      updateTagAction(`invoice-${result.id}`);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -78,9 +78,10 @@ export const useUpdateInvoiceStatus = () => {
 
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Invoice status has been updated");
-      revalidatePathAction("/invoices");
+      updateTagAction(`invoices-${result.org_id}`);
+      updateTagAction(`invoice-${result.id}`);
     },
     onError: (error) => {
       toast.error(error.message);

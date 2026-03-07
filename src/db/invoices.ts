@@ -1,7 +1,10 @@
 import { neon } from "@neondatabase/serverless";
+import { cacheTag } from "next/cache";
 import type { CreateInvoiceInput, FullInvoice, Invoice } from "@/dal/types";
 
 export async function fetchingInvoicesDb(orgId: string): Promise<Invoice[]> {
+  "use cache";
+  cacheTag(`invoices-${orgId}`);
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
@@ -32,6 +35,8 @@ export async function fetchingInvoiceByIdDb(
   id: string,
   orgId: string,
 ): Promise<FullInvoice | null> {
+  "use cache";
+  cacheTag(`invoice-${id}`);
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
@@ -124,28 +129,40 @@ export async function createInvoiceDb(
   return data;
 }
 
-export async function deleteInvoiceDb(id: string): Promise<void> {
+export async function deleteInvoiceDb(id: string): Promise<Invoice> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
-  const sql = neon(process.env.DATABASE_URL);
-  // Delete invoice items first (assuming no CASCADE)
-  await sql`DELETE FROM invoice_items WHERE invoice_id = ${id}`;
-  await sql`DELETE FROM invoices WHERE id = ${id}`;
-}
 
+  const sql = neon(process.env.DATABASE_URL);
+
+  await sql`DELETE FROM invoice_items WHERE invoice_id = ${id}`;
+
+  const result = await sql`
+    DELETE FROM invoices 
+    WHERE id = ${id} 
+    RETURNING *
+  `;
+  if (!result[0]) {
+    throw new Error(`Invoice ${id} not found`);
+  }
+
+  return result[0] as Invoice;
+}
 export async function updateInvoiceStatusDb(
   id: string,
   status: "draft" | "sent" | "paid",
   orgId: string,
-): Promise<void> {
+): Promise<Invoice> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
   const sql = neon(process.env.DATABASE_URL);
-  await sql`
+  const result = await sql`
     UPDATE invoices 
     SET status = ${status}
     WHERE id = ${id} AND org_id = ${orgId}
+    RETURNING *;
   `;
+  return result[0] as Invoice;
 }

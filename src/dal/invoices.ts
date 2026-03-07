@@ -10,7 +10,7 @@ import { CreateInvoiceSchema } from "./schema";
 import type { CreateInvoiceInput, FullInvoice, Invoice, Result } from "./types";
 
 export async function getInvoices(): Promise<Result<Invoice[]>> {
-  const { orgId } = await auth.protect(); 
+  const { orgId } = await auth.protect();
   if (!orgId) {
     return { data: null, error: "No org" };
   }
@@ -42,7 +42,7 @@ export async function getInvoiceById(id: string): Promise<Result<FullInvoice>> {
 export async function createInvoiceDal(
   input: CreateInvoiceInput,
 ): Promise<Result<Invoice>> {
-  const { orgId } = await auth.protect(); 
+  const { orgId } = await auth.protect();
   if (!orgId) {
     return { data: null, error: "No org" };
   }
@@ -61,12 +61,12 @@ export async function createInvoiceDal(
   }
 }
 
-export async function deleteInvoiceDal(id: string): Promise<Result<void>> {
+export async function deleteInvoiceDal(id: string): Promise<Result<Invoice>> {
   await auth.protect();
- 
+
   try {
-    await deleteInvoiceDb(id);
-    return { data: undefined, error: null };
+    const data = await deleteInvoiceDb(id);
+    return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
     return { data: null, error: "Failed to delete invoice." };
@@ -76,15 +76,15 @@ export async function deleteInvoiceDal(id: string): Promise<Result<void>> {
 export async function updateInvoiceStatusDal(
   id: string,
   status: "draft" | "sent" | "paid",
-): Promise<Result<void>> {
+): Promise<Result<Invoice>> {
   const { orgId } = await auth.protect();
- 
- if (!orgId) {
+
+  if (!orgId) {
     return { data: null, error: "No org" };
   }
   try {
-    await updateInvoiceStatusDb(id, status, orgId);
-    return { data: undefined, error: null };
+    const data = await updateInvoiceStatusDb(id, status, orgId);
+    return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
     return { data: null, error: "Failed to update invoice status." };
