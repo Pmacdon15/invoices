@@ -1,7 +1,10 @@
 import { neon } from "@neondatabase/serverless";
+import { cacheTag } from "next/cache";
 import type { CreateCustomerInput, Customer } from "@/dal/types";
 
 export async function fetchingCustomersDb(orgId: string): Promise<Customer[]> {
+  "use cache";
+  cacheTag(`customers-${orgId}`);
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
@@ -29,14 +32,16 @@ export async function createCustomerDb(
   return newCustomer;
 }
 
-export async function deleteCustomerDb(id: string): Promise<void> {
+export async function deleteCustomerDb(id: string): Promise<Customer> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
   const sql = neon(process.env.DATABASE_URL);
-  await sql`
+  const [result] = await sql`
     UPDATE customers 
     SET deleted = true 
     WHERE id = ${id}
+    RETURNING *
   `;
+  return result as Customer;
 }

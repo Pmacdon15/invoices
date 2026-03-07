@@ -51,11 +51,11 @@ export async function createCustomerDal(
   }
 }
 
-export async function deleteCustomerDal(id: string): Promise<Result<void>> {
+export async function deleteCustomerDal(id: string): Promise<Result<Customer>> {
   await auth.protect();
   try {
-    await deleteCustomerDb(id);
-    return { data: undefined, error: null };
+    const data = await deleteCustomerDb(id);
+    return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
     return { data: null, error: "Database Error" };

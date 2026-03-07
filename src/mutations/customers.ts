@@ -6,7 +6,7 @@ import {
   createCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
-import { revalidatePathAction } from "@/actions/revalidate";
+import { revalidatePathAction, updateTagAction } from "@/actions/revalidate";
 import type { CreateCustomerInput } from "@/dal/types";
 
 export const useCreateCustomer = () => {
@@ -21,10 +21,10 @@ export const useCreateCustomer = () => {
 
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Customer has been created");
 
-      revalidatePathAction("/customers");
+      updateTagAction(`customers-${result.org_id}`);
       router.push(`/customers`);
     },
     onError: (error) => {
