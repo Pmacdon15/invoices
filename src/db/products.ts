@@ -1,7 +1,10 @@
 import { neon } from "@neondatabase/serverless";
+import { cacheTag } from "next/cache";
 import type { CreateProductInput, Product } from "@/dal/types";
 
 export async function fetchingProductsDb(orgId: string): Promise<Product[]> {
+  "use cache";
+  cacheTag(`products-${orgId}`);
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
@@ -9,7 +12,7 @@ export async function fetchingProductsDb(orgId: string): Promise<Product[]> {
   const productsFromDb = (await sql`
     SELECT * FROM products 
     WHERE deleted = false AND org_id = ${orgId}
-  `) as any[];
+  `) ;
 
   return productsFromDb.map((product) => ({
     ...product,
@@ -33,14 +36,21 @@ export async function createProductDb(
   return newProduct;
 }
 
-export async function deleteProductDb(id: string): Promise<void> {
+export async function deleteProductDb(id: string): Promise<Product> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
+
   const sql = neon(process.env.DATABASE_URL);
-  await sql`
+
+  // 1. Capture the result (neon returns an array)
+  const result = await sql`
     UPDATE products 
     SET deleted = true 
     WHERE id = ${id}
+    RETURNING *
   `;
+
+  // 2. Return the first element (the updated row) or null if not found
+  return (result[0] as Product);
 }

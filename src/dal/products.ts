@@ -45,11 +45,13 @@ export async function createProductDal(
   }
 }
 
-export async function deleteProductDal(id: string): Promise<Result<void>> {
+export async function deleteProductDal(
+  id: string,
+): Promise<Result<Product>> {
   await auth.protect();
   try {
-    await deleteProductDb(id);
-    return { data: undefined, error: null };
+    const data = await deleteProductDb(id);
+    return { data: data ?? null, error: null };
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
     return { data: null, error: "Failed to delete product." };
