@@ -2,8 +2,7 @@
 
 import {
   OrganizationSwitcher,
-  SignedIn,
-  SignedOut,
+  Show,
   SignInButton,
   SignOutButton,
   SignUpButton,
@@ -68,18 +67,18 @@ export function Navbar() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          <SignedOut>
+          <Show when={"signed-out"}>
             <SignInButton>
               <Button>Sign in</Button>
             </SignInButton>
             <SignUpButton />
-          </SignedOut>
-          <SignedIn>
+          </Show>
+          <Show when={"signed-in"}>
             <div className="flex items-center gap-4">
               <UserButton />
               <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
             </div>
-          </SignedIn>
+          </Show>
         </div>
 
         {/* Mobile Navigation */}
@@ -99,9 +98,9 @@ export function Navbar() {
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-4 ">
-                <SignedIn>
+                <Show when={"signed-in"}>
                   <OrganizationSwitcher />
-                </SignedIn>
+                </Show>
                 {navItems.map((item) => (
                   <Link
                     key={item.title}
@@ -113,17 +112,17 @@ export function Navbar() {
                   </Link>
                 ))}
                 <hr className="my-2" />
-                <SignedOut>
+                <Show when={"signed-out"}>
                   <SignInButton>
                     <Button>Sign in</Button>
                   </SignInButton>
                   <SignUpButton />
-                </SignedOut>
-                <SignedIn>
+                </Show>
+                <Show when={"signed-in"}>
                   <div className="flex items-center gap-4">
                     <SignOutButton />
                   </div>
-                </SignedIn>
+                </Show>
               </nav>
             </SheetContent>
           </Sheet>
