@@ -41,7 +41,7 @@ export function InvoiceDetails({
             ID: {invoice.id}
           </p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
           <DownloadPDFButton invoiceId={invoice.id} />
           <div className="flex flex-col items-end gap-2">
@@ -75,7 +75,9 @@ export function InvoiceDetails({
               className="h-12 md:h-16 w-auto object-contain"
             />
           )}
-          <h1 className="text-xl md:text-2xl font-bold">{organization?.name}</h1>
+          <h1 className="text-xl md:text-2xl font-bold">
+            {organization?.name}
+          </h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -121,12 +123,15 @@ export function InvoiceDetails({
                   <div className="flex justify-between items-start">
                     <div className="font-bold pr-2">{item.product?.name}</div>
                     <div className="font-black text-primary">
-                      {currencyFormatter.format(item.quantity * item.unit_price)}
+                      {currencyFormatter.format(
+                        item.quantity * item.unit_price,
+                      )}
                     </div>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>
-                      {item.quantity} x {currencyFormatter.format(item.unit_price)}
+                      {item.quantity} x{" "}
+                      {currencyFormatter.format(item.unit_price)}
                     </span>
                     <span className="font-mono uppercase">
                       ID: {item.product_id.slice(0, 8)}
@@ -135,7 +140,9 @@ export function InvoiceDetails({
                 </div>
               ))}
               <div className="bg-primary/5 p-4 flex justify-between items-center">
-                <span className="text-xs font-bold uppercase">Total Amount</span>
+                <span className="text-xs font-bold uppercase">
+                  Total Amount
+                </span>
                 <span className="text-xl font-black text-primary">
                   {currencyFormatter.format(invoice.total)}
                 </span>
@@ -145,15 +152,26 @@ export function InvoiceDetails({
             <table className="hidden md:table w-full text-sm">
               <thead className="bg-muted/40 border-y">
                 <tr>
-                  <th className="px-6 py-3 text-left font-bold uppercase tracking-wider text-xs">Description</th>
-                  <th className="px-6 py-3 text-center font-bold uppercase tracking-wider text-xs">Qty</th>
-                  <th className="px-6 py-3 text-right font-bold uppercase tracking-wider text-xs">Price</th>
-                  <th className="px-6 py-3 text-right font-bold uppercase tracking-wider text-xs">Amount</th>
+                  <th className="px-6 py-3 text-left font-bold uppercase tracking-wider text-xs">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-center font-bold uppercase tracking-wider text-xs">
+                    Qty
+                  </th>
+                  <th className="px-6 py-3 text-right font-bold uppercase tracking-wider text-xs">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-right font-bold uppercase tracking-wider text-xs">
+                    Amount
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {invoice.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={item.id}
+                    className="hover:bg-muted/20 transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div className="font-bold">{item.product?.name}</div>
                       <div className="text-xs text-muted-foreground">
@@ -165,14 +183,21 @@ export function InvoiceDetails({
                       {currencyFormatter.format(item.unit_price)}
                     </td>
                     <td className="px-6 py-4 text-right font-bold">
-                      {currencyFormatter.format(item.quantity * item.unit_price)}
+                      {currencyFormatter.format(
+                        item.quantity * item.unit_price,
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-muted/30 font-bold border-t-2 border-primary/20">
                 <tr>
-                  <td colSpan={3} className="px-6 py-4 text-right uppercase tracking-wider">Total Amount</td>
+                  <td
+                    colSpan={3}
+                    className="px-6 py-4 text-right uppercase tracking-wider"
+                  >
+                    Total Amount
+                  </td>
                   <td className="px-6 py-4 text-right text-xl text-primary font-black">
                     {currencyFormatter.format(invoice.total)}
                   </td>
