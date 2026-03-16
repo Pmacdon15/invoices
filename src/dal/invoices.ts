@@ -54,6 +54,8 @@ export async function createInvoiceDal(
 
   try {
     const data = await createInvoiceDb(input, orgId);
+
+    
     return { data, error: null };
   } catch (e: unknown) {
     console.error("SQL Error:", e);

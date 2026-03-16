@@ -1,16 +1,13 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   createCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
-import { updateTagAction } from "@/actions/revalidate";
 import type { CreateCustomerInput } from "@/dal/types";
 
 export const useCreateCustomer = () => {
-  const router = useRouter();
   return useMutation({
     mutationFn: async (data: CreateCustomerInput) => {
       const { data: result, error } = await createCustomerAction(data);
@@ -21,13 +18,14 @@ export const useCreateCustomer = () => {
 
       return result;
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast.success("Customer has been created");
-
-      updateTagAction(`customers-${result.org_id}`);
-      router.push(`/customers`);
     },
     onError: (error) => {
+      if (error.message === "NEXT_REDIRECT") {
+        toast.success("Customer has been created");
+        return;
+      }
       toast.error(error.message);
     },
   });
@@ -43,11 +41,10 @@ export const useDeleteCustomer = () => {
         throw new Error(error || "Failed to delete customer");
       }
 
-      return result; 
+      return result;
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast.success("Customer has been deleted");
-      updateTagAction(`customers-${result.org_id}`);
     },
     onError: (error) => {
       toast.error(error.message);

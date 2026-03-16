@@ -1,12 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProductAction, deleteProductAction } from "@/actions/products";
-import { updateTagAction } from "@/actions/revalidate";
 import type { CreateProductInput } from "@/dal/types";
 
 export const useCreateProduct = () => {
-  const router = useRouter();
   return useMutation({
     mutationFn: async (data: CreateProductInput) => {
       const { data: result, error } = await createProductAction(data);
@@ -17,12 +14,12 @@ export const useCreateProduct = () => {
 
       return result;
     },
-    onSuccess: (result) => {
-      toast.success("Product has been created");
-      updateTagAction(`products-${result.org_id}`);
-      router.push("/products");
-    },
+    onSuccess: () => {},
     onError: (error) => {
+      if (error.message === "NEXT_REDIRECT") {
+        toast.success("Product has been created");
+        return;
+      }
       toast.error(error.message);
     },
   });
@@ -40,9 +37,8 @@ export const useDeleteProduct = () => {
 
       return result;
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast.success("Product has been deleted");
-      updateTagAction(`products-${result.org_id}`);
     },
     onError: (error) => {
       toast.error(error.message);

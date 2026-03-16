@@ -1,16 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   createInvoiceAction,
   deleteInvoiceAction,
   updateInvoiceStatusAction,
 } from "@/actions/invoices";
-import { updateTagAction } from "@/actions/revalidate";
+// import { updateTagAction } from "@/actions/revalidate";
 import type { CreateInvoiceInput } from "@/dal/types";
 
 export const useCreateInvoice = () => {
-  const router = useRouter();
   return useMutation({
     mutationFn: async (input: CreateInvoiceInput) => {
       const { data: result, error } = await createInvoiceAction(input);
@@ -21,15 +19,20 @@ export const useCreateInvoice = () => {
 
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success("Invoice has been created");
 
-      updateTagAction(`invoices-${data.org_id}`);
-      if (data?.id) {
-        router.push(`/invoices/${data.id}`);
-      }
+      // if (data?.id) {
+      //   router.push(`/invoices/${data.id}`);
+      // }
     },
     onError: (error) => {
+      // console.log("Error: ", error)
+      if (error.message === "NEXT_REDIRECT") {
+        toast.success("Invoice has been created");
+        return;
+      }
+
       toast.error(error.message);
     },
   });
@@ -47,10 +50,8 @@ export const useDeleteInvoice = () => {
 
       return result;
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast.success("Invoice has been deleted");
-      updateTagAction(`invoices-${result.org_id}`);
-      updateTagAction(`invoice-${result.id}`);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -78,10 +79,8 @@ export const useUpdateInvoiceStatus = () => {
 
       return result;
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast.success("Invoice status has been updated");
-      updateTagAction(`invoices-${result.org_id}`);
-      updateTagAction(`invoice-${result.id}`);
     },
     onError: (error) => {
       toast.error(error.message);
