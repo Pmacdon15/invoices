@@ -1,25 +1,25 @@
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProductAction, deleteProductAction } from "@/actions/products";
 import type { CreateProductInput } from "@/dal/types";
 
 export const useCreateProduct = () => {
+  const router = useRouter();
   return useMutation({
-    mutationFn: async (data: CreateProductInput) => {
-      const { data: result, error } = await createProductAction(data);
-
-      if (error !== null) {
-        throw new Error(error || "Failed to create Product");
+    mutationFn: async (variables: CreateProductInput) => {
+      const response = await createProductAction(variables);
+      if ("message" in response) {
+        throw new Error(response.message);
       }
 
-      return result;
+      return response.data;
     },
-    onSuccess: () => {},
-    onError: (error) => {
-      if (error.message === "NEXT_REDIRECT") {
-        toast.success("Product has been created");
-        return;
-      }
+    onSuccess: () => {
+      toast.success("Product created!");
+      router.push("/products");
+    },
+    onError: (error: Error) => {     
       toast.error(error.message);
     },
   });
@@ -28,14 +28,12 @@ export const useCreateProduct = () => {
 export const useDeleteProduct = () => {
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data: result, error } = await deleteProductAction(id);
-
-      if (error !== null) {
-        // If error is an object, ensure you grab the message string
-        throw new Error(error || "Failed to delete product");
+      const response = await deleteProductAction(id);
+      if ("message" in response) {
+        throw new Error(response.message);
       }
 
-      return result;
+      return response.data;
     },
     onSuccess: () => {
       toast.success("Product has been deleted");

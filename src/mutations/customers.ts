@@ -1,5 +1,6 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   createCustomerAction,
@@ -8,24 +9,21 @@ import {
 import type { CreateCustomerInput } from "@/dal/types";
 
 export const useCreateCustomer = () => {
+  const router = useRouter();
   return useMutation({
     mutationFn: async (data: CreateCustomerInput) => {
-      const { data: result, error } = await createCustomerAction(data);
-
-      if (error !== null) {
-        throw new Error(error || "Failed to create customer");
+      const response = await createCustomerAction(data);
+      if ("message" in response) {
+        throw new Error(response.message);
       }
 
-      return result;
+      return response.data;
     },
     onSuccess: () => {
       toast.success("Customer has been created");
+      router.push("/customers");
     },
     onError: (error) => {
-      if (error.message === "NEXT_REDIRECT") {
-        toast.success("Customer has been created");
-        return;
-      }
       toast.error(error.message);
     },
   });
@@ -34,14 +32,12 @@ export const useCreateCustomer = () => {
 export const useDeleteCustomer = () => {
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data: result, error } = await deleteCustomerAction(id);
-
-      if (error !== null) {
-        // If error is an object, ensure you grab the message string
-        throw new Error(error || "Failed to delete customer");
+      const response = await deleteCustomerAction(id);
+      if ("message" in response) {
+        throw new Error(response.message);
       }
 
-      return result;
+      return response.data;
     },
     onSuccess: () => {
       toast.success("Customer has been deleted");

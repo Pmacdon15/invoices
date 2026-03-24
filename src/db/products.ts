@@ -9,10 +9,10 @@ export async function fetchingProductsDb(orgId: string): Promise<Product[]> {
     throw new Error("Config Error");
   }
   const sql = neon(process.env.DATABASE_URL);
-  const productsFromDb = (await sql`
+  const productsFromDb = await sql`
     SELECT * FROM products 
     WHERE deleted = false AND org_id = ${orgId}
-  `) ;
+  `;
 
   return productsFromDb.map((product) => ({
     ...product,
@@ -24,10 +24,7 @@ export async function createProductDb(
   input: CreateProductInput,
   orgId: string,
 ): Promise<Product> {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("Config Error");
-  }
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = neon(String(process.env.DATABASE_URL));
   const [newProduct] = (await sql`
     INSERT INTO products (name, price, org_id)
     VALUES (${input.name}, ${input.price}, ${orgId})
@@ -37,13 +34,8 @@ export async function createProductDb(
 }
 
 export async function deleteProductDb(id: string): Promise<Product> {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("Config Error");
-  }
+  const sql = neon(String(process.env.DATABASE_URL));
 
-  const sql = neon(process.env.DATABASE_URL);
-
-  // 1. Capture the result (neon returns an array)
   const result = await sql`
     UPDATE products 
     SET deleted = true 
@@ -51,6 +43,5 @@ export async function deleteProductDb(id: string): Promise<Product> {
     RETURNING *
   `;
 
-  // 2. Return the first element (the updated row) or null if not found
-  return (result[0] as Product);
+  return result[0] as Product;
 }

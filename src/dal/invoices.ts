@@ -1,4 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
+import { errAsync, okAsync } from "neverthrow";
+import z from "zod";
 import {
   createInvoiceDb,
   deleteInvoiceDb,
@@ -39,56 +41,59 @@ export async function getInvoiceById(id: string): Promise<Result<FullInvoice>> {
   }
 }
 
-export async function createInvoiceDal(
-  input: CreateInvoiceInput,
-): Promise<Result<Invoice>> {
+export async function createInvoiceDal(input: CreateInvoiceInput) {
   const { orgId } = await auth.protect();
   if (!orgId) {
-    return { data: null, error: "No org" };
+    return errAsync({ reason: "Not authorized" } as const);
   }
 
   const validation = CreateInvoiceSchema.safeParse(input);
   if (!validation.success) {
-    return { data: null, error: validation.error.issues[0].message };
+    const errorTree = z.treeifyError(validation.error);
+
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
   }
-
   try {
-    const data = await createInvoiceDb(input, orgId);
+    const invoice = await createInvoiceDb(input, orgId);
 
-    
-    return { data, error: null };
+    return okAsync(invoice);
   } catch (e: unknown) {
-    console.error("SQL Error:", e);
-    return { data: null, error: "Database failed to create invoice." };
+    console.error("Database Insert Error:", e);
+    return errAsync({ reason: "Db failed to create invoice" } as const);
   }
 }
 
-export async function deleteInvoiceDal(id: string): Promise<Result<Invoice>> {
-  await auth.protect();
-
+export async function deleteInvoiceDal(id: string) {
+  const { orgId } = await auth.protect();
+  if (!orgId) {
+    return errAsync({ reason: "Not authorized" } as const);
+  }
   try {
     const data = await deleteInvoiceDb(id);
-    return { data, error: null };
+    return okAsync(data);
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
-    return { data: null, error: "Failed to delete invoice." };
+    return errAsync({ reason: "Db failed to delete invoice" } as const);
   }
 }
 
 export async function updateInvoiceStatusDal(
   id: string,
   status: "draft" | "sent" | "paid",
-): Promise<Result<Invoice>> {
+) {
   const { orgId } = await auth.protect();
 
   if (!orgId) {
-    return { data: null, error: "No org" };
+    return errAsync({ reason: "Not authorized" } as const);
   }
   try {
-    const data = await updateInvoiceStatusDb(id, status, orgId);
-    return { data, error: null };
+    const invoice = await updateInvoiceStatusDb(id, status, orgId);
+    return okAsync(invoice);
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
-    return { data: null, error: "Failed to update invoice status." };
+    return errAsync({ reason: "Db failed to update invoice" } as const);
   }
 }

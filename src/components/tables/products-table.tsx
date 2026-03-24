@@ -1,12 +1,10 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Loader2, Trash2 } from "lucide-react";
 import { use } from "react";
 import { DataTable } from "@/components/tables/data-table";
-import { Button } from "@/components/ui/button";
 import type { Product, Result } from "@/dal/types";
-import { useDeleteProduct } from "@/mutations/products";
+import DeleteProductButton from "../buttons/delete-product-button";
 
 export function ProductsTable({
   dataPromise,
@@ -14,7 +12,6 @@ export function ProductsTable({
   dataPromise: Promise<Result<Product[]>>;
 }) {
   const { data, error } = use(dataPromise);
-  const { mutate: deleteProduct, isPending: isDeleting } = useDeleteProduct();
 
   if (error !== null) {
     return (
@@ -44,25 +41,7 @@ export function ProductsTable({
     },
     {
       id: "actions",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={() => {
-            if (confirm("Are you sure you want to delete this product?")) {
-              deleteProduct(row.original.id);
-            }
-          }}
-          disabled={isDeleting}
-        >
-          {isDeleting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
-          )}
-        </Button>
-      ),
+      cell: ({ row }) => <DeleteProductButton productId={row.original.id} />,
     },
   ];
 

@@ -1,48 +1,57 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { redirect } from "next/navigation";
 import {
   createInvoiceDal,
   deleteInvoiceDal,
   updateInvoiceStatusDal,
 } from "@/dal/invoices";
-import type { CreateInvoiceInput, Invoice, Result } from "@/dal/types";
+import type { CreateInvoiceInput } from "@/dal/types";
+import { handleMutationError } from "./utils";
 
-export async function createInvoiceAction(
-  input: CreateInvoiceInput,
-): Promise<Result<Invoice>> {
+export async function createInvoiceAction(input: CreateInvoiceInput) {
   const result = await createInvoiceDal(input);
-  if (result.error !== null) {
-    return { data: null, error: result.error };
-  }
-  updateTag(`invoices-${result.data.org_id}`);
-  redirect(`/invoices/${result.data.id}`);
 
-  // return { data: result.data, error: null };
+  return result.match(
+    (data) => {
+      updateTag(`invoices-${data.org_id}`);
+      // redirect(`/products`);
+      return { data };
+    },
+    (err) => {
+      return handleMutationError(err);
+    },
+  );
 }
 
 export async function deleteInvoiceAction(id: string) {
   const result = await deleteInvoiceDal(id);
-
-  if (result.error !== null) {
-    return { data: null, error: result.error };
-  }
-  updateTag(`invoices-${result.data.org_id}`);
-  updateTag(`invoice-${result.data.id}`);
-  return { data: result.data, error: null };
+  return result.match(
+    (data) => {
+      updateTag(`invoices-${data.org_id}`);
+      updateTag(`invoice-${data.id}`);
+      return { data };
+    },
+    (err) => {
+      return handleMutationError(err);
+    },
+  );
 }
 
 export async function updateInvoiceStatusAction(
   id: string,
   status: "draft" | "sent" | "paid",
 ) {
-  const result = await await updateInvoiceStatusDal(id, status);
+  const result = await updateInvoiceStatusDal(id, status);
 
-  if (result.error !== null) {
-    return { data: null, error: result.error };
-  }
-  updateTag(`invoices-${result.data.org_id}`);
-  updateTag(`invoice-${result.data.id}`);
-  return { data: result.data, error: null };
+  return result.match(
+    (data) => {
+      updateTag(`invoices-${data.org_id}`);
+      updateTag(`invoice-${data.id}`);
+      return { data };
+    },
+    (err) => {
+      return handleMutationError(err);
+    },
+  );
 }
