@@ -6,7 +6,7 @@ import {
   deleteCustomerDb,
   fetchingCustomersDb,
 } from "@/db/customers";
-import { CreateCustomerSchema } from "./schema";
+import { CreateCustomerSchema, IdSchema } from "./schema";
 import type { CreateCustomerInput, Customer, Result } from "./types";
 
 export async function getCustomers(): Promise<Result<Customer[]>> {
@@ -59,8 +59,17 @@ export async function deleteCustomerDal(id: string) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
+  const validation = IdSchema.safeParse({ id });
+  if (!validation.success) {
+    const errorTree = z.treeifyError(validation.error);
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
+  }
+
   try {
-    const data = await deleteCustomerDb(id);
+    const data = await deleteCustomerDb(id, orgId);
     return okAsync(data);
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);

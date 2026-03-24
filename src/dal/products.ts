@@ -6,7 +6,7 @@ import {
   deleteProductDb,
   fetchingProductsDb,
 } from "@/db/products";
-import { CreateProductSchema } from "./schema";
+import { CreateProductSchema, IdSchema } from "./schema";
 import type { CreateProductInput, Product, Result } from "./types";
 
 export async function getProducts(): Promise<Result<Product[]>> {
@@ -55,8 +55,18 @@ export async function deleteProductDal(id: string) {
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
   }
+
+  const validation = IdSchema.safeParse({ id });
+  if (!validation.success) {
+    const errorTree = z.treeifyError(validation.error);
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
+  }
+
   try {
-    const data = await deleteProductDb(id);
+    const data = await deleteProductDb(id, orgId);
     return okAsync(data);
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);

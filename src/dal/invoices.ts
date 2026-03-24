@@ -8,7 +8,11 @@ import {
   fetchingInvoicesDb,
   updateInvoiceStatusDb,
 } from "@/db/invoices";
-import { CreateInvoiceSchema } from "./schema";
+import {
+  CreateInvoiceSchema,
+  IdSchema,
+  UpdateInvoiceStatusSchema,
+} from "./schema";
 import type { CreateInvoiceInput, FullInvoice, Invoice, Result } from "./types";
 
 export async function getInvoices(): Promise<Result<Invoice[]>> {
@@ -71,8 +75,18 @@ export async function deleteInvoiceDal(id: string) {
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
   }
+
+  const validation = IdSchema.safeParse({ id });
+  if (!validation.success) {
+    const errorTree = z.treeifyError(validation.error);
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
+  }
+
   try {
-    const data = await deleteInvoiceDb(id);
+    const data = await deleteInvoiceDb(id, orgId);
     return okAsync(data);
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
@@ -89,6 +103,16 @@ export async function updateInvoiceStatusDal(
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
   }
+
+  const validation = UpdateInvoiceStatusSchema.safeParse({ id, status });
+  if (!validation.success) {
+    const errorTree = z.treeifyError(validation.error);
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
+  }
+
   try {
     const invoice = await updateInvoiceStatusDb(id, status, orgId);
     return okAsync(invoice);

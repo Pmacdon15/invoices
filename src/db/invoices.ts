@@ -129,22 +129,29 @@ export async function createInvoiceDb(
   return data;
 }
 
-export async function deleteInvoiceDb(id: string): Promise<Invoice> {
+export async function deleteInvoiceDb(
+  id: string,
+  orgId: string,
+): Promise<Invoice> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
 
   const sql = neon(process.env.DATABASE_URL);
 
-  await sql`DELETE FROM invoice_items WHERE invoice_id = ${id}`;
+  await sql`
+    DELETE FROM invoice_items 
+    WHERE invoice_id = ${id} 
+    AND invoice_id IN (SELECT id FROM invoices WHERE org_id = ${orgId})
+  `;
 
   const result = await sql`
     DELETE FROM invoices 
-    WHERE id = ${id} 
+    WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *
   `;
   if (!result[0]) {
-    throw new Error(`Invoice ${id} not found`);
+    throw new Error(`Invoice not found or not authorized`);
   }
 
   return result[0] as Invoice;

@@ -33,15 +33,22 @@ export async function createProductDb(
   return newProduct;
 }
 
-export async function deleteProductDb(id: string): Promise<Product> {
+export async function deleteProductDb(
+  id: string,
+  orgId: string,
+): Promise<Product> {
   const sql = neon(String(process.env.DATABASE_URL));
 
-  const result = await sql`
+  const [result] = await sql`
     UPDATE products 
     SET deleted = true 
-    WHERE id = ${id}
+    WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *
   `;
 
-  return result[0] as Product;
+  if (!result) {
+    throw new Error(`Product id not found or not authorized`);
+  }
+
+  return result as Product;
 }
