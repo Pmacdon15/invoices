@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   createInvoiceAction,
@@ -9,30 +10,24 @@ import {
 import type { CreateInvoiceInput } from "@/dal/types";
 
 export const useCreateInvoice = () => {
+  const router = useRouter();
   return useMutation({
     mutationFn: async (input: CreateInvoiceInput) => {
-      const { data: result, error } = await createInvoiceAction(input);
-
-      if (error !== null) {
-        throw new Error(error || "Failed to create invoice");
+      const response = await createInvoiceAction(input);
+      if ("message" in response) {
+        throw new Error(response.message);
       }
 
-      return result;
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Invoice has been created");
 
-      // if (data?.id) {
-      //   router.push(`/invoices/${data.id}`);
-      // }
+      if (data?.id) {
+        router.push(`/invoices/${data.id}`);
+      }
     },
     onError: (error) => {
-      // console.log("Error: ", error)
-      if (error.message === "NEXT_REDIRECT") {
-        toast.success("Invoice has been created");
-        return;
-      }
-
       toast.error(error.message);
     },
   });
@@ -41,14 +36,13 @@ export const useCreateInvoice = () => {
 export const useDeleteInvoice = () => {
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data: result, error } = await deleteInvoiceAction(id);
+      const response = await deleteInvoiceAction(id);
 
-      if (error !== null) {
-        // If error is an object, ensure you grab the message string
-        throw new Error(error || "Failed to delete invoice");
+      if ("message" in response) {
+        throw new Error(response.message);
       }
 
-      return result;
+      return response.data;
     },
     onSuccess: () => {
       toast.success("Invoice has been deleted");
@@ -68,16 +62,13 @@ export const useUpdateInvoiceStatus = () => {
       id: string;
       status: "draft" | "sent" | "paid";
     }) => {
-      const { data: result, error } = await updateInvoiceStatusAction(
-        id,
-        status,
-      );
+      const response = await updateInvoiceStatusAction(id, status);
 
-      if (error !== null) {
-        throw new Error(error || "Failed to update invoice status");
+      if ("message" in response) {
+        throw new Error(response.message);
       }
 
-      return result;
+      return response.data;
     },
     onSuccess: () => {
       toast.success("Invoice status has been updated");

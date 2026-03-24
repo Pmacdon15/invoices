@@ -20,10 +20,7 @@ export async function createCustomerDb(
   input: CreateCustomerInput,
   orgId: string,
 ): Promise<Customer> {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("Config Error");
-  }
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = neon(String(process.env.DATABASE_URL));
   const [newCustomer] = (await sql`
     INSERT INTO customers (name, email, org_id)
     VALUES (${input.name}, ${input.email}, ${orgId})
@@ -32,16 +29,19 @@ export async function createCustomerDb(
   return newCustomer;
 }
 
-export async function deleteCustomerDb(id: string): Promise<Customer> {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("Config Error");
-  }
-  const sql = neon(process.env.DATABASE_URL);
+export async function deleteCustomerDb(
+  id: string,
+  orgId: string,
+): Promise<Customer> {
+  const sql = neon(String(process.env.DATABASE_URL));
   const [result] = await sql`
     UPDATE customers 
     SET deleted = true 
-    WHERE id = ${id}
+    WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *
   `;
+  if (!result) {
+    throw new Error(`Customer not found or not authorized`);
+  }
   return result as Customer;
 }

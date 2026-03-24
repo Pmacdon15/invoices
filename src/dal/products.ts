@@ -1,10 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
+import { errAsync, okAsync } from "neverthrow";
+import z from "zod";
 import {
   createProductDb,
   deleteProductDb,
   fetchingProductsDb,
 } from "@/db/products";
-import { CreateProductSchema } from "./schema";
+import { CreateProductSchema, IdSchema } from "./schema";
 import type { CreateProductInput, Product, Result } from "./types";
 
 export async function getProducts(): Promise<Result<Product[]>> {
@@ -22,38 +24,52 @@ export async function getProducts(): Promise<Result<Product[]>> {
   }
 }
 
-export async function createProductDal(
-  input: CreateProductInput,
-): Promise<Result<Product>> {
+export async function createProductDal(input: CreateProductInput) {
   const { orgId } = await auth.protect();
 
   if (!orgId) {
-    return { data: null, error: "No org" };
+    return errAsync({ reason: "Not authorized" } as const);
   }
 
   const validation = CreateProductSchema.safeParse(input);
   if (!validation.success) {
-    return { data: null, error: validation.error.message };
+    const errorTree = z.treeifyError(validation.error);
+
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
   }
 
   try {
-    const data = await createProductDb(input, orgId);
-    return { data, error: null };
+    const product = await createProductDb(input, orgId);
+    return okAsync(product);
   } catch (e: unknown) {
     console.error("Database Insert Error:", e);
-    return { data: null, error: "Failed to create product. Please try again." };
+    return errAsync({ reason: "Db failed to create product" } as const);
   }
 }
 
-export async function deleteProductDal(
-  id: string,
-): Promise<Result<Product>> {
-  await auth.protect();
+export async function deleteProductDal(id: string) {
+  const { orgId } = await auth.protect();
+  if (!orgId) {
+    return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  const validation = IdSchema.safeParse({ id });
+  if (!validation.success) {
+    const errorTree = z.treeifyError(validation.error);
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
+  }
+
   try {
-    const data = await deleteProductDb(id);
-    return { data: data ?? null, error: null };
+    const data = await deleteProductDb(id, orgId);
+    return okAsync(data);
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
-    return { data: null, error: "Failed to delete product." };
+    return errAsync({ reason: "Db failed to delete product" } as const);
   }
 }

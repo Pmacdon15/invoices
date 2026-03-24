@@ -57,6 +57,15 @@ export const CreateBrandingSchema = BrandingSchema.omit({
 // --- Invoice ---
 export const InvoiceStatusSchema = z.enum(["draft", "sent", "paid"]);
 
+export const IdSchema = z.object({
+  id: z.uuid(),
+});
+
+export const UpdateInvoiceStatusSchema = z.object({
+  id: z.uuid(),
+  status: InvoiceStatusSchema,
+});
+
 export const InvoiceSchema = z.object({
   id: z.uuid(),
   customer_id: z.uuid("Please select a customer"),
