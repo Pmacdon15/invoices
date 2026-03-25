@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { use } from "react";
+import { use, useOptimistic } from "react";
 import { DataTable } from "@/components/tables/data-table";
 import type { Product, Result } from "@/dal/types";
 import DeleteProductButton from "../buttons/delete-product-button";
@@ -12,6 +12,11 @@ export function ProductsTable({
   dataPromise: Promise<Result<Product[]>>;
 }) {
   const { data, error } = use(dataPromise);
+  const [optimisticProducts, setOptimisticProducts] = useOptimistic(
+    data ?? [],
+    (state, idToDelete: string) =>
+      state.filter((product) => product.id !== idToDelete),
+  );
 
   if (error !== null) {
     return (
@@ -19,7 +24,7 @@ export function ProductsTable({
     );
   }
 
-  const products = data ?? [];
+  const products = optimisticProducts?? [];
 
   const columns: ColumnDef<Product>[] = [
     {
@@ -41,7 +46,7 @@ export function ProductsTable({
     },
     {
       id: "actions",
-      cell: ({ row }) => <DeleteProductButton productId={row.original.id} />,
+      cell: ({ row }) => <DeleteProductButton productId={row.original.id}  setOptimisticProducts={ setOptimisticProducts}/>,
     },
   ];
 

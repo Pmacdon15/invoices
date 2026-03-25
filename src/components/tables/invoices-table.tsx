@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import Link from "next/link";
-import { use } from "react";
+import { use, useOptimistic, ViewTransition } from "react";
 import { DataTable } from "@/components/tables/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,10 @@ interface InvoicesTableProps {
 
 export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
   const { data, error } = use(invoicesPromise);
-  // const { mutate: deleteInvoice, isPending: isDeleting } = useDeleteInvoice();
-
+  const [optimisticInvoices, setOptimisticInvoices] = useOptimistic(
+    data ?? [],
+    (state, idToDelete: string) => state.filter((inv) => inv.id !== idToDelete),
+  );
   if (error) {
     return (
       <div className="p-4 text-destructive bg-destructive/10 rounded">
@@ -26,7 +28,7 @@ export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
     );
   }
 
-  const invoices = data ?? [];
+  const invoices = optimisticInvoices ?? [];
 
   const columns: ColumnDef<Invoice>[] = [
     {
@@ -84,14 +86,19 @@ export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
     {
       id: "actions",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon">
-            <Link href={`/invoices/${row.original.id}`}>
-              <Eye className="h-4 w-4" />
-            </Link>
-          </Button>
-          <DeleteInvoiceButton rowId={row.original.id} />
-        </div>
+        <ViewTransition>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="icon">
+              <Link href={`/invoices/${row.original.id}`}>
+                <Eye className="h-4 w-4" />
+              </Link>
+            </Button>
+            <DeleteInvoiceButton
+              rowId={row.original.id}
+              setOptimisticInvoices={setOptimisticInvoices}
+            />
+          </div>
+        </ViewTransition>
       ),
     },
   ];

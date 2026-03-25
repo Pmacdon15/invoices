@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { use } from "react";
+import { use, useOptimistic } from "react";
 import { DataTable } from "@/components/tables/data-table";
 import type { Customer, Result } from "@/dal/types";
 import DeleteCustomerButton from "../buttons/delete-customer-button";
@@ -12,13 +12,17 @@ export function CustomersTable({
   resultsPromise: Promise<Result<Customer[]>>;
 }) {
   const { data, error } = use(resultsPromise);
-  // const { mutate: deleteCustomer, isPending: isDeleting } = useDeleteCustomer();
+  const [optimisticCustomers, setOptimisticCustomers] = useOptimistic(
+    data ?? [],
+    (state, idToDelete: string) =>
+      state.filter((customer) => customer.id !== idToDelete),
+  );
 
   if (error !== null) {
     return <div className="text-destructive">Error: {error}</div>;
   }
 
-  const customers = data ?? [];
+  const customers = optimisticCustomers ?? [];
 
   if (customers.length < 1) {
     return (
@@ -33,7 +37,7 @@ export function CustomersTable({
     { accessorKey: "email", header: "Email" },
     {
       id: "actions",
-      cell: ({ row }) => <DeleteCustomerButton rowId={row.original.id} />,
+      cell: ({ row }) => <DeleteCustomerButton rowId={row.original.id} setOptimisticCustomers={setOptimisticCustomers}/>,
     },
   ];
 
