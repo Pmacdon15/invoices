@@ -26,26 +26,26 @@ import { CreateInvoiceSchema } from "@/dal/schema";
 import type {
   CreateInvoiceInput,
   Customer,
+  PaginatedValue,
   Product,
   Result,
 } from "@/dal/types";
 import { useCreateInvoice } from "@/mutations/invoices";
 
 interface InvoiceFormProps {
-  customersPromise: Promise<Result<Customer[]>>;
-  productsPromise: Promise<Result<Product[]>>;
+  customersPromise: Promise<Result<PaginatedValue<Customer>>>;
+  productsPromise: Promise<Result<PaginatedValue<Product>>>;
 }
 
 export function InvoiceForm({
   customersPromise,
   productsPromise,
 }: InvoiceFormProps) {
-  
   const { data: customers, error: customerError } = use(customersPromise);
   const { data: products, error: productsError } = use(productsPromise);
 
   const { mutate, isPending } = useCreateInvoice();
-  
+
   const form = useForm({
     defaultValues: {
       customer_id: "",
@@ -141,7 +141,7 @@ export function InvoiceForm({
                       </SelectTrigger>
                       <SelectContent>
                         {customerError === null &&
-                          customers?.map((customer) => (
+                          customers.data?.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
                               {customer.name}
                             </SelectItem>
@@ -232,9 +232,9 @@ export function InvoiceForm({
                   <form.Field name="items" mode="array">
                     {(field) => (
                       <>
-                        {field.state.value.map((_, i) => (
+                        {field.state.value.map((value, i) => (
                           <tr
-                            key={i}
+                            key={value.product_id}
                             className="flex flex-col md:table-row p-4 md:p-0 border-b md:border-0 relative"
                           >
                             <td className="md:px-4 md:py-3 py-2">
@@ -243,7 +243,7 @@ export function InvoiceForm({
                                   <Select
                                     onValueChange={(val) => {
                                       subField.handleChange(val);
-                                      const product = products?.find(
+                                      const product = products.data?.find(
                                         (p) => p.id === val,
                                       );
                                       if (product) {
@@ -259,7 +259,7 @@ export function InvoiceForm({
                                       <SelectValue placeholder="Select product" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {products?.map((product) => (
+                                      {products.data?.map((product) => (
                                         <SelectItem
                                           key={product.id}
                                           value={product.id}

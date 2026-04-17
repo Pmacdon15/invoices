@@ -15,7 +15,7 @@ import type {
 } from "./types";
 
 export async function getCustomers(
-  page: number,
+  page=1,
 ): Promise<Result<PaginatedValue<Customer>>> {
   const { orgId } = await auth.protect();
 

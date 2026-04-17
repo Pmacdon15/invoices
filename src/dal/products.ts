@@ -7,9 +7,16 @@ import {
   fetchingProductsDb,
 } from "@/db/products";
 import { CreateProductSchema, IdSchema } from "./schema";
-import type { CreateProductInput, PaginatedValue, Product, Result } from "./types";
+import type {
+  CreateProductInput,
+  PaginatedValue,
+  Product,
+  Result,
+} from "./types";
 
-export async function getProducts(page: number): Promise<Result<PaginatedValue<Product>>> {
+export async function getProducts(
+  page = 1,
+): Promise<Result<PaginatedValue<Product>>> {
   const { orgId } = await auth.protect();
 
   if (!orgId) {
