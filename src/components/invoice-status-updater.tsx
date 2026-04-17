@@ -24,7 +24,7 @@ export function InvoiceStatusUpdater({
 
   return (
     <Select
-      defaultValue={currentStatus}
+      value={currentStatus}
       onValueChange={handleStatusChange}
       disabled={isPending}
     >
