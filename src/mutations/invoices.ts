@@ -7,9 +7,12 @@ import {
   updateInvoiceStatusAction,
 } from "@/actions/invoices";
 // import { updateTagAction } from "@/actions/revalidate";
-import type { CreateInvoiceInput } from "@/dal/types";
+import type { CreateInvoiceInput, Invoice } from "@/dal/types";
 
-export const useCreateInvoice = () => {
+export const useCreateInvoice = (options?: {
+  onSuccess?: (data: Invoice) => void;
+  onError?: (error: Error) => void;
+}) => {
   const router = useRouter();
   return useMutation({
     mutationFn: async (input: CreateInvoiceInput) => {
@@ -22,18 +25,26 @@ export const useCreateInvoice = () => {
     },
     onSuccess: (data) => {
       toast.success("Invoice has been created");
-
-      if (data?.id) {
+      if (options?.onSuccess) {
+        options.onSuccess(data);
+      } else if (data?.id) {
         router.push(`/invoices/${data.id}`);
       }
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: Error) => {
+      if (options?.onError) {
+        options.onError(error);
+      } else {
+        toast.error(error.message);
+      }
     },
   });
 };
 
-export const useDeleteInvoice = () => {
+export const useDeleteInvoice = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}) => {
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await deleteInvoiceAction(id);
@@ -46,9 +57,14 @@ export const useDeleteInvoice = () => {
     },
     onSuccess: () => {
       toast.success("Invoice has been deleted");
+      options?.onSuccess?.();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: Error) => {
+      if (options?.onError) {
+        options.onError(error);
+      } else {
+        toast.error(error.message);
+      }
     },
   });
 };

@@ -1,8 +1,5 @@
-import { PlusCircle } from "lucide-react";
-import Link from "next/link";
 import { Suspense } from "react";
-import { CustomersTable } from "@/components/tables/customer-table";
-import { Button } from "@/components/ui/button";
+import { CustomersManagement } from "@/components/management/customers-management";
 import { getCustomers } from "@/dal/customers";
 
 export default async function CustomersPage(props: PageProps<"/customers">) {
@@ -14,21 +11,8 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
 
   return (
     <div className="container mx-auto py-10 px-4">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Customers</h1>
-          <p className="text-muted-foreground">
-            Manage your customer database.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/customers/new" className="flex items-center gap-2">
-            <PlusCircle className="h-4 w-4" /> Add Customer
-          </Link>
-        </Button>
-      </div>
-      <Suspense>
-        <CustomersTable resultsPromise={dataPromise} />
+      <Suspense fallback={<div>Loading customers...</div>}>
+        <CustomersManagement resultsPromise={dataPromise} />
       </Suspense>
     </div>
   );

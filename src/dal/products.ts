@@ -13,9 +13,9 @@ import type {
   Product,
   Result,
 } from "./types";
-
 export async function getProducts(
   page = 1,
+  all = false,
 ): Promise<Result<PaginatedValue<Product>>> {
   const { orgId } = await auth.protect();
 
@@ -23,7 +23,7 @@ export async function getProducts(
     return { data: null, error: "No org" };
   }
   try {
-    const data = await fetchingProductsDb(orgId, page);
+    const data = await fetchingProductsDb(orgId, page, all);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);

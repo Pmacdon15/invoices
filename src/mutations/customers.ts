@@ -6,9 +6,12 @@ import {
   createCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
-import type { CreateCustomerInput } from "@/dal/types";
+import type { CreateCustomerInput, Customer } from "@/dal/types";
 
-export const useCreateCustomer = () => {
+export const useCreateCustomer = (options?: {
+  onSuccess?: (data: Customer) => void;
+  onError?: (error: Error) => void;
+}) => {
   const router = useRouter();
   return useMutation({
     mutationFn: async (data: CreateCustomerInput) => {
@@ -19,17 +22,28 @@ export const useCreateCustomer = () => {
 
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Customer has been created");
-      router.push("/customers");
+      if (options?.onSuccess) {
+        options.onSuccess(data);
+      } else {
+        router.push("/customers");
+      }
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: Error) => {
+      if (options?.onError) {
+        options.onError(error);
+      } else {
+        toast.error(error.message);
+      }
     },
   });
 };
 
-export const useDeleteCustomer = () => {
+export const useDeleteCustomer = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}) => {
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await deleteCustomerAction(id);
@@ -41,9 +55,14 @@ export const useDeleteCustomer = () => {
     },
     onSuccess: () => {
       toast.success("Customer has been deleted");
+      options?.onSuccess?.();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: Error) => {
+      if (options?.onError) {
+        options.onError(error);
+      } else {
+        toast.error(error.message);
+      }
     },
   });
 };

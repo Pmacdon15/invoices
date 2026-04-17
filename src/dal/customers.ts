@@ -15,7 +15,8 @@ import type {
 } from "./types";
 
 export async function getCustomers(
-  page=1,
+  page = 1,
+  all = false
 ): Promise<Result<PaginatedValue<Customer>>> {
   const { orgId } = await auth.protect();
 
@@ -23,7 +24,7 @@ export async function getCustomers(
     return { data: null, error: "No org" };
   }
   try {
-    const data = await fetchingCustomersDb(orgId, page);
+    const data = await fetchingCustomersDb(orgId, page, all);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);

@@ -2,9 +2,12 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProductAction, deleteProductAction } from "@/actions/products";
-import type { CreateProductInput } from "@/dal/types";
+import type { CreateProductInput, Product } from "@/dal/types";
 
-export const useCreateProduct = () => {
+export const useCreateProduct = (options?: {
+  onSuccess?: (data: Product) => void;
+  onError?: (error: Error) => void;
+}) => {
   const router = useRouter();
   return useMutation({
     mutationFn: async (variables: CreateProductInput) => {
@@ -15,17 +18,28 @@ export const useCreateProduct = () => {
 
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Product created!");
-      router.push("/products");
+      if (options?.onSuccess) {
+        options.onSuccess(data);
+      } else {
+        router.push("/products");
+      }
     },
-    onError: (error: Error) => {     
-      toast.error(error.message);
+    onError: (error: Error) => {
+      if (options?.onError) {
+        options.onError(error);
+      } else {
+        toast.error(error.message);
+      }
     },
   });
 };
 
-export const useDeleteProduct = () => {
+export const useDeleteProduct = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}) => {
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await deleteProductAction(id);
@@ -37,9 +51,14 @@ export const useDeleteProduct = () => {
     },
     onSuccess: () => {
       toast.success("Product has been deleted");
+      options?.onSuccess?.();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: Error) => {
+      if (options?.onError) {
+        options.onError(error);
+      } else {
+        toast.error(error.message);
+      }
     },
   });
 };

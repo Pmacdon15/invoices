@@ -1,34 +1,27 @@
-import { PlusCircle } from "lucide-react";
-import Link from "next/link";
 import { Suspense } from "react";
-import { InvoicesTable } from "@/components/tables/invoices-table";
-import { Button } from "@/components/ui/button";
+import { InvoicesManagement } from "@/components/management/invoices-management";
+import { getCustomers } from "@/dal/customers";
 import { getInvoices } from "@/dal/invoices";
+import { getProducts } from "@/dal/products";
 
 export default async function InvoicesPage(props: PageProps<"/invoices">) {
-  const dataPromise = props.searchParams.then((params) =>
+  const invoicesPromise = props.searchParams.then((params) =>
     getInvoices(
       Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1,
     ),
   );
 
+  const customersPromise = getCustomers(1, true);
+  const productsPromise = getProducts(1, true);
+
   return (
     <div className="container mx-auto py-10 px-4">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Invoices</h1>
-          <p className="text-muted-foreground">
-            Managing your billing and payments.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/invoices/new" className="flex items-center gap-2">
-            <PlusCircle className="h-4 w-4" /> Create Invoice
-          </Link>
-        </Button>
-      </div>
-      <Suspense>
-        <InvoicesTable invoicesPromise={dataPromise} />
+      <Suspense fallback={<div>Loading invoices...</div>}>
+        <InvoicesManagement
+          invoicesPromise={invoicesPromise}
+          customersPromise={customersPromise}
+          productsPromise={productsPromise}
+        />
       </Suspense>
     </div>
   );

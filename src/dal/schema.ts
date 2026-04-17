@@ -17,7 +17,7 @@ export const CreateCustomerSchema = CustomerSchema.omit({
 export const ProductSchema = z.object({
   id: z.uuid(),
   name: z.string().min(2, "Product name must be at least 2 characters"),
-  price: z.number().positive("Price must be positive"),
+  price: z.coerce.number().positive("Price must be positive"),
   org_id: z.string(),
 });
 
@@ -31,8 +31,8 @@ export const InvoiceItemSchema = z.object({
   id: z.uuid(),
   invoice_id: z.uuid(),
   product_id: z.uuid("Please select a product"),
-  quantity: z.number().int().positive("Quantity must be at least 1"),
-  unit_price: z.number().nonnegative("Price cannot be negative"),
+  quantity: z.coerce.number().int().positive("Quantity must be at least 1"),
+  unit_price: z.coerce.number().nonnegative("Price cannot be negative"),
   product: ProductSchema.optional(),
 });
 
@@ -69,7 +69,7 @@ export const UpdateInvoiceStatusSchema = z.object({
 export const InvoiceSchema = z.object({
   id: z.uuid(),
   customer_id: z.uuid("Please select a customer"),
-  total: z.number().nonnegative(),
+  total: z.coerce.number().nonnegative(),
   status: InvoiceStatusSchema,
   org_id: z.string(),
   created_at: z.string(),

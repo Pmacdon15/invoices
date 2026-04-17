@@ -9,15 +9,33 @@ import type {
 export async function fetchingCustomersDb(
   orgId: string,
   page: number = 1,
+  all: boolean = false
 ): Promise<PaginatedValue<Customer>> {
   "use cache";
-  cacheTag(`customers-${orgId}`, `customers-${orgId}-page-${page}`);
+  const tag = all ? `customers-${orgId}-all` : `customers-${orgId}-page-${page}`;
+  cacheTag(`customers-${orgId}`, tag);
 
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
 
   const sql = neon(process.env.DATABASE_URL);
+
+  if (all) {
+    const data = await sql`
+      SELECT * FROM customers 
+      WHERE deleted = false AND org_id = ${orgId}
+      ORDER BY id DESC
+    ` as Customer[];
+
+    return {
+      data,
+      currentPage: 1,
+      totalPages: 1,
+      totalCount: data.length,
+    };
+  }
+
   const pageSize = 10;
   const offset = (page - 1) * pageSize;
 
