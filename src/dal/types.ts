@@ -34,3 +34,10 @@ export type CreateBrandingInput = z.infer<typeof CreateBrandingSchema>;
 export type Result<T> =
   | { data: T; error: null }
   | { data: null; error: string };
+
+export interface PaginatedValue<T> {
+  data: T[];
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+}

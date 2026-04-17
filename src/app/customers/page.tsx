@@ -5,8 +5,12 @@ import { CustomersTable } from "@/components/tables/customer-table";
 import { Button } from "@/components/ui/button";
 import { getCustomers } from "@/dal/customers";
 
-export default async function CustomersPage() {
-  const dataPromise = getCustomers();
+export default async function CustomersPage(props: PageProps<"/customers">) {
+  const dataPromise = props.searchParams.then((params) =>
+    getCustomers(
+      Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1,
+    ),
+  );
 
   return (
     <div className="container mx-auto py-10 px-4">

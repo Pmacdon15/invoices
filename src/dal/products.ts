@@ -7,16 +7,16 @@ import {
   fetchingProductsDb,
 } from "@/db/products";
 import { CreateProductSchema, IdSchema } from "./schema";
-import type { CreateProductInput, Product, Result } from "./types";
+import type { CreateProductInput, PaginatedValue, Product, Result } from "./types";
 
-export async function getProducts(): Promise<Result<Product[]>> {
+export async function getProducts(page: number): Promise<Result<PaginatedValue<Product>>> {
   const { orgId } = await auth.protect();
 
   if (!orgId) {
     return { data: null, error: "No org" };
   }
   try {
-    const data = await fetchingProductsDb(orgId);
+    const data = await fetchingProductsDb(orgId, page);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);

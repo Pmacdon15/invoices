@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button";
 import { getProducts } from "@/dal/products";
 import { ProductsTable } from "../../components/tables/products-table";
 
-export default async function ProductsPage() {
-  const data = getProducts();
+export default async function ProductsPage(props: PageProps<"/products">) {
+  const dataPromise = props.searchParams.then((params) =>
+    getProducts(
+      Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1,
+    ),
+  );
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -24,7 +28,7 @@ export default async function ProductsPage() {
         </Button>
       </div>
       <Suspense>
-        <ProductsTable dataPromise={data} />
+        <ProductsTable dataPromise={dataPromise} />
       </Suspense>
     </div>
   );

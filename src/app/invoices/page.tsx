@@ -5,8 +5,12 @@ import { InvoicesTable } from "@/components/tables/invoices-table";
 import { Button } from "@/components/ui/button";
 import { getInvoices } from "@/dal/invoices";
 
-export default async function InvoicesPage() {
-  const invoicesPromise = getInvoices();
+export default async function InvoicesPage(props: PageProps<"/invoices">) {
+  const dataPromise = props.searchParams.then((params) =>
+    getInvoices(
+      Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1,
+    ),
+  );
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -24,7 +28,7 @@ export default async function InvoicesPage() {
         </Button>
       </div>
       <Suspense>
-        <InvoicesTable invoicesPromise={invoicesPromise} />
+        <InvoicesTable invoicesPromise={dataPromise} />
       </Suspense>
     </div>
   );

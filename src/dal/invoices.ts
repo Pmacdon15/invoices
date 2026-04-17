@@ -13,16 +13,24 @@ import {
   IdSchema,
   UpdateInvoiceStatusSchema,
 } from "./schema";
-import type { CreateInvoiceInput, FullInvoice, Invoice, Result } from "./types";
+import type {
+  CreateInvoiceInput,
+  FullInvoice,
+  Invoice,
+  PaginatedValue,
+  Result,
+} from "./types";
 
-export async function getInvoices(): Promise<Result<Invoice[]>> {
+export async function getInvoices(
+  page: number,
+): Promise<Result<PaginatedValue<Invoice>>> {
   const { orgId } = await auth.protect();
   if (!orgId) {
     return { data: null, error: "No org" };
   }
 
   try {
-    const data = await fetchingInvoicesDb(orgId);
+    const data = await fetchingInvoicesDb(orgId, page);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);

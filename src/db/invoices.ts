@@ -1,26 +1,80 @@
 import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
-import type { CreateInvoiceInput, FullInvoice, Invoice } from "@/dal/types";
+import type {
+  CreateInvoiceInput,
+  FullInvoice,
+  Invoice,
+  PaginatedValue,
+} from "@/dal/types";
 
-export async function fetchingInvoicesDb(orgId: string): Promise<Invoice[]> {
+// export async function fetchingInvoicesDb(orgId: string, page:number): Promise<Invoice[]> {
+//   "use cache";
+//   cacheTag(`invoices-${orgId}`);
+//   if (!process.env.DATABASE_URL) {
+//     throw new Error("Config Error");
+//   }
+//   const sql = neon(process.env.DATABASE_URL);
+//   const data = (await sql`
+//     SELECT
+//       i.*,
+//       c.name as customer_name,
+//       c.email as customer_email
+//     FROM invoices i
+//     JOIN customers c ON i.customer_id = c.id
+//     WHERE i.org_id = ${orgId}
+//     ORDER BY i.created_at DESC
+//   `) as (Invoice & { customer_name: string; customer_email: string })[];
+
+//   return data.map((inv) => ({
+//     ...inv,
+//     customer: {
+//       id: inv.customer_id,
+//       name: inv.customer_name,
+//       email: inv.customer_email,
+//       org_id: inv.org_id,
+//     },
+//   }));
+// }
+export async function fetchingInvoicesDb(
+  orgId: string,
+  page: number = 1,
+): Promise<PaginatedValue<Invoice>> {
   "use cache";
-  cacheTag(`invoices-${orgId}`);
+  // Including the page in the tag ensures specific pages can be purged or cached independently
+  cacheTag(`invoices-${orgId}`, `invoices-${orgId}-page-${page}`);
+
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
-  const sql = neon(process.env.DATABASE_URL);
-  const data = (await sql`
-    SELECT 
-      i.*,
-      c.name as customer_name,
-      c.email as customer_email
-    FROM invoices i 
-    JOIN customers c ON i.customer_id = c.id
-    WHERE i.org_id = ${orgId}
-    ORDER BY i.created_at DESC
-  `) as (Invoice & { customer_name: string; customer_email: string })[];
 
-  return data.map((inv) => ({
+  const sql = neon(process.env.DATABASE_URL);
+  const pageSize = 10;
+  const offset = (page - 1) * pageSize;
+
+  const [data, countResult] = await Promise.all([
+    sql`
+      SELECT 
+        i.*,
+        c.name as customer_name,
+        c.email as customer_email
+      FROM invoices i 
+      JOIN customers c ON i.customer_id = c.id
+      WHERE i.org_id = ${orgId}
+      ORDER BY i.created_at DESC
+      LIMIT ${pageSize} OFFSET ${offset}
+    `,
+
+    sql`
+      SELECT COUNT(*) as total FROM invoices 
+      WHERE org_id = ${orgId}
+    `,
+  ]);
+
+  const totalCount = Number(countResult[0].total);
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Map the flat SQL result into the nested Invoice object structure
+  const formattedData = data.map((inv) => ({
     ...inv,
     customer: {
       id: inv.customer_id,
@@ -28,7 +82,14 @@ export async function fetchingInvoicesDb(orgId: string): Promise<Invoice[]> {
       email: inv.customer_email,
       org_id: inv.org_id,
     },
-  }));
+  })) as Invoice[];
+
+  return {
+    data: formattedData,
+    currentPage: page,
+    totalPages: totalPages,
+    totalCount: totalCount,
+  };
 }
 
 export async function fetchingInvoiceByIdDb(

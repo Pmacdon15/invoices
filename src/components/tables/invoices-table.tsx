@@ -7,28 +7,47 @@ import { use, useOptimistic, ViewTransition } from "react";
 import { DataTable } from "@/components/tables/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Invoice, Result } from "@/dal/types";
+import type { Invoice, PaginatedValue, Result } from "@/dal/types";
 import DeleteInvoiceButton from "../buttons/delete-invoice-button";
 
 interface InvoicesTableProps {
-  invoicesPromise: Promise<Result<Invoice[]>>;
+  invoicesPromise: Promise<Result<PaginatedValue<Invoice>>>;
 }
 
 export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
   const { data, error } = use(invoicesPromise);
-  const [optimisticInvoices, setOptimisticInvoices] = useOptimistic(
-    data ?? [],
-    (state, idToDelete: string) => state.filter((inv) => inv.id !== idToDelete),
+
+  // 1. Setup Optimistic UI for the PaginatedValue object
+  const [optimisticData, setOptimisticDelete] = useOptimistic(
+    data,
+    (state, idToDelete: string) => {
+      if (!state) return state;
+      return {
+        ...state,
+        data: state.data.filter((inv) => inv.id !== idToDelete),
+        totalCount: state.totalCount - 1,
+      };
+    },
   );
+
   if (error) {
     return (
-      <div className="p-4 text-destructive bg-destructive/10 rounded">
+      <div className="p-4 text-destructive bg-destructive/10 rounded border border-destructive/20">
         Error: {error}
       </div>
     );
   }
 
-  const invoices = optimisticInvoices ?? [];
+  // 2. Extract the array from the optimistic state
+  const invoices = optimisticData?.data ?? [];
+
+  if (invoices.length < 1) {
+    return (
+      <div className="p-8 text-center border-2 border-dashed rounded-lg text-muted-foreground">
+        No invoices found for this period.
+      </div>
+    );
+  }
 
   const columns: ColumnDef<Invoice>[] = [
     {
@@ -49,9 +68,14 @@ export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
       cell: ({ row }) => {
         const customer = row.original.customer;
         return (
-          <span className="font-medium">
-            {customer ? customer.name : "Unknown"}
-          </span>
+          <div className="flex flex-col">
+            <span className="font-medium text-sm">
+              {customer ? customer.name : "Unknown"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {customer?.email}
+            </span>
+          </div>
         );
       },
     },
@@ -64,7 +88,7 @@ export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
       accessorKey: "total",
       header: "Total",
       cell: ({ row }) => {
-        const amount = row.original.total;
+        const amount = Number(row.original.total);
         return new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
@@ -95,7 +119,7 @@ export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
             </Button>
             <DeleteInvoiceButton
               rowId={row.original.id}
-              setOptimisticInvoices={setOptimisticInvoices}
+              setOptimisticInvoices={setOptimisticDelete}
             />
           </div>
         </ViewTransition>
@@ -103,5 +127,20 @@ export function InvoicesTable({ invoicesPromise }: InvoicesTableProps) {
     },
   ];
 
-  return <DataTable columns={columns} data={invoices} />;
+  return (
+    <div className="space-y-4">
+      <DataTable 
+        columns={columns} 
+        data={invoices} 
+        totalPages={optimisticData?.totalPages} 
+      />
+      
+      <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
+        <span>Total Invoices: {optimisticData?.totalCount}</span>
+        <span>
+          Page {optimisticData?.currentPage} of {optimisticData?.totalPages}
+        </span>
+      </div>
+    </div>
+  );
 }

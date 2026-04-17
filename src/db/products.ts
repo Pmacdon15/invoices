@@ -1,23 +1,63 @@
 import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
-import type { CreateProductInput, Product } from "@/dal/types";
+import type { CreateProductInput, PaginatedValue, Product } from "@/dal/types";
 
-export async function fetchingProductsDb(orgId: string): Promise<Product[]> {
+// export async function fetchingProductsDb(orgId: string): Promise<Product[]> {
+//   "use cache";
+//   cacheTag(`products-${orgId}`);
+//   if (!process.env.DATABASE_URL) {
+//     throw new Error("Config Error");
+//   }
+//   const sql = neon(process.env.DATABASE_URL);
+//   const productsFromDb = await sql`
+//     SELECT * FROM products
+//     WHERE deleted = false AND org_id = ${orgId}
+//   `;
+
+//   return productsFromDb.map((product) => ({
+//     ...product,
+//     price: parseFloat(product.price),
+//   })) as Product[];
+// }
+
+export async function fetchingProductsDb(
+  orgId: string,
+  page: number = 1,
+): Promise<PaginatedValue<Product>> {
   "use cache";
-  cacheTag(`products-${orgId}`);
+  cacheTag(`products-${orgId}`, `products-${orgId}-page-${page}`);
+
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
-  const sql = neon(process.env.DATABASE_URL);
-  const productsFromDb = await sql`
-    SELECT * FROM products 
-    WHERE deleted = false AND org_id = ${orgId}
-  `;
 
-  return productsFromDb.map((product) => ({
-    ...product,
-    price: parseFloat(product.price),
-  })) as Product[];
+  const sql = neon(process.env.DATABASE_URL);
+  const pageSize = 10;
+  const offset = (page - 1) * pageSize;
+
+  const [rows, countResult] = await Promise.all([
+    sql`
+      SELECT * FROM products 
+      WHERE deleted = false AND org_id = ${orgId}
+      ORDER BY id DESC
+      LIMIT ${pageSize} OFFSET ${offset}
+    `,
+    sql`
+      SELECT COUNT(*) as total FROM products 
+      WHERE deleted = false AND org_id = ${orgId}
+    `,
+  ]);
+
+  // Use the capital 'N' Number constructor
+  const totalCount = Number(countResult[0].total);
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  return {
+    data: rows as Product[],
+    currentPage: page,
+    totalPages: totalPages,
+    totalCount: totalCount,
+  };
 }
 
 export async function createProductDb(

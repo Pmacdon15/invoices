@@ -7,16 +7,23 @@ import {
   fetchingCustomersDb,
 } from "@/db/customers";
 import { CreateCustomerSchema, IdSchema } from "./schema";
-import type { CreateCustomerInput, Customer, Result } from "./types";
+import type {
+  CreateCustomerInput,
+  Customer,
+  PaginatedValue,
+  Result,
+} from "./types";
 
-export async function getCustomers(): Promise<Result<Customer[]>> {
+export async function getCustomers(
+  page: number,
+): Promise<Result<PaginatedValue<Customer>>> {
   const { orgId } = await auth.protect();
 
   if (!orgId) {
     return { data: null, error: "No org" };
   }
   try {
-    const data = await fetchingCustomersDb(orgId);
+    const data = await fetchingCustomersDb(orgId, page);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
