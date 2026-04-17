@@ -244,6 +244,7 @@ export async function updateInvoiceStatusDb(
 export async function sendInvoiceDb(
   id: string,
   orgId: string,
+  orgName: string,
 ): Promise<Invoice> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
@@ -300,31 +301,36 @@ export async function sendInvoiceDb(
   const { error: resendError } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "invoices@resend.dev",
     to: invoice.customer_email,
-    subject: `Invoice – ${fmt.format(invoice.total as unknown as number)}`,
+    subject: `Invoice from ${orgName} – ${fmt.format(invoice.total as unknown as number)}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#111">
-        <h2 style="margin-bottom:4px">Invoice</h2>
-        <p style="color:#6b7280;font-size:13px;margin-top:0">ID: ${invoice.id}</p>
-        <p>Hi ${invoice.customer_name},</p>
-        <p>Please find your invoice details below. Payment is due upon receipt.</p>
-        <table style="width:100%;border-collapse:collapse;margin:24px 0">
-          <thead>
-            <tr style="background:#f3f4f6">
-              <th style="padding:8px 12px;text-align:left;font-size:12px;text-transform:uppercase">Description</th>
-              <th style="padding:8px 12px;text-align:center;font-size:12px;text-transform:uppercase">Qty</th>
-              <th style="padding:8px 12px;text-align:right;font-size:12px;text-transform:uppercase">Price</th>
-              <th style="padding:8px 12px;text-align:right;font-size:12px;text-transform:uppercase">Amount</th>
-            </tr>
-          </thead>
-          <tbody>${itemsHtml}</tbody>
-          <tfoot>
-            <tr style="background:#f9fafb">
-              <td colspan="3" style="padding:10px 12px;text-align:right;font-weight:700;text-transform:uppercase;font-size:13px">Total Due</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;font-size:16px">${fmt.format(invoice.total as unknown as number)}</td>
-            </tr>
-          </tfoot>
-        </table>
-        <p style="color:#6b7280;font-size:12px">Thank you for your business.</p>
+        <div style="background:#18181b;padding:24px 32px;border-radius:8px 8px 0 0">
+          <p style="color:#a1a1aa;font-size:12px;margin:0 0 4px 0;text-transform:uppercase;letter-spacing:0.05em">Invoice from</p>
+          <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0">${orgName}</h1>
+        </div>
+        <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;padding:24px 32px">
+          <p style="color:#6b7280;font-size:12px;margin:0 0 20px 0">Invoice ID: ${invoice.id}</p>
+          <p style="margin:0 0 4px 0">Hi <strong>${invoice.customer_name}</strong>,</p>
+          <p style="margin:0 0 24px 0;color:#374151">Please find your invoice details below. Payment is due upon receipt.</p>
+          <table style="width:100%;border-collapse:collapse;margin:0 0 24px 0">
+            <thead>
+              <tr style="background:#f3f4f6">
+                <th style="padding:8px 12px;text-align:left;font-size:12px;text-transform:uppercase;color:#6b7280">Description</th>
+                <th style="padding:8px 12px;text-align:center;font-size:12px;text-transform:uppercase;color:#6b7280">Qty</th>
+                <th style="padding:8px 12px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280">Price</th>
+                <th style="padding:8px 12px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280">Amount</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+            <tfoot>
+              <tr style="background:#f9fafb">
+                <td colspan="3" style="padding:10px 12px;text-align:right;font-weight:700;text-transform:uppercase;font-size:13px">Total Due</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:700;font-size:18px;color:#18181b">${fmt.format(invoice.total as unknown as number)}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p style="color:#6b7280;font-size:12px;border-top:1px solid #e5e7eb;padding-top:16px;margin:0">Thank you for your business — ${orgName}</p>
+        </div>
       </div>
     `,
   });

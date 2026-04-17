@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { errAsync, okAsync } from "neverthrow";
 import z from "zod";
 import {
@@ -147,15 +147,17 @@ export async function sendInvoiceDal(id: string) {
     } as const);
   }
 
+  // Fetch org name from Clerk
+  const client = await clerkClient();
+  const org = await client.organizations.getOrganization({ organizationId: orgId });
+  const orgName = org.name;
+
   try {
-    const invoice = await sendInvoiceDb(id, orgId);
+    const invoice = await sendInvoiceDb(id, orgId, orgName);
     return okAsync(invoice);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("Send Invoice Error:", e);
-    if (message.includes("RESEND_API_KEY")) {
-      return errAsync({ reason: "Failed to send invoice", message } as const);
-    }
     return errAsync({ reason: "Failed to send invoice", message } as const);
   }
 }
