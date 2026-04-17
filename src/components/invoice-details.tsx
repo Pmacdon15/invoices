@@ -6,6 +6,7 @@ import Image from "next/image";
 import { use } from "react";
 import type { FullInvoice, Result } from "@/dal/types";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
+import { SendInvoiceButton } from "./buttons/send-invoice-button";
 import { InvoiceStatusUpdater } from "./invoice-status-updater";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
@@ -43,6 +44,10 @@ export function InvoiceDetails({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <SendInvoiceButton
+            invoiceId={invoice.id}
+            currentStatus={invoice.status as "draft" | "sent" | "paid"}
+          />
           <DownloadPDFButton invoiceId={invoice.id} />
           <div className="flex flex-col items-end gap-2">
             <InvoiceStatusUpdater

@@ -4,10 +4,12 @@ import { toast } from "sonner";
 import {
   createInvoiceAction,
   deleteInvoiceAction,
+  sendInvoiceAction,
   updateInvoiceStatusAction,
 } from "@/actions/invoices";
 // import { updateTagAction } from "@/actions/revalidate";
 import type { CreateInvoiceInput, Invoice } from "@/dal/types";
+import { Route } from "next";
 
 export const useCreateInvoice = (options?: {
   onSuccess?: (data: Invoice) => void;
@@ -28,7 +30,7 @@ export const useCreateInvoice = (options?: {
       if (options?.onSuccess) {
         options.onSuccess(data);
       } else if (data?.id) {
-        router.push(`/invoices/${data.id}`);
+        router.push(`/invoices/${data.id}` as Route);
       }
     },
     onError: (error: Error) => {
@@ -90,6 +92,26 @@ export const useUpdateInvoiceStatus = () => {
       toast.success("Invoice status has been updated");
     },
     onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+};
+
+export const useSendInvoice = () => {
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await sendInvoiceAction(invoiceId);
+
+      if ("message" in response) {
+        throw new Error(response.message);
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Invoice sent! Status updated to Sent.");
+    },
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });

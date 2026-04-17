@@ -11,12 +11,13 @@ export type ActionErrorReason =
   | "Db failed to create invoice"
   | "Db failed to update invoice"
   | "Db failed to delete invoice"
+  | "Failed to send invoice"
   | "Test"; // Add this if you want to keep that specific string
 
 export interface ActionError {
   reason: ActionErrorReason;
   message?: string;
-  errors?: Record<string, any>; // Add this to hold the Zod tree
+  errors?: Record<string, unknown>; // Add this to hold the Zod tree
 }
 export function handleMutationError(error: ActionError) {
   const { reason, errors } = error;
@@ -49,6 +50,8 @@ export function handleMutationError(error: ActionError) {
       return { message: reason || "Db error" };
     case "Db failed to delete invoice":
       return { message: reason || "Db error" };
+    case "Failed to send invoice":
+      return { message: reason };
     case "Test":
       return { message: reason };
     default:

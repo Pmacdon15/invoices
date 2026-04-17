@@ -4,6 +4,7 @@ import { updateTag } from "next/cache";
 import {
   createInvoiceDal,
   deleteInvoiceDal,
+  sendInvoiceDal,
   updateInvoiceStatusDal,
 } from "@/dal/invoices";
 import type { CreateInvoiceInput } from "@/dal/types";
@@ -43,6 +44,21 @@ export async function updateInvoiceStatusAction(
   status: "draft" | "sent" | "paid",
 ) {
   const result = await updateInvoiceStatusDal(id, status);
+
+  return result.match(
+    (data) => {
+      updateTag(`invoices-${data.org_id}`);
+      updateTag(`invoice-${data.id}`);
+      return { data };
+    },
+    (err) => {
+      return handleMutationError(err);
+    },
+  );
+}
+
+export async function sendInvoiceAction(invoiceId: string) {
+  const result = await sendInvoiceDal(invoiceId);
 
   return result.match(
     (data) => {

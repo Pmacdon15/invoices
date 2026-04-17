@@ -122,7 +122,14 @@ export async function fetchingInvoiceByIdDb(
     FROM invoice_items ii
     JOIN products p ON ii.product_id = p.id
     WHERE ii.invoice_id = ${id}
-  `) as any[];
+  `) as {
+    id: string;
+    invoice_id: string;
+    product_id: string;
+    quantity: number;
+    unit_price: number;
+    product_name: string;
+  }[];
 
   return {
     ...invoice,
@@ -232,5 +239,107 @@ export async function updateInvoiceStatusDb(
     WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *;
   `;
+  return result[0] as Invoice;
+}
+export async function sendInvoiceDb(
+  id: string,
+  orgId: string,
+): Promise<Invoice> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  const sql = neon(process.env.DATABASE_URL);
+
+  // Fetch the full invoice with customer + items
+  const [invoice] = (await sql`
+    SELECT 
+      i.*,
+      c.name as customer_name,
+      c.email as customer_email
+    FROM invoices i
+    JOIN customers c ON i.customer_id = c.id
+    WHERE i.id = ${id} AND i.org_id = ${orgId}
+  `) as (Invoice & { customer_name: string; customer_email: string })[];
+
+  if (!invoice) throw new Error("Invoice not found or not authorized");
+
+  const items = (await sql`
+    SELECT 
+      ii.*,
+      p.name as product_name
+    FROM invoice_items ii
+    JOIN products p ON ii.product_id = p.id
+    WHERE ii.invoice_id = ${id}
+  `) as { product_name: string; quantity: number; unit_price: number }[];
+
+  // Build email HTML
+  const fmt = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
+
+  const itemsHtml = items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${item.product_name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center">${item.quantity}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt.format(item.unit_price)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${fmt.format(item.quantity * item.unit_price)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const { Resend } = await import("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const { error: resendError } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "invoices@resend.dev",
+    to: invoice.customer_email,
+    subject: `Invoice – ${fmt.format(invoice.total as unknown as number)}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#111">
+        <h2 style="margin-bottom:4px">Invoice</h2>
+        <p style="color:#6b7280;font-size:13px;margin-top:0">ID: ${invoice.id}</p>
+        <p>Hi ${invoice.customer_name},</p>
+        <p>Please find your invoice details below. Payment is due upon receipt.</p>
+        <table style="width:100%;border-collapse:collapse;margin:24px 0">
+          <thead>
+            <tr style="background:#f3f4f6">
+              <th style="padding:8px 12px;text-align:left;font-size:12px;text-transform:uppercase">Description</th>
+              <th style="padding:8px 12px;text-align:center;font-size:12px;text-transform:uppercase">Qty</th>
+              <th style="padding:8px 12px;text-align:right;font-size:12px;text-transform:uppercase">Price</th>
+              <th style="padding:8px 12px;text-align:right;font-size:12px;text-transform:uppercase">Amount</th>
+            </tr>
+          </thead>
+          <tbody>${itemsHtml}</tbody>
+          <tfoot>
+            <tr style="background:#f9fafb">
+              <td colspan="3" style="padding:10px 12px;text-align:right;font-weight:700;text-transform:uppercase;font-size:13px">Total Due</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;font-size:16px">${fmt.format(invoice.total as unknown as number)}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <p style="color:#6b7280;font-size:12px">Thank you for your business.</p>
+      </div>
+    `,
+  });
+
+  if (resendError) {
+    throw new Error(`Failed to send email: ${resendError.message}`);
+  }
+
+  // Update status to 'sent'
+  const result = await sql`
+    UPDATE invoices
+    SET status = 'sent'
+    WHERE id = ${id} AND org_id = ${orgId}
+    RETURNING *;
+  `;
+
   return result[0] as Invoice;
 }

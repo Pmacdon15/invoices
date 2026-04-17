@@ -6,6 +6,7 @@ import {
   deleteInvoiceDb,
   fetchingInvoiceByIdDb,
   fetchingInvoicesDb,
+  sendInvoiceDb,
   updateInvoiceStatusDb,
 } from "@/db/invoices";
 import {
@@ -127,5 +128,34 @@ export async function updateInvoiceStatusDal(
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
     return errAsync({ reason: "Db failed to update invoice" } as const);
+  }
+}
+
+export async function sendInvoiceDal(id: string) {
+  const { orgId } = await auth.protect();
+
+  if (!orgId) {
+    return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  const validation = IdSchema.safeParse({ id });
+  if (!validation.success) {
+    const errorTree = z.treeifyError(validation.error);
+    return errAsync({
+      reason: "Validation failed",
+      errors: errorTree,
+    } as const);
+  }
+
+  try {
+    const invoice = await sendInvoiceDb(id, orgId);
+    return okAsync(invoice);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("Send Invoice Error:", e);
+    if (message.includes("RESEND_API_KEY")) {
+      return errAsync({ reason: "Failed to send invoice", message } as const);
+    }
+    return errAsync({ reason: "Failed to send invoice", message } as const);
   }
 }
