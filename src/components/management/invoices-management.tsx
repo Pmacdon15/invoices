@@ -71,12 +71,9 @@ export function InvoicesManagement({
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Invoices</h1>
-          <p className="text-muted-foreground">
-            Managing your billing and payments.
-          </p>
-        </div>
+        <p className="text-muted-foreground">
+          Managing your billing and payments.
+        </p>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">

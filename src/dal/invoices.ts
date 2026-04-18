@@ -6,6 +6,7 @@ import {
   deleteInvoiceDb,
   fetchingInvoiceByIdDb,
   fetchingInvoicesDb,
+  searchInvoicesDb,
   sendInvoiceDb,
   updateInvoiceStatusDb,
 } from "@/db/invoices";
@@ -24,6 +25,7 @@ import type {
 
 export async function getInvoices(
   page: number,
+  query?: string,
 ): Promise<Result<PaginatedValue<Invoice>>> {
   const { orgId } = await auth.protect();
   if (!orgId) {
@@ -31,7 +33,7 @@ export async function getInvoices(
   }
 
   try {
-    const data = await fetchingInvoicesDb(orgId, page);
+    const data = await fetchingInvoicesDb(orgId, page, query);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
@@ -159,5 +161,19 @@ export async function sendInvoiceDal(id: string) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("Send Invoice Error:", e);
     return errAsync({ reason: "Failed to send invoice", message } as const);
+  }
+}
+
+export async function searchInvoicesDal(query: string): Promise<Result<Invoice[]>> {
+  const { orgId } = await auth.protect();
+  if (!orgId) {
+    return { data: null, error: "No org" };
+  }
+  try {
+    const data = await searchInvoicesDb(orgId, query);
+    return { data, error: null };
+  } catch (e: unknown) {
+    console.error("Database Search Error:", e);
+    return { data: null, error: "Database error occurred." };
   }
 }

@@ -5,6 +5,7 @@ import {
   createProductDb,
   deleteProductDb,
   fetchingProductsDb,
+  searchProductsDb,
 } from "@/db/products";
 import { CreateProductSchema, IdSchema } from "./schema";
 import type {
@@ -16,6 +17,7 @@ import type {
 export async function getProducts(
   page = 1,
   all = false,
+  query?: string,
 ): Promise<Result<PaginatedValue<Product>>> {
   const { orgId } = await auth.protect();
 
@@ -23,7 +25,7 @@ export async function getProducts(
     return { data: null, error: "No org" };
   }
   try {
-    const data = await fetchingProductsDb(orgId, page, all);
+    const data = await fetchingProductsDb(orgId, page, all, query);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
@@ -78,5 +80,19 @@ export async function deleteProductDal(id: string) {
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
     return errAsync({ reason: "Db failed to delete product" } as const);
+  }
+}
+
+export async function searchProductsDal(query: string): Promise<Result<Product[]>> {
+  const { orgId } = await auth.protect();
+  if (!orgId) {
+    return { data: null, error: "No org" };
+  }
+  try {
+    const data = await searchProductsDb(orgId, query);
+    return { data, error: null };
+  } catch (e: unknown) {
+    console.error("Database Search Error:", e);
+    return { data: null, error: "Database error occurred." };
   }
 }

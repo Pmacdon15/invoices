@@ -5,6 +5,7 @@ import {
   createCustomerDb,
   deleteCustomerDb,
   fetchingCustomersDb,
+  searchCustomersDb,
 } from "@/db/customers";
 import { CreateCustomerSchema, IdSchema } from "./schema";
 import type {
@@ -16,7 +17,8 @@ import type {
 
 export async function getCustomers(
   page = 1,
-  all = false
+  all = false,
+  query?: string,
 ): Promise<Result<PaginatedValue<Customer>>> {
   const { orgId } = await auth.protect();
 
@@ -24,7 +26,7 @@ export async function getCustomers(
     return { data: null, error: "No org" };
   }
   try {
-    const data = await fetchingCustomersDb(orgId, page, all);
+    const data = await fetchingCustomersDb(orgId, page, all, query);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
@@ -82,5 +84,19 @@ export async function deleteCustomerDal(id: string) {
   } catch (e: unknown) {
     console.error("Database Delete Error:", e);
     return errAsync({ reason: "Db failed to delete customer" } as const);
+  }
+}
+
+export async function searchCustomersDal(query: string): Promise<Result<Customer[]>> {
+  const { orgId } = await auth.protect();
+  if (!orgId) {
+    return { data: null, error: "No org" };
+  }
+  try {
+    const data = await searchCustomersDb(orgId, query);
+    return { data, error: null };
+  } catch (e: unknown) {
+    console.error("Database Search Error:", e);
+    return { data: null, error: "Database error occurred." };
   }
 }

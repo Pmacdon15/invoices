@@ -9,7 +9,8 @@ import type {
 export async function fetchingCustomersDb(
   orgId: string,
   page: number = 1,
-  all: boolean = false
+  all: boolean = false,
+  query?: string,
 ): Promise<PaginatedValue<Customer>> {
   "use cache";
   const tag = all ? `customers-${orgId}-all` : `customers-${orgId}-page-${page}`;
@@ -22,11 +23,11 @@ export async function fetchingCustomersDb(
   const sql = neon(process.env.DATABASE_URL);
 
   if (all) {
-    const data = await sql`
+    const data = (await sql`
       SELECT * FROM customers 
       WHERE deleted = false AND org_id = ${orgId}
       ORDER BY id DESC
-    ` as Customer[];
+    `) as Customer[];
 
     return {
       data,
@@ -39,16 +40,20 @@ export async function fetchingCustomersDb(
   const pageSize = 10;
   const offset = (page - 1) * pageSize;
 
+  const whereClause = query
+    ? sql`WHERE deleted = false AND org_id = ${orgId} AND (name ILIKE ${`%${query}%`} OR email ILIKE ${`%${query}%`})`
+    : sql`WHERE deleted = false AND org_id = ${orgId}`;
+
   const [data, countResult] = await Promise.all([
     sql`
       SELECT * FROM customers 
-      WHERE deleted = false AND org_id = ${orgId}
+      ${whereClause}
       ORDER BY id DESC
       LIMIT ${pageSize} OFFSET ${offset}
     `,
     sql`
       SELECT COUNT(*) as total FROM customers 
-      WHERE deleted = false AND org_id = ${orgId}
+      ${whereClause}
     `,
   ]);
 
@@ -61,6 +66,28 @@ export async function fetchingCustomersDb(
     totalPages: totalPages,
     totalCount: totalCount,
   };
+}
+
+export async function searchCustomersDb(
+  orgId: string,
+  query: string,
+): Promise<Customer[]> {
+  "use cache";
+  cacheTag(`customers-${orgId}`);
+
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+
+  const sql = neon(process.env.DATABASE_URL);
+  const data = (await sql`
+    SELECT * FROM customers 
+    WHERE deleted = false AND org_id = ${orgId} AND (name ILIKE ${`%${query}%`} OR email ILIKE ${`%${query}%`})
+    ORDER BY name ASC
+    LIMIT 10
+  `) as Customer[];
+
+  return data;
 }
 // export async function fetchingCustomersDb(
 //   orgId: string,
