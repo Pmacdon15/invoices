@@ -25,7 +25,7 @@ export async function fetchingCustomersDb(
   if (all) {
     const data = (await sql`
       SELECT * FROM customers 
-      WHERE deleted = false AND org_id = ${orgId}
+      WHERE status != 'deleted' AND org_id = ${orgId}
       ORDER BY id DESC
     `) as Customer[];
 
@@ -41,8 +41,8 @@ export async function fetchingCustomersDb(
   const offset = (page - 1) * pageSize;
 
   const whereClause = query
-    ? sql`WHERE deleted = false AND org_id = ${orgId} AND (name ILIKE ${`%${query}%`} OR email ILIKE ${`%${query}%`})`
-    : sql`WHERE deleted = false AND org_id = ${orgId}`;
+    ? sql`WHERE status != 'deleted' AND org_id = ${orgId} AND (name ILIKE ${`%${query}%`} OR email ILIKE ${`%${query}%`})`
+    : sql`WHERE status != 'deleted' AND org_id = ${orgId}`;
 
   const [data, countResult] = await Promise.all([
     sql`
@@ -82,7 +82,7 @@ export async function searchCustomersDb(
   const sql = neon(process.env.DATABASE_URL);
   const data = (await sql`
     SELECT * FROM customers 
-    WHERE deleted = false AND org_id = ${orgId} AND (name ILIKE ${`%${query}%`} OR email ILIKE ${`%${query}%`})
+    WHERE status != 'deleted' AND org_id = ${orgId} AND (name ILIKE ${`%${query}%`} OR email ILIKE ${`%${query}%`})
     ORDER BY name ASC
     LIMIT 10
   `) as Customer[];
@@ -141,7 +141,7 @@ export async function deleteCustomerDb(
   const sql = neon(String(process.env.DATABASE_URL));
   const [result] = await sql`
     UPDATE customers 
-    SET deleted = true 
+    SET status = 'deleted' 
     WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *
   `;
@@ -160,8 +160,9 @@ export async function getCustomerCount(orgId: string): Promise<number> {
     SELECT count(*) as count 
     FROM customers 
     WHERE org_id = ${orgId} 
-    AND deleted = false
+    AND status = 'active'
   `;
 
   return Number(result[0]?.count ?? 0);
 }
+
