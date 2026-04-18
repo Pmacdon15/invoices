@@ -40,8 +40,7 @@ export default function Home() {
     <div className="flex flex-col gap-12 py-12 px-4 container mx-auto">
       <section className="flex flex-col items-center text-center gap-4 max-w-3xl mx-auto">
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-          Streamline Your{" "}
-          <span className="text-primary">Invoicing</span>
+          Streamline Your <span className="text-primary">Invoicing</span>
         </h1>
         <p className="text-xl text-muted-foreground">
           The all-in-one platform for managing customers, products, and
@@ -99,25 +98,27 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             <h2 className="text-3xl font-bold">Ready to grow?</h2>
             <p className="text-muted-foreground text-lg">
-              Join thousands of professionals who trust InvoicePro for their
-              daily business operations.
+              Take control of your daily business operations with a tool built
+              for your professional needs.
             </p>
             <div className="flex gap-2 items-center text-sm font-medium">
-              <div className="flex -space-x-2">
+              {/* <div className="flex -space-x-2">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
                     className="h-8 w-8 rounded-full bg-slate-200 border-2 border-white dark:border-slate-800"
                   />
                 ))}
-              </div>
-              <span>Trusted by 500+ businesses</span>
+              </div> */}
+              <span>Built for professional efficiency</span>
             </div>
           </div>
           <div className="flex justify-end">
-            <Button size="lg" className="rounded-full px-12 h-14 text-lg">
-              Get Started Now
-            </Button>
+            <Link href={"/customers"}>
+              <Button size="lg" className="rounded-full px-12 h-14 text-lg">
+                Get Started Now
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
