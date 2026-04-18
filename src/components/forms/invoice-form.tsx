@@ -98,14 +98,11 @@ export function InvoiceForm({
     },
   });
 
-  // Early return for missing products
+
   if (productsError !== null) {
     return (
       <div className="flex flex-col items-center justify-center p-8 border rounded-lg bg-muted/20">
-        <p className="text-destructive mb-4">{productsError}</p>
-        <Button asChild>
-          <Link href={"/products"}>Add Products</Link>
-        </Button>
+        <p className="text-destructive mb-4">{productsError}</p>        
       </div>
     );
   }

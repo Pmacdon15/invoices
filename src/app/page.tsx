@@ -1,4 +1,4 @@
-import { ArrowRight, Package, Receipt, Users } from "lucide-react";
+import { ArrowRight, Package, Receipt, Users, Plus, LayoutGrid } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,21 +18,18 @@ export default function Home() {
         "Manage your client database, add new customers and view history.",
       icon: Users,
       href: "/customers",
-      color: "text-blue-500",
     },
     {
       title: "Products",
       description: "Keep track of your offerings and set standard pricing.",
       icon: Package,
       href: "/products",
-      color: "text-green-500",
     },
     {
       title: "Invoices",
       description: "Generate professional invoices and track payment status.",
       icon: Receipt,
       href: "/invoices",
-      color: "text-purple-500",
     },
   ];
 
@@ -50,12 +47,18 @@ export default function Home() {
           <Button
             asChild
             size="lg"
-            className="px-8 bg-blue-600 hover:bg-blue-700"
+            className="px-8"
           >
-            <Link href="/invoices">Create Invoice</Link>
+            <Link href="/invoices" className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Create Invoice
+            </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="px-8">
-            <Link href="/customers">View Customers</Link>
+            <Link href="/customers" className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5" />
+              View Customers
+            </Link>
           </Button>
         </div>
       </section>
@@ -68,7 +71,7 @@ export default function Home() {
           >
             <CardHeader>
               <div
-                className={`p-2 rounded-lg w-fit mb-2 ${action.color} bg-opacity-10 bg-current`}
+                className="p-2 rounded-lg w-fit mb-2 text-primary bg-primary/10"
               >
                 <action.icon className="h-6 w-6" />
               </div>
