@@ -5,6 +5,7 @@ import {
   createCustomerDb,
   deleteCustomerDb,
   fetchingCustomersDb,
+  getCustomerCount,
   searchCustomersDb,
 } from "@/db/customers";
 import { CreateCustomerSchema, IdSchema } from "./schema";
@@ -38,10 +39,32 @@ export async function getCustomers(
 }
 
 export async function createCustomerDal(input: CreateCustomerInput) {
-  const { orgId } = await auth.protect();
+  const { orgId, has } = await auth.protect();
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  let limit = 0;
+  if (has({ feature: "create_unlimited_customers" })) {
+    limit = Infinity;
+  } else if (has({ feature: "create_up_to_8_customers" })) {
+    limit = 8;
+  } else if (has({ feature: "create_up_to_4_customers" })) {
+    limit = 4;
+  }
+
+  try {
+    const currentCount = await getCustomerCount(orgId);
+
+    if (currentCount >= limit) {
+      return errAsync({
+        reason: `Usage limit reached, limit: ${limit} customers total with your plan. Consider upgrading`,
+      } as const);
+    }
+  } catch (e) {
+    console.error("Error failed to verify usage limits: ", e);
+    return errAsync({ reason: "Failed to verify usage limits" } as const);
   }
 
   const validation = CreateCustomerSchema.safeParse(input);

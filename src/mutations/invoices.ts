@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -7,14 +8,10 @@ import {
   sendInvoiceAction,
   updateInvoiceStatusAction,
 } from "@/actions/invoices";
-// import { updateTagAction } from "@/actions/revalidate";
-import type { CreateInvoiceInput, Invoice } from "@/dal/types";
-import { Route } from "next";
 
-export const useCreateInvoice = (options?: {
-  onSuccess?: (data: Invoice) => void;
-  onError?: (error: Error) => void;
-}) => {
+import type { CreateInvoiceInput } from "@/dal/types";
+
+export const useCreateInvoice = () => {
   const router = useRouter();
   return useMutation({
     mutationFn: async (input: CreateInvoiceInput) => {
@@ -27,18 +24,12 @@ export const useCreateInvoice = (options?: {
     },
     onSuccess: (data) => {
       toast.success("Invoice has been created");
-      if (options?.onSuccess) {
-        options.onSuccess(data);
-      } else if (data?.id) {
+      if (data?.id) {
         router.push(`/invoices/${data.id}` as Route);
       }
     },
     onError: (error: Error) => {
-      if (options?.onError) {
-        options.onError(error);
-      } else {
-        toast.error(error.message);
-      }
+      toast.error(error.message);
     },
   });
 };

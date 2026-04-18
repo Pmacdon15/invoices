@@ -150,3 +150,18 @@ export async function deleteCustomerDb(
   }
   return result as Customer;
 }
+
+export async function getCustomerCount(orgId: string): Promise<number> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const result = await sql`
+    SELECT count(*) as count 
+    FROM customers 
+    WHERE org_id = ${orgId} 
+    AND deleted = false
+  `;
+
+  return Number(result[0]?.count ?? 0);
+}

@@ -12,15 +12,28 @@ export type ActionErrorReason =
   | "Db failed to update invoice"
   | "Db failed to delete invoice"
   | "Failed to send invoice"
-  | "Test"; // Add this if you want to keep that specific string
+  | "Failed to verify usage limits"
+  | `Usage limit reached, limit: ${string} with your plan. Consider upgrading`
+  | "Test";
 
 export interface ActionError {
   reason: ActionErrorReason;
   message?: string;
-  errors?: Record<string, unknown>; // Add this to hold the Zod tree
+  errors?: Record<string, unknown>;
 }
+
+function isUsageLimitError(
+  reason: ActionErrorReason
+): reason is `Usage limit reached, limit: ${string} with your plan. Consider upgrading` {
+  return reason.startsWith("Usage limit reached");
+}
+
 export function handleMutationError(error: ActionError) {
   const { reason, errors } = error;
+
+  if (isUsageLimitError(reason)) {
+    return { message: reason };
+  }
 
   switch (reason) {
     case "Not authorized":
@@ -29,33 +42,26 @@ export function handleMutationError(error: ActionError) {
 
     case "Validation failed":
       return {
-        message:
-          ` ${reason} ${errors} ` ||
-          "Data validation on submitted data has failed ",
+        message: "Data validation on submitted data has failed",
+        errors: errors,
       };
 
+    case "Failed to verify usage limits":
+      return { message: "Could not verify subscription limits." };
+
     case "Unknown Db error":
-      return { message: reason || "Db error" };
     case "Db failed to create product":
-      return { message: reason || "Db error" };
     case "Db failed to delete product":
-      return { message: reason || "Db error" };
     case "Db failed to create customer":
-      return { message: reason || "Db error" };
     case "Db failed to delete customer":
-      return { message: reason || "Db error" };
     case "Db failed to create invoice":
-      return { message: reason || "Db error" };
     case "Db failed to update invoice":
-      return { message: reason || "Db error" };
     case "Db failed to delete invoice":
-      return { message: reason || "Db error" };
     case "Failed to send invoice":
-      return { message: reason };
     case "Test":
       return { message: reason };
+
     default:
-      // Exhaustive check
       throw new Error(`Unhandled error reason: ${reason satisfies never}`);
   }
 }

@@ -49,7 +49,7 @@ export function DataTable<TData, TValue>({
     params.set("page", newPage.toString());
     router.push(`${pathname}?${params.toString()}` as Route);
   };
- console.log("numbers: ", currentPage , totalPages)
+ 
   return (
     <div>
       <div className="rounded-md border">

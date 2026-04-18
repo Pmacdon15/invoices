@@ -417,3 +417,19 @@ export async function sendInvoiceDb(
   return result[0] as Invoice;
 }
 
+export async function getMonthlyInvoiceCount(orgId: string): Promise<number> {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const sql = neon(String(process.env.DATABASE_URL));
+  // Example using a standard Postgres client or Drizzle
+  const result = await sql`
+    SELECT count(*) as count 
+    FROM invoices 
+    WHERE org_id = ${orgId} 
+    AND created_at >= ${startOfMonth.toISOString()}
+  `;
+
+  return Number(result[0]?.count ?? 0);
+}

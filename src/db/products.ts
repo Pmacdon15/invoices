@@ -117,3 +117,18 @@ export async function searchProductsDb(
 
   return data;
 }
+
+export async function getProductCount(orgId: string): Promise<number> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const result = await sql`
+    SELECT count(*) as count 
+    FROM products 
+    WHERE org_id = ${orgId} 
+    AND deleted = false
+  `;
+
+  return Number(result[0]?.count ?? 0);
+}
