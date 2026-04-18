@@ -2,19 +2,39 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { neon } from "@neondatabase/serverless";
 import { revalidateTag } from "next/cache";
 
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
 export async function rebalanceOrgItems(orgId: string) {
   if (!process.env.DATABASE_URL) throw new Error("Config Error");
   const sql = neon(process.env.DATABASE_URL);
 
   const client = await clerkClient();
 
-  // Extract features from subscription items
-  const features: string[] = [];
+    // Extract features from subscription items
+    const features: string[] = [];
+    const MAX_RETRIES = 5;
+    const INITIAL_DELAY = 1000; // 1 second
 
-  try {
-    // Get the organization's subscription
-    const subscription =
-      await client.billing.getOrganizationBillingSubscription(orgId);
+    let subscription: any = null; // Initialize subscription to null
+    let lastError: any = null; // To store the last error
+
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      try {
+        subscription = await client.billing.getOrganizationBillingSubscription(orgId);
+        if (subscription) {
+          break; // Success, exit loop
+        }
+      } catch (e) {
+        lastError = e;
+        console.warn(
+          `Attempt ${i + 1}/${MAX_RETRIES} failed to get organization billing subscription for ${orgId}: ${e}`
+        );
+        if (i < MAX_RETRIES - 1) {
+          const delayTime = INITIAL_DELAY * Math.pow(2, i);
+          await delay(delayTime);
+        }
+      }
+    }
 
     if (subscription?.subscriptionItems) {
       for (const item of subscription.subscriptionItems) {
@@ -22,12 +42,12 @@ export async function rebalanceOrgItems(orgId: string) {
           features.push(...item.plan.features.map((f) => f.id));
         }
       }
+    } else if (lastError) {
+      // Only log this if an error occurred and no subscription was retrieved
+      console.error(
+        `Organization ${orgId} or its billing not found in Clerk after ${MAX_RETRIES} retries, defaulting to starter limits: ${lastError}`,
+      );
     }
-  } catch (e) {
-    console.error(
-      `Organization ${orgId} or its billing not found in Clerk, defaulting to starter limits.`,
-    );
-  }
 
   console.log(`Organization ${orgId} features:`, features); // Debug log
 
