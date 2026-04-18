@@ -51,7 +51,7 @@ export async function createCustomerDal(input: CreateCustomerInput) {
   } else if (has({ feature: "create_up_to_8_customers" })) {
     limit = 8;
   } else if (has({ feature: "create_up_to_4_customers" })) {
-    limit = 4;
+    limit = 6;
   }
 
   try {

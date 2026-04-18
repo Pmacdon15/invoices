@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { rebalanceOrgItems } from "@/db/utils";
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  // const authHeader = req.headers.get("authorization");
+  // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  //   return new Response("Unauthorized", { status: 401 });
+  // }
 
   if (!process.env.DATABASE_URL) throw new Error("Config Error");
   const sql = neon(process.env.DATABASE_URL);

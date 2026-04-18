@@ -12,7 +12,7 @@ export async function rebalanceOrgItems(orgId: string) {
 
     // Extract features from subscription items
     const features: string[] = [];
-    const MAX_RETRIES = 5;
+    const MAX_RETRIES = 2;
     const INITIAL_DELAY = 1000; // 1 second
 
     let subscription: any = null; // Initialize subscription to null
@@ -39,7 +39,7 @@ export async function rebalanceOrgItems(orgId: string) {
     if (subscription?.subscriptionItems) {
       for (const item of subscription.subscriptionItems) {
         if (item.plan?.features) {
-          features.push(...item.plan.features.map((f) => f.id));
+          features.push(...item.plan.features.map((f:any) => f.id));
         }
       }
     } else if (lastError) {
