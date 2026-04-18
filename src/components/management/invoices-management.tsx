@@ -13,6 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type {
   Customer,
   Invoice,
@@ -38,6 +45,7 @@ export function InvoicesManagement({
 }: InvoicesManagementProps) {
   const { data, error } = use(invoicesPromise);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const [optimisticState, setOptimistic] = useOptimistic(
     data,
@@ -68,12 +76,32 @@ export function InvoicesManagement({
     return <div className="text-destructive">Error: {error}</div>;
   }
 
+  const filteredInvoices = optimisticState?.data.filter((invoice) => {
+    if (statusFilter === "all") return true;
+    return invoice.status === statusFilter;
+  }) ?? [];
+
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <p className="text-muted-foreground">
-          Managing your billing and payments.
-        </p>
+      <div className="flex justify-between items-end gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="text-muted-foreground">
+            Managing your billing and payments.
+          </p>
+          <div className="flex items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -103,7 +131,7 @@ export function InvoicesManagement({
       </div>
 
       <InvoicesTable
-        data={optimisticState?.data ?? []}
+        data={filteredInvoices}
         totalPages={data?.totalPages ?? 1}
         currentPage={data?.currentPage ?? 1}
         totalCount={optimisticState?.totalCount ?? 0}
