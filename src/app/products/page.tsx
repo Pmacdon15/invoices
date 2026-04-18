@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { ProductsManagement } from "@/components/management/products-management";
-import { getProducts } from "@/dal/products";
 import { SearchSelector } from "@/components/ui/search-selector";
+import { getProducts } from "@/dal/products";
 
 export default async function ProductsPage(props: PageProps<"/products">) {
   const dataPromise = props.searchParams.then((searchParams) => {
@@ -21,10 +21,12 @@ export default async function ProductsPage(props: PageProps<"/products">) {
     <div className="container mx-auto py-10 px-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Products</h1>
-        <SearchSelector
-          placeholder="Search products..."
-          apiEndpoint="/api/products/search"
-        />
+        <Suspense>
+          <SearchSelector
+            placeholder="Search products..."
+            apiEndpoint="/api/products/search"
+          />
+        </Suspense>
       </div>
       <Suspense fallback={<div>Loading products...</div>}>
         <ProductsManagement dataPromise={dataPromise} />
