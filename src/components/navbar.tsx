@@ -85,10 +85,10 @@ export function Navbar() {
         <div className="flex items-center md:hidden">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
+              {/* <Button variant="ghost" className="md:hidden"> */}
+                <Menu size={24} />
+                {/* <span className="sr-only">Toggle menu</span> */}
+              {/* </Button> */}
             </SheetTrigger>
             <SheetContent side="right" className="p-8">
               <SheetHeader>
