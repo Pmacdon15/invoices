@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
 import { clerkClient } from "@clerk/nextjs/server";
+import { neon } from "@neondatabase/serverless";
 import { revalidateTag } from "next/cache";
 
 export async function rebalanceOrgItems(orgId: string) {
@@ -13,7 +13,8 @@ export async function rebalanceOrgItems(orgId: string) {
 
   try {
     // Get the organization's subscription
-    const subscription = await client.billing.getOrganizationBillingSubscription(orgId)
+    const subscription =
+      await client.billing.getOrganizationBillingSubscription(orgId);
 
     if (subscription?.subscriptionItems) {
       for (const item of subscription.subscriptionItems) {
@@ -23,7 +24,9 @@ export async function rebalanceOrgItems(orgId: string) {
       }
     }
   } catch (e) {
-    console.error(`Organization ${orgId} or its billing not found in Clerk, defaulting to starter limits.`);
+    console.error(
+      `Organization ${orgId} or its billing not found in Clerk, defaulting to starter limits.`,
+    );
   }
 
   console.log(`Organization ${orgId} features:`, features); // Debug log
@@ -70,7 +73,7 @@ export async function rebalanceOrgItems(orgId: string) {
   }
 
   if (hasChanged) {
-    revalidateTag(`customers-${orgId}`);
-    revalidateTag(`products-${orgId}`);
+    revalidateTag(`customers-${orgId}`, { expire: 0 });
+    revalidateTag(`products-${orgId}`, { expire: 0 });
   }
 }
