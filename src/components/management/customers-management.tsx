@@ -61,12 +61,9 @@ export function CustomersManagement({
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Customers</h1>
-          <p className="text-muted-foreground">
-            Manage your customer database.
-          </p>
-        </div>
+        <p className="text-muted-foreground">
+          Manage your customer database.
+        </p>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -81,7 +78,7 @@ export function CustomersManagement({
               </DialogDescription>
             </DialogHeader>
             <CustomerForm
-              orgId={data.data[0].org_id}
+              orgId={data.data[0]?.org_id ?? ""}
               isModal
               onOptimistic={(newCustomer) => {
                 setOptimistic({ type: "add", payload: newCustomer });

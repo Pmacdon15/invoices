@@ -38,6 +38,7 @@ import type {
 export async function fetchingInvoicesDb(
   orgId: string,
   page: number = 1,
+  query?: string,
 ): Promise<PaginatedValue<Invoice>> {
   "use cache";
   // Including the page in the tag ensures specific pages can be purged or cached independently
@@ -51,6 +52,16 @@ export async function fetchingInvoicesDb(
   const pageSize = 10;
   const offset = (page - 1) * pageSize;
 
+  const whereClause = query
+    ? sql`WHERE i.org_id = ${orgId} AND (
+        c.name ILIKE ${`%${query}%`} OR 
+        c.email ILIKE ${`%${query}%`} OR 
+        i.id::TEXT ILIKE ${`%${query}%`} OR 
+        i.total::TEXT ILIKE ${`%${query}%`} OR 
+        i.created_at::TEXT ILIKE ${`%${query}%`}
+      )`
+    : sql`WHERE i.org_id = ${orgId}`;
+
   const [data, countResult] = await Promise.all([
     sql`
       SELECT 
@@ -59,14 +70,15 @@ export async function fetchingInvoicesDb(
         c.email as customer_email
       FROM invoices i 
       JOIN customers c ON i.customer_id = c.id
-      WHERE i.org_id = ${orgId}
+      ${whereClause}
       ORDER BY i.created_at DESC
       LIMIT ${pageSize} OFFSET ${offset}
     `,
 
     sql`
-      SELECT COUNT(*) as total FROM invoices 
-      WHERE org_id = ${orgId}
+      SELECT COUNT(*) as total FROM invoices i
+      JOIN customers c ON i.customer_id = c.id
+      ${whereClause}
     `,
   ]);
 
@@ -90,6 +102,47 @@ export async function fetchingInvoicesDb(
     totalPages: totalPages,
     totalCount: totalCount,
   };
+}
+
+export async function searchInvoicesDb(
+  orgId: string,
+  query: string,
+): Promise<Invoice[]> {
+  "use cache";
+  cacheTag(`invoices-${orgId}`);
+
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+
+  const sql = neon(process.env.DATABASE_URL);
+  const data = (await sql`
+    SELECT 
+      i.*,
+      c.name as customer_name,
+      c.email as customer_email
+    FROM invoices i 
+    JOIN customers c ON i.customer_id = c.id
+    WHERE i.org_id = ${orgId} AND (
+      c.name ILIKE ${`%${query}%`} OR 
+      c.email ILIKE ${`%${query}%`} OR 
+      i.id::TEXT ILIKE ${`%${query}%`} OR 
+      i.total::TEXT ILIKE ${`%${query}%`} OR 
+      i.created_at::TEXT ILIKE ${`%${query}%`}
+    )
+    ORDER BY i.created_at DESC
+    LIMIT 10
+  `) as (Invoice & { customer_name: string; customer_email: string })[];
+
+  return data.map((inv) => ({
+    ...inv,
+    customer: {
+      id: inv.customer_id,
+      name: inv.customer_name,
+      email: inv.customer_email,
+      org_id: inv.org_id,
+    },
+  })) as Invoice[];
 }
 
 export async function fetchingInvoiceByIdDb(
@@ -363,5 +416,4 @@ export async function sendInvoiceDb(
 
   return result[0] as Invoice;
 }
-
 

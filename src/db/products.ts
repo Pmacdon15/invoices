@@ -4,7 +4,8 @@ import type { CreateProductInput, PaginatedValue, Product } from "@/dal/types";
 export async function fetchingProductsDb(
   orgId: string,
   page: number = 1,
-  all: boolean = false
+  all: boolean = false,
+  query?: string,
 ): Promise<PaginatedValue<Product>> {
   "use cache";
   const tag = all ? `products-${orgId}-all` : `products-${orgId}-page-${page}`;
@@ -17,11 +18,11 @@ export async function fetchingProductsDb(
   const sql = neon(process.env.DATABASE_URL);
 
   if (all) {
-    const data = await sql`
+    const data = (await sql`
       SELECT * FROM products 
       WHERE deleted = false AND org_id = ${orgId}
       ORDER BY id DESC
-    ` as Product[];
+    `) as Product[];
 
     return {
       data,
@@ -34,16 +35,20 @@ export async function fetchingProductsDb(
   const pageSize = 10;
   const offset = (page - 1) * pageSize;
 
+  const whereClause = query
+    ? sql`WHERE deleted = false AND org_id = ${orgId} AND name ILIKE ${`%${query}%`}`
+    : sql`WHERE deleted = false AND org_id = ${orgId}`;
+
   const [rows, countResult] = await Promise.all([
     sql`
       SELECT * FROM products 
-      WHERE deleted = false AND org_id = ${orgId}
+      ${whereClause}
       ORDER BY id DESC
       LIMIT ${pageSize} OFFSET ${offset}
     `,
     sql`
       SELECT COUNT(*) as total FROM products 
-      WHERE deleted = false AND org_id = ${orgId}
+      ${whereClause}
     `,
   ]);
 
@@ -89,4 +94,26 @@ export async function deleteProductDb(
   }
 
   return result as Product;
+}
+
+export async function searchProductsDb(
+  orgId: string,
+  query: string,
+): Promise<Product[]> {
+  "use cache";
+  cacheTag(`products-${orgId}`);
+
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+
+  const sql = neon(process.env.DATABASE_URL);
+  const data = (await sql`
+    SELECT * FROM products 
+    WHERE deleted = false AND org_id = ${orgId} AND name ILIKE ${`%${query}%`}
+    ORDER BY name ASC
+    LIMIT 10
+  `) as Product[];
+
+  return data;
 }
