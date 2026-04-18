@@ -1,4 +1,5 @@
 import { ArrowRight, Package, Receipt, Users } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +41,7 @@ export default function Home() {
       <section className="flex flex-col items-center text-center gap-4 max-w-3xl mx-auto">
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
           Streamline Your{" "}
-          <span className="text-primary text-blue-600">Invoicing</span>
+          <span className="text-primary">Invoicing</span>
         </h1>
         <p className="text-xl text-muted-foreground">
           The all-in-one platform for managing customers, products, and
@@ -52,7 +53,7 @@ export default function Home() {
             size="lg"
             className="px-8 bg-blue-600 hover:bg-blue-700"
           >
-            <Link href="/invoices/new">Create Invoice</Link>
+            <Link href="/invoices">Create Invoice</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="px-8">
             <Link href="/customers">View Customers</Link>
@@ -82,7 +83,7 @@ export default function Home() {
                 className="p-0 group-hover:translate-x-1 transition-transform"
               >
                 <Link
-                  href={action.href as any}
+                  href={action.href as Route}
                   className="flex items-center gap-1"
                 >
                   Go to {action.title} <ArrowRight className="h-4 w-4" />
