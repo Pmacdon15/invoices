@@ -73,10 +73,10 @@ export function InvoiceDetails({
               />
             </DialogContent>
           </Dialog>
-          <SendInvoiceButton
+          {/* <SendInvoiceButton
             invoiceId={invoice.id}
             currentStatus={invoice.status as "draft" | "sent" | "paid"}
-          />
+          /> */}
           <DownloadPDFButton invoiceId={invoice.id} />
           <div className="flex flex-col items-end gap-2">
             <InvoiceStatusUpdater
