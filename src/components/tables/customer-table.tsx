@@ -6,13 +6,58 @@ import type { Customer } from "@/dal/types";
 import DeleteCustomerButton from "../buttons/delete-customer-button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Edit2 } from "lucide-react";
+import { CustomerForm } from "../forms/customer-form";
+
+const EditCustomerCell = ({
+  customer,
+  setOptimistic,
+}: {
+  customer: Customer;
+  setOptimistic: (action: any) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Customer</DialogTitle>
+          <DialogDescription>Update the customer details below.</DialogDescription>
+        </DialogHeader>
+        <CustomerForm
+          orgId={customer.org_id}
+          initialData={customer}
+          isModal
+          onOptimistic={(updatedCustomer) => {
+            setOptimistic({ type: "update", payload: updatedCustomer });
+            setIsOpen(false);
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 interface CustomersTableProps {
   data: Customer[];
   totalPages: number;
   currentPage: number;
   totalCount: number;
-  setOptimistic: (action: { type: "delete"; payload: string }) => void;
+  setOptimistic: (
+    action: { type: "delete"; payload: string } | { type: "update"; payload: Customer }
+  ) => void;
 }
 
 export function CustomersTable({
@@ -64,10 +109,13 @@ export function CustomersTable({
     {
       id: "actions",
       cell: ({ row }) => (
-        <DeleteCustomerButton
-          rowId={row.original.id}
-          setOptimisticCustomers={(id) => setOptimistic({ type: "delete", payload: id })}
-        />
+        <div className="flex items-center justify-end gap-2">
+          <EditCustomerCell customer={row.original} setOptimistic={setOptimistic} />
+          <DeleteCustomerButton
+            rowId={row.original.id}
+            setOptimisticCustomers={(id) => setOptimistic({ type: "delete", payload: id })}
+          />
+        </div>
       ),
     },
   ];

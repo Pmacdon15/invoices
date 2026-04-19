@@ -10,14 +10,17 @@ import {
   searchInvoicesDb,
   sendInvoiceDb,
   updateInvoiceStatusDb,
+  updateInvoiceDb,
 } from "@/db/invoices";
 import {
   CreateInvoiceSchema,
   IdSchema,
   UpdateInvoiceStatusSchema,
+  UpdateInvoiceSchema,
 } from "./schema";
 import type {
   CreateInvoiceInput,
+  UpdateInvoiceInput,
   FullInvoice,
   Invoice,
   PaginatedValue,
@@ -208,5 +211,29 @@ export async function searchInvoicesDal(
   } catch (e: unknown) {
     console.error("Database Search Error:", e);
     return { data: null, error: "Database error occurred." };
+  }
+}
+
+export async function updateInvoiceDal(input: UpdateInvoiceInput) {
+  const { orgId } = await auth.protect();
+
+  if (!orgId) {
+    return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  const validation = UpdateInvoiceSchema.safeParse(input);
+  if (!validation.success) {
+    return errAsync({
+      reason: "Validation failed",
+      errors: z.treeifyError(validation.error),
+    } as const);
+  }
+
+  try {
+    const invoice = await updateInvoiceDb(input, orgId);
+    return okAsync(invoice);
+  } catch (e: unknown) {
+    console.error("Database Update Error:", e);
+    return errAsync({ reason: "Db failed to update invoice" } as const);
   }
 }

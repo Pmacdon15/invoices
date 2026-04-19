@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
-import type { CreateProductInput, PaginatedValue, Product } from "@/dal/types";
+import type { CreateProductInput, UpdateProductInput, PaginatedValue, Product } from "@/dal/types";
 export async function fetchingProductsDb(
   orgId: string,
   page: number = 1,
@@ -84,7 +84,7 @@ export async function deleteProductDb(
 
   const [result] = await sql`
     UPDATE products 
-    SET deleted = true 
+    SET status = 'deleted' 
     WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *
   `;
@@ -131,4 +131,24 @@ export async function getProductCount(orgId: string): Promise<number> {
   `;
 
   return Number(result[0]?.count ?? 0);
+}
+
+export async function updateProductDb(
+  input: UpdateProductInput,
+  orgId: string,
+): Promise<Product> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const result = await sql`
+    UPDATE products 
+    SET name = ${input.name}, price = ${input.price}, status = ${input.status}
+    WHERE id = ${input.id} AND org_id = ${orgId}
+    RETURNING *
+  `;
+  if (!result[0]) {
+    throw new Error("Product not found or not authorized");
+  }
+  return result[0] as Product;
 }

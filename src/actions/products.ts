@@ -1,8 +1,8 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { createProductDal, deleteProductDal } from "@/dal/products";
-import type { CreateProductInput } from "@/dal/types";
+import { createProductDal, deleteProductDal, updateProductDal } from "@/dal/products";
+import type { CreateProductInput, UpdateProductInput } from "@/dal/types";
 import { handleMutationError } from "./utils";
 
 export async function createProductAction(input: CreateProductInput) {
@@ -25,6 +25,20 @@ export async function deleteProductAction(id: string) {
     (data) => {
       updateTag(`products-${data.org_id}`);
       // redirect(`/products`);
+      return { data };
+    },
+    (err) => {
+      return handleMutationError(err);
+    },
+  );
+}
+
+export async function updateProductAction(input: UpdateProductInput) {
+  const result = await updateProductDal(input);
+
+  return result.match(
+    (data) => {
+      updateTag(`products-${data.org_id}`);
       return { data };
     },
     (err) => {

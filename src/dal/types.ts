@@ -27,8 +27,11 @@ export type FullInvoice = Invoice & {
 };
 
 export type CreateCustomerInput = z.infer<typeof CreateCustomerSchema>;
+export type UpdateCustomerInput = z.infer<typeof import("./schema").UpdateCustomerSchema>;
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
+export type UpdateProductInput = z.infer<typeof import("./schema").UpdateProductSchema>;
 export type CreateInvoiceInput = z.infer<typeof CreateInvoiceSchema>;
+export type UpdateInvoiceInput = z.infer<typeof import("./schema").UpdateInvoiceSchema>;
 export type CreateBrandingInput = z.infer<typeof CreateBrandingSchema>;
 
 export type Result<T> =

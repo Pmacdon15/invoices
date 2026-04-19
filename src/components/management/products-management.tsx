@@ -21,7 +21,8 @@ interface ProductsManagementProps {
 
 type OptimisticAction =
   | { type: "add"; payload: Product }
-  | { type: "delete"; payload: string };
+  | { type: "delete"; payload: string }
+  | { type: "update"; payload: Product };
 
 export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
   const { data, error } = use(dataPromise);
@@ -45,6 +46,15 @@ export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
           ...state,
           data: state.data.filter((p) => p.id !== action.payload),
           totalCount: state.totalCount - 1,
+        };
+      }
+
+      if (action.type === "update") {
+        return {
+          ...state,
+          data: state.data.map((p) =>
+            p.id === action.payload.id ? action.payload : p
+          ),
         };
       }
 

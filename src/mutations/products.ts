@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createProductAction, deleteProductAction } from "@/actions/products";
-import type { CreateProductInput } from "@/dal/types";
+import { createProductAction, deleteProductAction, updateProductAction } from "@/actions/products";
+import type { CreateProductInput, UpdateProductInput } from "@/dal/types";
 
 export const useCreateProduct = () => {
   const router = useRouter();
@@ -49,6 +49,25 @@ export const useDeleteProduct = (options?: {
       } else {
         toast.error(error.message);
       }
+    },
+  });
+};
+
+export const useUpdateProduct = () => {
+  return useMutation({
+    mutationFn: async (data: UpdateProductInput) => {
+      const response = await updateProductAction(data);
+      if ("message" in response) {
+        throw new Error(response.message);
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Product has been updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 };

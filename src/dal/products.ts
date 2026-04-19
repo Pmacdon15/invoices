@@ -7,10 +7,12 @@ import {
   fetchingProductsDb,
   getProductCount,
   searchProductsDb,
+  updateProductDb,
 } from "@/db/products";
-import { CreateProductSchema, IdSchema } from "./schema";
+import { CreateProductSchema, IdSchema, UpdateProductSchema } from "./schema";
 import type {
   CreateProductInput,
+  UpdateProductInput,
   PaginatedValue,
   Product,
   Result,
@@ -125,5 +127,29 @@ export async function searchProductsDal(query: string): Promise<Result<Product[]
   } catch (e: unknown) {
     console.error("Database Search Error:", e);
     return { data: null, error: "Database error occurred." };
+  }
+}
+
+export async function updateProductDal(input: UpdateProductInput) {
+  const { orgId } = await auth.protect();
+
+  if (!orgId) {
+    return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  const validation = UpdateProductSchema.safeParse(input);
+  if (!validation.success) {
+    return errAsync({
+      reason: "Validation failed",
+      errors: z.treeifyError(validation.error),
+    } as const);
+  }
+
+  try {
+    const product = await updateProductDb(input, orgId);
+    return okAsync(product);
+  } catch (e: unknown) {
+    console.error("Database Update Error:", e);
+    return errAsync({ reason: "Db failed to update product" } as const);
   }
 }

@@ -5,9 +5,13 @@ import { InvoiceDetails } from "@/components/invoice-details";
 import { Button } from "@/components/ui/button";
 
 import { getInvoiceById } from "@/dal/invoices";
+import { getCustomers } from "@/dal/customers";
+import { getProducts } from "@/dal/products";
 
 export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
   const invoicePromise = props.params.then((p) => getInvoiceById(p.id));
+  const customersPromise = getCustomers(1, true);
+  const productsPromise = getProducts(1, true);
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl">
@@ -30,7 +34,11 @@ export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
           </div>
         }
       >
-        <InvoiceDetails invoicePromise={invoicePromise} />
+        <InvoiceDetails 
+          invoicePromise={invoicePromise} 
+          customersPromise={customersPromise}
+          productsPromise={productsPromise}
+        />
       </Suspense>
     </div>
   );

@@ -5,8 +5,10 @@ export type ActionErrorReason =
   | "Validation failed"
   | "Unknown Db error"
   | "Db failed to create product"
+  | "Db failed to update product"
   | "Db failed to delete product"
   | "Db failed to create customer"
+  | "Db failed to update customer"
   | "Db failed to delete customer"
   | "Db failed to create invoice"
   | "Db failed to update invoice"
@@ -51,8 +53,10 @@ export function handleMutationError(error: ActionError) {
 
     case "Unknown Db error":
     case "Db failed to create product":
+    case "Db failed to update product":
     case "Db failed to delete product":
     case "Db failed to create customer":
+    case "Db failed to update customer":
     case "Db failed to delete customer":
     case "Db failed to create invoice":
     case "Db failed to update invoice":

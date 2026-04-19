@@ -6,13 +6,58 @@ import { Badge } from "@/components/ui/badge";
 import type { Product } from "@/dal/types";
 import { cn } from "@/lib/utils";
 import DeleteProductButton from "../buttons/delete-product-button";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Edit2 } from "lucide-react";
+import { ProductForm } from "../forms/product-form";
+
+const EditProductCell = ({
+  product,
+  setOptimistic,
+}: {
+  product: Product;
+  setOptimistic: (action: any) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Product</DialogTitle>
+          <DialogDescription>Update the product details below.</DialogDescription>
+        </DialogHeader>
+        <ProductForm
+          orgId={product.org_id}
+          initialData={product}
+          isModal
+          onOptimistic={(updatedProduct) => {
+            setOptimistic({ type: "update", payload: updatedProduct });
+            setIsOpen(false);
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 interface ProductsTableProps {
   data: Product[];
   totalPages: number;
   currentPage: number;
   totalCount: number;
-  setOptimistic: (action: { type: "delete"; payload: string }) => void;
+  setOptimistic: (
+    action: { type: "delete"; payload: string } | { type: "update"; payload: Product }
+  ) => void;
 }
 
 export function ProductsTable({
@@ -81,12 +126,15 @@ export function ProductsTable({
     {
       id: "actions",
       cell: ({ row }) => (
-        <DeleteProductButton
-          productId={row.original.id}
-          setOptimisticProducts={(id) =>
-            setOptimistic({ type: "delete", payload: id })
-          }
-        />
+        <div className="flex items-center justify-end gap-2">
+          <EditProductCell product={row.original} setOptimistic={setOptimistic} />
+          <DeleteProductButton
+            productId={row.original.id}
+            setOptimisticProducts={(id) =>
+              setOptimistic({ type: "delete", payload: id })
+            }
+          />
+        </div>
       ),
     },
   ];
