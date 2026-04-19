@@ -2,39 +2,12 @@ import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
 import type {
   CreateInvoiceInput,
+  UpdateInvoiceInput,
   FullInvoice,
   Invoice,
   PaginatedValue,
 } from "@/dal/types";
 
-// export async function fetchingInvoicesDb(orgId: string, page:number): Promise<Invoice[]> {
-//   "use cache";
-//   cacheTag(`invoices-${orgId}`);
-//   if (!process.env.DATABASE_URL) {
-//     throw new Error("Config Error");
-//   }
-//   const sql = neon(process.env.DATABASE_URL);
-//   const data = (await sql`
-//     SELECT
-//       i.*,
-//       c.name as customer_name,
-//       c.email as customer_email
-//     FROM invoices i
-//     JOIN customers c ON i.customer_id = c.id
-//     WHERE i.org_id = ${orgId}
-//     ORDER BY i.created_at DESC
-//   `) as (Invoice & { customer_name: string; customer_email: string })[];
-
-//   return data.map((inv) => ({
-//     ...inv,
-//     customer: {
-//       id: inv.customer_id,
-//       name: inv.customer_name,
-//       email: inv.customer_email,
-//       org_id: inv.org_id,
-//     },
-//   }));
-// }
 export async function fetchingInvoicesDb(
   orgId: string,
   page: number = 1,
@@ -447,4 +420,56 @@ export async function getMonthlyInvoiceCount(orgId: string): Promise<number> {
   `;
 
   return Number(result[0]?.count ?? 0);
+}
+
+export async function updateInvoiceDb(
+  input: UpdateInvoiceInput,
+  orgId: string,
+): Promise<Invoice> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const customerId = input.customer_id;
+
+  const totalAmount = input.items.reduce(
+    (sum, item) => sum + item.quantity * item.unit_price,
+    0,
+  );
+
+  const [data] = (await sql`
+    WITH deleted_items AS (
+      DELETE FROM invoice_items
+      WHERE invoice_id = ${input.id} AND invoice_id IN (SELECT id FROM invoices WHERE org_id = ${orgId})
+    ),
+    updated_invoice AS (
+      UPDATE invoices
+      SET customer_id = ${customerId}::uuid,
+          status = ${input.status},
+          total = ${totalAmount}
+      WHERE id = ${input.id} AND org_id = ${orgId}
+      RETURNING id, customer_id, total, status, org_id, created_at
+    ),
+    inserted_items AS (
+      INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price)
+      SELECT 
+        ${input.id}, 
+        items.product_id, 
+        items.quantity, 
+        items.unit_price
+      FROM UNNEST(
+        ${input.items.map((i) => i.product_id)}::uuid[],
+        ${input.items.map((i) => i.quantity)}::int[],
+        ${input.items.map((i) => i.unit_price)}::numeric[]
+      ) AS items(product_id, quantity, unit_price)
+      WHERE EXISTS (SELECT 1 FROM updated_invoice)
+    )
+    SELECT * FROM updated_invoice;
+  `) as Invoice[];
+
+  if (!data) {
+    throw new Error("Invoice not found or not authorized");
+  }
+
+  return data;
 }

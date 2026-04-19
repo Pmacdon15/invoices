@@ -7,10 +7,12 @@ import {
   fetchingCustomersDb,
   getCustomerCount,
   searchCustomersDb,
+  updateCustomerDb,
 } from "@/db/customers";
-import { CreateCustomerSchema, IdSchema } from "./schema";
+import { CreateCustomerSchema, IdSchema, UpdateCustomerSchema } from "./schema";
 import type {
   CreateCustomerInput,
+  UpdateCustomerInput,
   Customer,
   PaginatedValue,
   Result,
@@ -129,5 +131,29 @@ export async function searchCustomersDal(query: string): Promise<Result<Customer
   } catch (e: unknown) {
     console.error("Database Search Error:", e);
     return { data: null, error: "Database error occurred." };
+  }
+}
+
+export async function updateCustomerDal(input: UpdateCustomerInput) {
+  const { orgId } = await auth.protect();
+
+  if (!orgId) {
+    return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  const validation = UpdateCustomerSchema.safeParse(input);
+  if (!validation.success) {
+    return errAsync({
+      reason: "Validation failed",
+      errors: z.treeifyError(validation.error),
+    } as const);
+  }
+
+  try {
+    const customer = await updateCustomerDb(input, orgId);
+    return okAsync(customer);
+  } catch (e: unknown) {
+    console.error("Database Update Error:", e);
+    return errAsync({ reason: "Db failed to update customer" } as const);
   }
 }

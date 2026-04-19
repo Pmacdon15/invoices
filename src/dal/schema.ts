@@ -14,6 +14,10 @@ export const CreateCustomerSchema = CustomerSchema.omit({
   org_id: true,
 });
 
+export const UpdateCustomerSchema = CreateCustomerSchema.extend({
+  id: z.string().uuid(),
+});
+
 // --- Product ---
 export const ProductSchema = z.object({
   id: z.uuid(),
@@ -26,6 +30,10 @@ export const ProductSchema = z.object({
 export const CreateProductSchema = ProductSchema.omit({
   id: true,
   org_id: true,
+});
+
+export const UpdateProductSchema = CreateProductSchema.extend({
+  id: z.string().uuid(),
 });
 
 // --- Invoice Item ---
@@ -91,4 +99,8 @@ export const CreateInvoiceSchema = InvoiceSchema.omit({
   items: z
     .array(CreateInvoiceItemSchema)
     .min(1, "Invoice must have at least one item"),
+});
+
+export const UpdateInvoiceSchema = CreateInvoiceSchema.extend({
+  id: z.string().uuid(),
 });

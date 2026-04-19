@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
 import type {
   CreateCustomerInput,
+  UpdateCustomerInput,
   Customer,
   PaginatedValue,
 } from "@/dal/types";
@@ -164,5 +165,25 @@ export async function getCustomerCount(orgId: string): Promise<number> {
   `;
 
   return Number(result[0]?.count ?? 0);
+}
+
+export async function updateCustomerDb(
+  input: UpdateCustomerInput,
+  orgId: string,
+): Promise<Customer> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const result = await sql`
+    UPDATE customers 
+    SET name = ${input.name}, email = ${input.email}, status = ${input.status}
+    WHERE id = ${input.id} AND org_id = ${orgId}
+    RETURNING *
+  `;
+  if (!result[0]) {
+    throw new Error("Customer not found or not authorized");
+  }
+  return result[0] as Customer;
 }
 

@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { startTransition, use } from "react";
+import { startTransition, use, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,13 +24,14 @@ import { CreateInvoiceSchema } from "@/dal/schema";
 import type {
   CreateInvoiceInput,
   Customer,
+  FullInvoice,
   Invoice,
   PaginatedValue,
   Product,
   Result,
 } from "@/dal/types";
 import { cn } from "@/lib/utils";
-import { useCreateInvoice } from "@/mutations/invoices";
+import { useCreateInvoice, useUpdateInvoice } from "@/mutations/invoices";
 
 interface InvoiceFormProps {
   orgId: string;
@@ -38,6 +39,7 @@ interface InvoiceFormProps {
   productsPromise: Promise<Result<PaginatedValue<Product>>>;
   onOptimistic?: (data: Invoice) => void;
   isModal?: boolean;
+  initialData?: FullInvoice;
 }
 
 export function InvoiceForm({
@@ -46,18 +48,32 @@ export function InvoiceForm({
   productsPromise,
   onOptimistic,
   isModal,
+  initialData,
 }: InvoiceFormProps) {
   const { data: customers, error: customerError } = use(customersPromise);
   const { data: products, error: productsError } = use(productsPromise);
 
-  const { mutate, isPending } = useCreateInvoice();
+  const { mutate: createMutate, isPending: isCreating } = useCreateInvoice();
+  const { mutate: updateMutate, isPending: isUpdating } = useUpdateInvoice();
+  
+  const isPending = isCreating || isUpdating;
 
   const form = useForm({
-    defaultValues: {
-      customer_id: "",
-      status: "draft" as const,
-      items: [{ product_id: "", quantity: 1, unit_price: 0 }],
-    } as CreateInvoiceInput,
+    defaultValues: initialData
+      ? {
+          customer_id: initialData.customer_id,
+          status: initialData.status,
+          items: initialData.items.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+          })),
+        } as CreateInvoiceInput
+      : {
+          customer_id: "",
+          status: "draft" as const,
+          items: [{ product_id: "", quantity: 1, unit_price: 0 }],
+        } as CreateInvoiceInput,
     validators: {
       onSubmit: ({ value }) => {
         const result = CreateInvoiceSchema.safeParse(value);
@@ -81,19 +97,29 @@ export function InvoiceForm({
 
         startTransition(() => {
           onOptimistic({
-            id: `opt-${crypto.randomUUID()}`,
+            id: initialData ? initialData.id : `opt-${crypto.randomUUID()}`,
             customer_id: value.customer_id,
             org_id: orgId,
             status: value.status,
             total: totalAmount,
-            created_at: new Date().toISOString(),
+            created_at: initialData ? initialData.created_at : new Date().toISOString(),
             customer: selectedCustomer,
           } as Invoice);
         });
-        mutate(value);
+        
+        if (initialData) {
+          updateMutate({ ...value, id: initialData.id });
+        } else {
+          createMutate(value);
+        }
         return;
       }
-      mutate(value);
+
+      if (initialData) {
+        updateMutate({ ...value, id: initialData.id });
+      } else {
+        createMutate(value);
+      }
     },
   });
 
@@ -408,6 +434,8 @@ export function InvoiceForm({
         <Button type="submit" size="lg" disabled={isPending}>
           {isPending ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : initialData ? (
+            "Update Invoice"
           ) : (
             "Create Invoice"
           )}
@@ -423,9 +451,9 @@ export function InvoiceForm({
   return (
     <Card className="max-w-4xl mx-auto shadow-lg border-muted/50">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold">Create New Invoice</CardTitle>
+        <CardTitle className="text-2xl font-bold">{initialData ? "Edit Invoice" : "Create New Invoice"}</CardTitle>
         <CardDescription>
-          Generate a new invoice by selecting a customer and adding products.
+          {initialData ? "Update the invoice details below." : "Generate a new invoice by selecting a customer and adding products."}
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>

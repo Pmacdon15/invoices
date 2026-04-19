@@ -15,33 +15,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Product } from "@/dal/types";
 import { cn } from "@/lib/utils";
-import { useCreateProduct } from "@/mutations/products";
+import { useCreateProduct, useUpdateProduct } from "@/mutations/products";
 
 interface ProductFormProps {
   orgId: string;
   onOptimistic?: (data: Product) => void;
   isModal?: boolean;
+  initialData?: Product;
 }
 
 export function ProductForm({
   orgId,
   onOptimistic,
   isModal,
+  initialData,
 }: ProductFormProps) {
-  const { mutate, isPending } = useCreateProduct();
+  const { mutate: createMutate, isPending: isCreating } = useCreateProduct();
+  const { mutate: updateMutate, isPending: isUpdating } = useUpdateProduct();
+  const isPending = isCreating || isUpdating;
 
   const form = useForm({
-    defaultValues: {
-      name: "",
-      price: 0,
-    },
+    defaultValues: initialData
+      ? {
+          name: initialData.name,
+          price: initialData.price,
+        }
+      : {
+          name: "",
+          price: 0,
+        },
     onSubmit: async ({ value }) => {
       const fullData: Product = {
         ...value,
-        id: crypto.randomUUID(),
+        id: initialData ? initialData.id : crypto.randomUUID(),
         price: Number(value.price),
         org_id: orgId,
-        status: "active",
+        status: initialData ? initialData.status : "active",
       };
 
       if (onOptimistic) {
@@ -50,11 +59,11 @@ export function ProductForm({
         });
       }
 
-      mutate({
-        name: value.name,
-        price: Number(value.price),
-        status: "active",
-      });
+      if (initialData) {
+        updateMutate({ ...value, id: initialData.id, status: initialData.status, price: Number(value.price) });
+      } else {
+        createMutate({ ...value, price: Number(value.price), status: "active" });
+      }
     },
   });
 
@@ -124,6 +133,8 @@ export function ProductForm({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving...
             </>
+          ) : initialData ? (
+            "Update Product"
           ) : (
             "Save Product"
           )}
@@ -139,9 +150,9 @@ export function ProductForm({
   return (
     <Card className="max-w-xl mx-auto">
       <CardHeader>
-        <CardTitle>Add New Product</CardTitle>
+        <CardTitle>{initialData ? "Edit Product" : "Add New Product"}</CardTitle>
         <CardDescription>
-          Define a new product or service for your invoices.
+          {initialData ? "Update the product details below." : "Define a new product or service for your invoices."}
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>

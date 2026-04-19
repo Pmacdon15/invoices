@@ -7,9 +7,10 @@ import {
   deleteInvoiceAction,
   sendInvoiceAction,
   updateInvoiceStatusAction,
+  updateInvoiceAction,
 } from "@/actions/invoices";
 
-import type { CreateInvoiceInput } from "@/dal/types";
+import type { CreateInvoiceInput, UpdateInvoiceInput } from "@/dal/types";
 
 export const useCreateInvoice = () => {
   const router = useRouter();
@@ -101,6 +102,26 @@ export const useSendInvoice = () => {
     },
     onSuccess: () => {
       toast.success("Invoice sent! Status updated to Sent.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+};
+
+export const useUpdateInvoice = () => {
+  return useMutation({
+    mutationFn: async (input: UpdateInvoiceInput) => {
+      const response = await updateInvoiceAction(input);
+
+      if ("message" in response) {
+        throw new Error(response.message);
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Invoice has been updated");
     },
     onError: (error: Error) => {
       toast.error(error.message);

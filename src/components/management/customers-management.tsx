@@ -21,7 +21,8 @@ interface CustomersManagementProps {
 
 type OptimisticAction =
   | { type: "add"; payload: Customer }
-  | { type: "delete"; payload: string };
+  | { type: "delete"; payload: string }
+  | { type: "update"; payload: Customer };
 
 export function CustomersManagement({
   resultsPromise,
@@ -47,6 +48,15 @@ export function CustomersManagement({
           ...state,
           data: state.data.filter((c) => c.id !== action.payload),
           totalCount: state.totalCount - 1,
+        };
+      }
+
+      if (action.type === "update") {
+        return {
+          ...state,
+          data: state.data.map((c) =>
+            c.id === action.payload.id ? action.payload : c
+          ),
         };
       }
 

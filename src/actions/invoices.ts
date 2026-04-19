@@ -5,9 +5,10 @@ import {
   createInvoiceDal,
   deleteInvoiceDal,
   sendInvoiceDal,
+  updateInvoiceDal,
   updateInvoiceStatusDal,
 } from "@/dal/invoices";
-import type { CreateInvoiceInput } from "@/dal/types";
+import type { CreateInvoiceInput, UpdateInvoiceInput } from "@/dal/types";
 import { handleMutationError } from "./utils";
 
 export async function createInvoiceAction(input: CreateInvoiceInput) {
@@ -59,6 +60,21 @@ export async function updateInvoiceStatusAction(
 
 export async function sendInvoiceAction(invoiceId: string) {
   const result = await sendInvoiceDal(invoiceId);
+
+  return result.match(
+    (data) => {
+      updateTag(`invoices-${data.org_id}`);
+      updateTag(`invoice-${data.id}`);
+      return { data };
+    },
+    (err) => {
+      return handleMutationError(err);
+    },
+  );
+}
+
+export async function updateInvoiceAction(input: UpdateInvoiceInput) {
+  const result = await updateInvoiceDal(input);
 
   return result.match(
     (data) => {

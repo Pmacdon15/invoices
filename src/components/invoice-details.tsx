@@ -3,20 +3,28 @@
 import { useOrganization } from "@clerk/nextjs";
 import { Calendar, CreditCard, Package, User } from "lucide-react";
 import Image from "next/image";
-import { use } from "react";
-import type { FullInvoice, Result } from "@/dal/types";
+import { use, useState } from "react";
+import type { Customer, FullInvoice, PaginatedValue, Product, Result } from "@/dal/types";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
 import { SendInvoiceButton } from "./buttons/send-invoice-button";
 import { InvoiceStatusUpdater } from "./invoice-status-updater";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { InvoiceForm } from "./forms/invoice-form";
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
+import { Button } from "./ui/button";
 
 export function InvoiceDetails({
   invoicePromise,
+  customersPromise,
+  productsPromise,
 }: {
   invoicePromise: Promise<Result<FullInvoice>>;
+  customersPromise: Promise<Result<PaginatedValue<Customer>>>;
+  productsPromise: Promise<Result<PaginatedValue<Product>>>;
 }) {
   const { data: invoice, error } = use(invoicePromise);
   const { organization } = useOrganization();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   if (error !== null || !invoice) {
     return (
@@ -44,6 +52,27 @@ export function InvoiceDetails({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">Edit</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Invoice</DialogTitle>
+                <DialogDescription>
+                  Update the invoice details below.
+                </DialogDescription>
+              </DialogHeader>
+              <InvoiceForm
+                isModal
+                orgId={invoice.org_id}
+                initialData={invoice}
+                customersPromise={customersPromise}
+                productsPromise={productsPromise}
+                onOptimistic={() => setIsEditDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
           <SendInvoiceButton
             invoiceId={invoice.id}
             currentStatus={invoice.status as "draft" | "sent" | "paid"}

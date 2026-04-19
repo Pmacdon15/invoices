@@ -15,28 +15,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Customer } from "@/dal/types";
 import { cn } from "@/lib/utils";
-import { useCreateCustomer } from "@/mutations/customers";
+import { useCreateCustomer, useUpdateCustomer } from "@/mutations/customers";
 
 interface CustomerFormProps {
   orgId: string;
   onOptimistic?: (data: Customer) => void;
   isModal?: boolean;
+  initialData?: Customer;
 }
 
-export function CustomerForm({ orgId, onOptimistic, isModal }: CustomerFormProps) {
-  const { mutate, isPending } = useCreateCustomer();
+export function CustomerForm({ orgId, onOptimistic, isModal, initialData }: CustomerFormProps) {
+  const { mutate: createMutate, isPending: isCreating } = useCreateCustomer();
+  const { mutate: updateMutate, isPending: isUpdating } = useUpdateCustomer();
+  const isPending = isCreating || isUpdating;
 
   const form = useForm({
-    defaultValues: {
-      name: "",
-      email: "",
-    },
+    defaultValues: initialData 
+      ? {
+          name: initialData.name,
+          email: initialData.email,
+        }
+      : {
+          name: "",
+          email: "",
+        },
     onSubmit: async ({ value }) => {
       const fullData: Customer = {
         ...value,
-        id: crypto.randomUUID(),
+        id: initialData ? initialData.id : crypto.randomUUID(),
         org_id: orgId,
-        status: "active",
+        status: initialData ? initialData.status : "active",
       };
 
       if (onOptimistic) {
@@ -45,10 +53,11 @@ export function CustomerForm({ orgId, onOptimistic, isModal }: CustomerFormProps
         });
       }
       
-      mutate({
-        ...value,
-        status: "active",
-      });
+      if (initialData) {
+        updateMutate({ ...value, id: initialData.id, status: initialData.status });
+      } else {
+        createMutate({ ...value, status: "active" });
+      }
     },
   });
 
@@ -117,6 +126,8 @@ export function CustomerForm({ orgId, onOptimistic, isModal }: CustomerFormProps
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving...
             </>
+          ) : initialData ? (
+            "Update Customer"
           ) : (
             "Save Customer"
           )}
@@ -132,9 +143,9 @@ export function CustomerForm({ orgId, onOptimistic, isModal }: CustomerFormProps
   return (
     <Card className="max-w-xl mx-auto">
       <CardHeader>
-        <CardTitle>Add New Customer</CardTitle>
+        <CardTitle>{initialData ? "Edit Customer" : "Add New Customer"}</CardTitle>
         <CardDescription>
-          Enter the customer's details to add them to your database.
+          {initialData ? "Update the customer's details below." : "Enter the customer's details to add them to your database."}
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>
