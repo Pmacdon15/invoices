@@ -9,34 +9,84 @@ export async function rebalanceOrgItems(orgId: string) {
   const sql = neon(process.env.DATABASE_URL);
   const client = await clerkClient();
 
-  let features: string[] = [];
+  // Array to store found features with their IDs and names
+  let foundFeatures: { id: string; name?: string }[] = [];
 
   try {
     const subscription = await client.billing.getOrganizationBillingSubscription(orgId);
     if (subscription?.subscriptionItems) {
-      features = subscription.subscriptionItems.flatMap(
-        (item: any) => item.plan?.features?.map((f: any) => f.id) || [],
+      foundFeatures = subscription.subscriptionItems.flatMap(
+        (item: any) => item.plan?.features?.map((f: any) => ({ id: f.id, name: f.name })) || [],
       );
-      console.log(`✅ Subscription found. IDs: [${features.join(", ")}]`);
+      
+      if (foundFeatures.length > 0) {
+        const featureIds = foundFeatures.map(f => f.id).join(", ");
+        const featureNames = foundFeatures.map(f => f.name || 'N/A').join(", "); // Use 'N/A' if name is missing
+        console.log(`✅ Subscription found for ${orgId}.`);
+        console.log(`   Feature IDs: [${featureIds}]`);
+        console.log(`   Feature Names: [${featureNames}]`);
+      } else {
+        console.log(`✅ Subscription found for ${orgId}, but no features listed.`);
+      }
+    } else {
+      console.log(`ℹ️ No subscription items found for ${orgId}. Using defaults.`);
     }
   } catch (e: any) {
-    if (e.status !== 404) console.error(`❌ Clerk Error:`, e);
-    else console.log(`ℹ️ No subscription, using defaults.`);
+    if (e.status !== 404) {
+      console.error(`❌ Clerk API Error for ${orgId}:`, e);
+    } else {
+      console.log(`ℹ️ No subscription found for ${orgId}, using defaults.`);
+    }
   }
 
-  // UPDATE THESE IDs based on what you see in your Clerk Dashboard
-  // Example mapping based on your log: feat_3CYBDWdxcBcdOua46D6TsN4zqjc
-  const customerLimit = (features.includes("feat_3CYBDWdxcBcdOua46D6TsN4zqjc") || features.includes("create_unlimited_customers"))
-    ? Infinity 
-    : (features.includes("feat_3CYAsb2OAHlSqpXBsTEMBdWE1Ul") || features.includes("create_up_to_8_customers"))
-    ? 8 
-    : 4;
+  // Helper function to normalize feature names to a slug-like format for comparison
+  const normalizeNameToSlug = (name: string | undefined): string => {
+    if (!name) return "";
+    // Normalize to lowercase, replace multiple spaces with single space, then replace with underscores for slug matching
+    return name.toLowerCase().trim().replace(/\s+/g, '_');
+  };
 
-  const productLimit = (features.includes("feat_3CYAykGnVuDFInhfFwtyhumgYhO") || features.includes("create_unlimited_products"))
-    ? Infinity 
-    : 5;
+  // --- Limit Determination ---
 
-  console.log(`📊 Limits -> Cust: ${customerLimit}, Prod: ${productLimit}`);
+  let customerLimit = 4;
+  let productLimit = 5;
+  let limitReasons: string[] = [];
+
+ 
+  const SLUG_UNLIMITED_CUSTOMERS = "create_unlimited_customers";
+  const SLUG_8_CUSTOMERS = "create_up_to_8_customers";
+  const SLUG_4_CUSTOMERS = "create_up_to_4_customers"; // Explicitly define default if needed as a feature
+
+  const SLUG_UNLIMITED_PRODUCTS = "create_unlimited_products";
+  const SLUG_10_PRODUCTS = "create_up_to_10_products";
+
+
+  if (foundFeatures.length > 0) {
+    // Check for customer limits using feature names (slugs)
+    if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_UNLIMITED_CUSTOMERS)) {
+      customerLimit = Infinity;
+      limitReasons.push(`unlimited customers`);
+    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_8_CUSTOMERS)) {
+      customerLimit = 8;
+      limitReasons.push(`up to 8 customers`);
+    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_4_CUSTOMERS)) {
+      customerLimit = 4;
+      limitReasons.push(`up to 4 customers`);
+    }
+
+    // Check for product limits using feature names (slugs)
+    if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_UNLIMITED_PRODUCTS)) {
+      productLimit = Infinity;
+      limitReasons.push(`unlimited products`);
+    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_10_PRODUCTS)) {
+      productLimit = 10;
+      limitReasons.push(`up to 10 products`);
+    }
+  }
+
+  const finalLimitReason = limitReasons.length > 0 ? limitReasons.join(", ") : "default limits";
+
+  console.log(`📊 Limits set to -> Customers: ${customerLimit === Infinity ? "Unlimited" : customerLimit}, Products: ${productLimit === Infinity ? "Unlimited" : productLimit} (Reason: ${finalLimitReason})`);
 
   let hasChanged = false;
 
