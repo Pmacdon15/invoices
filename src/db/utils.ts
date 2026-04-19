@@ -13,7 +13,9 @@ export async function rebalanceOrgItems(orgId: string) {
   let foundFeatures: { id: string; name?: string }[] = [];
 
   try {
-    const subscription = await client.billing.getOrganizationBillingSubscription(orgId);
+    const cleanOrgId = orgId.trim();
+    console.log(`[DEBUG] Attempting to fetch subscription for clean orgId: ${JSON.stringify(cleanOrgId)}`);
+    const subscription = await client.billing.getOrganizationBillingSubscription(cleanOrgId);
     if (subscription?.subscriptionItems) {
       foundFeatures = subscription.subscriptionItems.flatMap(
         (item: any) => item.plan?.features?.map((f: any) => ({ id: f.id, name: f.name })) || [],
@@ -22,20 +24,21 @@ export async function rebalanceOrgItems(orgId: string) {
       if (foundFeatures.length > 0) {
         const featureIds = foundFeatures.map(f => f.id).join(", ");
         const featureNames = foundFeatures.map(f => f.name || 'N/A').join(", "); // Use 'N/A' if name is missing
-        console.log(`✅ Subscription found for ${orgId}.`);
+        console.log(`✅ Subscription found for ${cleanOrgId}.`);
         console.log(`   Feature IDs: [${featureIds}]`);
         console.log(`   Feature Names: [${featureNames}]`);
       } else {
-        console.log(`✅ Subscription found for ${orgId}, but no features listed.`);
+        console.log(`✅ Subscription found for ${cleanOrgId}, but no features listed.`);
       }
     } else {
-      console.log(`ℹ️ No subscription items found for ${orgId}. Using defaults.`);
+      console.log(`ℹ️ No subscription items found for ${cleanOrgId}. Using defaults.`);
     }
   } catch (e: any) {
+    console.error(`[DEBUG] Clerk API Full Error Object for ${orgId}:`, JSON.stringify(e, null, 2));
     if (e.status !== 404) {
       console.error(`❌ Clerk API Error for ${orgId}:`, e);
     } else {
-      console.log(`ℹ️ No subscription found for ${orgId}, using defaults.`);
+      console.log(`ℹ️ No subscription found for ${orgId}, using defaults. Error status: ${e.status}, Error message: ${e.message}`);
     }
   }
 
