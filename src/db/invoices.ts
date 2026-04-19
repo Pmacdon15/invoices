@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
+import { jsPDF } from "jspdf";
 import type {
   CreateInvoiceInput,
   FullInvoice,
@@ -316,11 +317,97 @@ export async function updateInvoiceStatusDb(
   `;
   return result[0] as Invoice;
 }
+
+async function generateInvoicePdf(
+  invoice: Invoice & { customer_name: string; customer_email: string },
+  items: { product_name: string; quantity: number; unit_price: number }[],
+  orgName: string,
+  orgImageUrl?: string,
+): Promise<Buffer> {
+  const doc = new jsPDF();
+  const fmt = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
+
+  let yOffset = 20;
+
+  // Add Logo if exists
+  if (orgImageUrl) {
+    try {
+      const response = await fetch(orgImageUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      // We assume it's a common image format. jsPDF handles most if given as bytes.
+      doc.addImage(uint8Array, "PNG", 20, yOffset, 30, 30);
+      yOffset += 40;
+    } catch (e) {
+      console.error("Failed to add logo to PDF:", e);
+      yOffset += 10;
+    }
+  }
+
+  // Header
+  doc.setFontSize(24);
+  doc.text("INVOICE", 105, yOffset, { align: "center" });
+  yOffset += 20;
+
+  doc.setFontSize(10);
+  doc.text(`From: ${orgName}`, 20, yOffset);
+  yOffset += 5;
+  doc.text(`Invoice ID: ${invoice.id}`, 20, yOffset);
+  yOffset += 5;
+  doc.text(`Date: ${new Date(invoice.created_at).toLocaleDateString()}`, 20, yOffset);
+  yOffset += 20;
+
+  // Billed To
+  doc.setFontSize(12);
+  doc.text("BILLED TO:", 20, yOffset);
+  yOffset += 5;
+  doc.setFontSize(10);
+  doc.text(invoice.customer_name, 20, yOffset);
+  yOffset += 5;
+  doc.text(invoice.customer_email, 20, yOffset);
+  yOffset += 20;
+
+  // Items Table Header
+  doc.setFontSize(10);
+  doc.text("Description", 20, yOffset);
+  doc.text("Qty", 120, yOffset, { align: "center" });
+  doc.text("Price", 150, yOffset, { align: "right" });
+  doc.text("Amount", 190, yOffset, { align: "right" });
+  doc.line(20, yOffset + 2, 190, yOffset + 2);
+  yOffset += 10;
+
+  // Items
+  for (const item of items) {
+    if (yOffset > 270) {
+      doc.addPage();
+      yOffset = 20;
+    }
+    doc.text(item.product_name, 20, yOffset);
+    doc.text(item.quantity.toString(), 120, yOffset, { align: "center" });
+    doc.text(fmt.format(item.unit_price), 150, yOffset, { align: "right" });
+    doc.text(fmt.format(item.quantity * item.unit_price), 190, yOffset, { align: "right" });
+    yOffset += 10;
+  }
+
+  // Footer Total
+  doc.line(20, yOffset, 190, yOffset);
+  yOffset += 10;
+  doc.setFontSize(12);
+  doc.text("TOTAL DUE:", 150, yOffset, { align: "right" });
+  doc.text(fmt.format(Number(invoice.total)), 190, yOffset, { align: "right" });
+
+  return Buffer.from(doc.output("arraybuffer"));
+}
+
 export async function sendInvoiceDb(
   id: string,
   orgId: string,
   orgName: string,
   orgImageUrl?: string,
+  adminEmail?: string,
 ): Promise<Invoice> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
@@ -372,6 +459,10 @@ export async function sendInvoiceDb(
 
   const logoHtml = orgImageUrl 
     ? `<img src="${orgImageUrl}" alt="${orgName}" width="48" height="48" style="height:48px;width:48px;border-radius:6px;display:block;margin-bottom:16px;object-fit:cover;background-color:#ffffff !important;color-scheme:only light;" class="logo-img">`
+    : "";
+
+  const adminEmailHtml = adminEmail 
+    ? `<p style="color:#6b7280;font-size:14px;margin-top:16px;" class="text-muted">This invoice was sent by your organization administrator: <strong>${adminEmail}</strong></p>`
     : "";
 
   const html = `
@@ -452,9 +543,11 @@ export async function sendInvoiceDb(
       <div style="padding:40px">
         <p style="color:#6b7280;font-size:13px;margin:0 0 32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;" class="text-muted">ID: ${invoice.id}</p>
         <p style="margin:0 0 8px 0;font-size:18px;color:#111827" class="text-main">Hi <strong>${invoice.customer_name}</strong>,</p>
-        <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below. Payment is due upon receipt. Thank you for choosing <strong>${orgName}</strong>.</p>
+        <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below and attached as a PDF. Payment is due upon receipt. Thank you for choosing <strong>${orgName}</strong>.</p>
         
-        <table style="width:100%;border-collapse:collapse;margin:0 0 40px 0">
+        ${adminEmailHtml}
+
+        <table style="width:100%;border-collapse:collapse;margin:32px 0 40px 0">
           <thead>
             <tr>
               <th style="padding:12px;text-align:left;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light">Description</th>
@@ -486,30 +579,49 @@ export async function sendInvoiceDb(
 </html>
   `;
 
-  const fromEmail = process.env.SES_FROM_EMAIL ?? "invoices@yourdomain.com";
+  const pdfBuffer = await generateInvoicePdf(invoice, items, orgName, orgImageUrl);
+  const pdfBase64 = pdfBuffer.toString("base64");
 
-  const { SESClient, SendEmailCommand } = await import("@aws-sdk/client-ses");
+  const fromEmail = process.env.SES_FROM_EMAIL ?? "invoices@yourdomain.com";
+  const subject = `Invoice from ${orgName} \u2013 ${fmt.format(invoice.total as unknown as number)}`;
+  const boundary = `NextPart_${Date.now().toString(16)}`;
+
+  const rawMessage = [
+    `From: ${orgName} <${fromEmail}>`,
+    `To: ${invoice.customer_email}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: 7bit",
+    "",
+    html,
+    "",
+    `--${boundary}`,
+    'Content-Type: application/pdf; name="invoice.pdf"',
+    'Content-Description: invoice.pdf',
+    'Content-Disposition: attachment; filename="invoice.pdf"; size=' + pdfBuffer.length,
+    "Content-Transfer-Encoding: base64",
+    "",
+    pdfBase64.match(/.{1,76}/g)?.join("\n"),
+    "",
+    `--${boundary}--`
+  ].join("\n");
+
+  const { SESClient, SendRawEmailCommand } = await import("@aws-sdk/client-ses");
   const ses = new SESClient({
     region: process.env.AWS_REGION ?? "us-east-1",
     credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     },
   });
 
   await ses.send(
-    new SendEmailCommand({
-      Source: fromEmail,
-      Destination: { ToAddresses: [invoice.customer_email] },
-      Message: {
-        Subject: {
-          Data: `Invoice from ${orgName} \u2013 ${fmt.format(invoice.total as unknown as number)}`,
-          Charset: "UTF-8",
-        },
-        Body: {
-          Html: { Data: html, Charset: "UTF-8" },
-        },
-      },
+    new SendRawEmailCommand({
+      RawMessage: { Data: Buffer.from(rawMessage) },
     }),
   );
 

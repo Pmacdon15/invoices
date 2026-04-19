@@ -190,16 +190,27 @@ export async function sendInvoiceDal(id: string) {
     } as const);
   }
 
-  // Fetch org name from Clerk
   const client = await clerkClient();
-  const org = await client.organizations.getOrganization({
-    organizationId: orgId,
-  });
+
+  const [org, memberships] = await Promise.all([
+    client.organizations.getOrganization({ organizationId: orgId }),
+    client.organizations.getOrganizationMembershipList({ organizationId: orgId }),
+  ]);
+
   const orgName = org.name;
   const orgImageUrl = org.imageUrl;
 
+  // Find the first admin to get their email
+  const adminMembership = memberships.data.find(m => m.role === "org:admin");
+  let adminEmail: string | undefined;
+
+  if (adminMembership) {
+    const user = await client.users.getUser(adminMembership.publicUserData?.userId!);
+    adminEmail = user.emailAddresses[0]?.emailAddress;
+  }
+
   try {
-    const invoice = await sendInvoiceDb(id, orgId, orgName, orgImageUrl);
+    const invoice = await sendInvoiceDb(id, orgId, orgName, orgImageUrl, adminEmail);
     return okAsync(invoice);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
