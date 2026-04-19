@@ -1,66 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Invoices App
+
+A robust B2B SaaS application for managing invoices, customers, and products, built with Next.js 16, Neon, and Clerk.
+
+## Overview
+
+This application provides a multi-tenant, organization-based environment to manage your billing and customer data. It comes with built-in subscription tier limits controlled by your Clerk dashboard and configured through environment variables.
+
+### Services Used
+- **Authentication & Billing**: [Clerk](https://clerk.com/)
+- **Database**: [Neon](https://neon.tech/) (Serverless Postgres)
+- **Emails**: [AWS SES](https://aws.amazon.com/ses/)
+
+---
+
+## Environment Variable Setup
+
+To get the project running locally or in production, you must configure your `.env.local` file. Copy the block below into your `.env.local` file and fill in the missing credentials.
+
+```env
+# ==========================================
+# CLERK AUTHENTICATION & WEBHOOKS
+# ==========================================
+# Get these from your Clerk Dashboard -> API Keys
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+# Get this from Clerk Dashboard -> Webhooks -> Add Endpoint
+CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
+
+# ==========================================
+# CLERK SUBSCRIPTION PLAN CONFIGURATION
+# ==========================================
+# The application uses these slugs to detect which plan an organization is on.
+# You configure these exact slugs as "Features" inside the Clerk Billing Dashboard.
+
+# Pro Plan Features
+NEXT_PUBLIC_CLERK_PRO_CUSTOMERS_SLUG="create_up_to_100_customers"
+NEXT_PUBLIC_CLERK_PRO_PRODUCTS_SLUG="create_up_to_100_products"
+NEXT_PUBLIC_CLERK_PRO_INVOICES_SLUG="create_up_to_100_invoices_a_month"
+NEXT_PUBLIC_PRO_LIMIT="100"
+
+# Basic Plan Features
+NEXT_PUBLIC_CLERK_BASIC_CUSTOMERS_SLUG="create_up_to_8_customers"
+NEXT_PUBLIC_CLERK_BASIC_PRODUCTS_SLUG="create_up_to_10_products"
+NEXT_PUBLIC_CLERK_BASIC_INVOICES_SLUG="create_up_to_10_invoices_a_month"
+NEXT_PUBLIC_BASIC_CUSTOMER_LIMIT="8"
+NEXT_PUBLIC_BASIC_PRODUCT_LIMIT="10"
+NEXT_PUBLIC_BASIC_INVOICE_LIMIT="10"
+
+# Free Plan Features (Default fallback if no features present)
+NEXT_PUBLIC_CLERK_FREE_CUSTOMERS_SLUG="create_up_to_4_customers"
+NEXT_PUBLIC_CLERK_FREE_PRODUCTS_SLUG="create_up_to_5_products"
+NEXT_PUBLIC_CLERK_FREE_INVOICES_SLUG="create_up_to_5_invoices_a_month"
+NEXT_PUBLIC_FREE_CUSTOMER_LIMIT="4"
+NEXT_PUBLIC_FREE_PRODUCT_LIMIT="5"
+NEXT_PUBLIC_FREE_INVOICE_LIMIT="5"
+
+# ==========================================
+# NEON DATABASE CONNECTION
+# ==========================================
+# Go to Neon Dashboard -> Project -> Dashboard -> Connection Details
+# Copy the `.env` format they provide and paste it here.
+DATABASE_URL=postgresql://user:password@endpoint...
+DATABASE_URL_UNPOOLED=postgresql://user:password@endpoint...
+PGDATABASE=
+PGHOST=
+PGPASSWORD=
+PGUSER=
+POSTGRES_DATABASE=
+POSTGRES_HOST=
+POSTGRES_PASSWORD=
+POSTGRES_PRISMA_URL=
+POSTGRES_URL=
+POSTGRES_URL_NON_POOLING=
+POSTGRES_URL_NO_SSL=
+POSTGRES_USER=
+
+# ==========================================
+# AWS SES (EMAIL)
+# ==========================================
+# Configure these to send out invoice emails
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-1
+SES_FROM_EMAIL=invoices@yourdomain.com
+```
+
+---
+
+## Configuring Limits in Clerk
+
+This project is built to rely on **Clerk Organization Billing**. By default, if an organization has no paid subscription, they are bound to the "Free Plan Features" limit defined in your `.env`.
+
+When an organization subscribes to a plan (e.g., "Basic" or "Pro"), Clerk assigns them "Features". 
+
+**To set this up:**
+1. Navigate to the **Billing** section of your Clerk Dashboard.
+2. Create your Plans (e.g., Basic and Pro).
+3. Inside each plan, create Features. Ensure the "Feature ID" in Clerk matches the slugs configured in your `.env` file (e.g., `create_up_to_100_customers`).
+4. The application dynamically reads these slugs and grants the corresponding integer limits!
+
+---
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies and run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## License & Commercial Use
 
-## Learn More
+This software is free for personal use.
 
-To learn more about Next.js, take a look at the following resources:
+If you intend to use this software to make money (commercial use), you **must**:
+1. Completely **rebrand** the application (change logos, names, and branding).
+2. Provide clear **attribution** to Patrick MacDonald and link to the GitHub profile: [pmacdon15](https://github.com/pmacdon15).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Clerk Subscription Setup
-
-This project uses Clerk for both authentication and B2B SaaS organization management (subscriptions/billing).
-
-To properly set up billing features and limits, you need to configure your subscription plans inside Clerk with the names **"basic"** and **"pro"**. 
-
-You also need to assign specific feature slugs to these plans in your Clerk dashboard and then supply them via your `.env.local` file so the app knows what limits to enforce. 
-
-### Limits Supported
-By default, the application falls back to these Free limits:
-- Up to 4 customers
-- Up to 5 products
-- Up to 5 invoices/month
-
-**Basic Plan** upgrades this to:
-- Up to 8 customers
-- Up to 10 products
-- Up to 10 invoices/month
-
-**Pro Plan** upgrades this to:
-- Up to 100 customers
-- Up to 100 products
-- Up to 100 invoices/month
-
-### Environment Configuration
-
-Define your feature slugs inside your `.env.local` file. We have provided a `.env.example` file which contains the standard slug names. 
-
-If you already have existing subscriptions with different feature slugs (like `create_unlimited_customers`), simply update your `.env.local` variables to match those exact strings, and the application will honor them, treating them as the 100-limit (Pro) tier.
+Once you have fulfilled these two conditions, you are free to use it for commercial purposes. See the `LICENSE` file for full details.
