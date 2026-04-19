@@ -36,25 +36,24 @@ export function ProductForm({
       price: 0,
     },
     onSubmit: async ({ value }) => {
+      const fullData: Product = {
+        ...value,
+        id: crypto.randomUUID(),
+        price: Number(value.price),
+        org_id: orgId,
+        status: "active",
+      };
+
       if (onOptimistic) {
         startTransition(() => {
-          onOptimistic({
-            ...value,
-            id: crypto.randomUUID(),
-            price: Number(value.price),
-            org_id: orgId,
-          });
+          onOptimistic(fullData);
         });
-        mutate({
-          name: value.name,
-          price: Number(value.price),
-        });
-        return;
       }
 
       mutate({
         name: value.name,
         price: Number(value.price),
+        status: "active",
       });
     },
   });
@@ -68,7 +67,6 @@ export function ProductForm({
       }}
     >
       <div className="space-y-4">
-        {/* Product Name Field */}
         <form.Field name="name">
           {(field) => (
             <div className="space-y-2">
@@ -90,7 +88,6 @@ export function ProductForm({
           )}
         </form.Field>
 
-        {/* Price Field */}
         <form.Field name="price">
           {(field) => (
             <div className="space-y-2">

@@ -2,7 +2,9 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/tables/data-table";
+import { Badge } from "@/components/ui/badge";
 import type { Product } from "@/dal/types";
+import { cn } from "@/lib/utils";
 import DeleteProductButton from "../buttons/delete-product-button";
 
 interface ProductsTableProps {
@@ -32,6 +34,15 @@ export function ProductsTable({
     {
       accessorKey: "name",
       header: "Product Name",
+      cell: ({ row }) => (
+        <div
+          className={cn(
+            row.original.status === "disabled" && "opacity-50 grayscale",
+          )}
+        >
+          {row.original.name}
+        </div>
+      ),
     },
     {
       accessorKey: "price",
@@ -43,15 +54,38 @@ export function ProductsTable({
           currency: "USD",
         }).format(amount);
 
-        return <div className="font-medium">{formatted}</div>;
+        return (
+          <div
+            className={cn(
+              "font-medium",
+              row.original.status === "disabled" && "opacity-50 grayscale",
+            )}
+          >
+            {formatted}
+          </div>
+        );
       },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.status === "active" ? "default" : "secondary"}
+          className="capitalize"
+        >
+          {row.original.status}
+        </Badge>
+      ),
     },
     {
       id: "actions",
       cell: ({ row }) => (
         <DeleteProductButton
           productId={row.original.id}
-          setOptimisticProducts={(id) => setOptimistic({ type: "delete", payload: id })}
+          setOptimisticProducts={(id) =>
+            setOptimistic({ type: "delete", payload: id })
+          }
         />
       ),
     },
@@ -59,12 +93,8 @@ export function ProductsTable({
 
   return (
     <div className="space-y-4">
-      <DataTable 
-        columns={columns} 
-        data={data} 
-        totalPages={totalPages} 
-      />
-      
+      <DataTable columns={columns} data={data} totalPages={totalPages} />
+
       <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
         <span>Total Products: {totalCount}</span>
         <span>

@@ -20,7 +20,7 @@ export async function fetchingProductsDb(
   if (all) {
     const data = (await sql`
       SELECT * FROM products 
-      WHERE deleted = false AND org_id = ${orgId}
+      WHERE status != 'deleted' AND org_id = ${orgId}
       ORDER BY id DESC
     `) as Product[];
 
@@ -36,8 +36,8 @@ export async function fetchingProductsDb(
   const offset = (page - 1) * pageSize;
 
   const whereClause = query
-    ? sql`WHERE deleted = false AND org_id = ${orgId} AND name ILIKE ${`%${query}%`}`
-    : sql`WHERE deleted = false AND org_id = ${orgId}`;
+    ? sql`WHERE status != 'deleted' AND org_id = ${orgId} AND name ILIKE ${`%${query}%`}`
+    : sql`WHERE status != 'deleted' AND org_id = ${orgId}`;
 
   const [rows, countResult] = await Promise.all([
     sql`
@@ -110,10 +110,25 @@ export async function searchProductsDb(
   const sql = neon(process.env.DATABASE_URL);
   const data = (await sql`
     SELECT * FROM products 
-    WHERE deleted = false AND org_id = ${orgId} AND name ILIKE ${`%${query}%`}
+    WHERE status != 'deleted' AND org_id = ${orgId} AND name ILIKE ${`%${query}%`}
     ORDER BY name ASC
     LIMIT 10
   `) as Product[];
 
   return data;
+}
+
+export async function getProductCount(orgId: string): Promise<number> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const result = await sql`
+    SELECT count(*) as count 
+    FROM products 
+    WHERE org_id = ${orgId} 
+    AND status = 'active'
+  `;
+
+  return Number(result[0]?.count ?? 0);
 }

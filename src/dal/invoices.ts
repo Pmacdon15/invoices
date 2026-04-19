@@ -6,6 +6,7 @@ import {
   deleteInvoiceDb,
   fetchingInvoiceByIdDb,
   fetchingInvoicesDb,
+  getMonthlyInvoiceCount,
   searchInvoicesDb,
   sendInvoiceDb,
   updateInvoiceStatusDb,
@@ -57,30 +58,50 @@ export async function getInvoiceById(id: string): Promise<Result<FullInvoice>> {
 }
 
 export async function createInvoiceDal(input: CreateInvoiceInput) {
-  const { orgId } = await auth.protect();
+  const { orgId, has } = await auth.protect();
+
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
+  let limit = 0;
+  if (has({ feature: "create_unlimited_invoices_a_month" })) {
+    limit = Infinity;
+  } else if (has({ feature: "create_up_to_10_invoices_a_month" })) {
+    limit = 10;
+  } else if (has({ feature: "create_up_to_5_invoices_a_month" })) {
+    limit = 5;
+  }
+
+  try {
+    const currentCount = await getMonthlyInvoiceCount(orgId);
+
+    if (currentCount >= limit) {
+      return errAsync({
+        reason: `Usage limit reached, limit: ${limit} a month with your plan. Consider upgrading`,
+      } as const);
+    }
+  } catch (e) {
+    console.error("Error failed to verify usage limits: ", e)
+    return errAsync({ reason: "Failed to verify usage limits" } as const);
+  }
+
   const validation = CreateInvoiceSchema.safeParse(input);
   if (!validation.success) {
-    const errorTree = z.treeifyError(validation.error);
-
     return errAsync({
       reason: "Validation failed",
-      errors: errorTree,
+      errors: z.treeifyError(validation.error),
     } as const);
   }
+
   try {
     const invoice = await createInvoiceDb(input, orgId);
-
     return okAsync(invoice);
   } catch (e: unknown) {
     console.error("Database Insert Error:", e);
     return errAsync({ reason: "Db failed to create invoice" } as const);
   }
 }
-
 export async function deleteInvoiceDal(id: string) {
   const { orgId } = await auth.protect();
   if (!orgId) {
@@ -151,7 +172,9 @@ export async function sendInvoiceDal(id: string) {
 
   // Fetch org name from Clerk
   const client = await clerkClient();
-  const org = await client.organizations.getOrganization({ organizationId: orgId });
+  const org = await client.organizations.getOrganization({
+    organizationId: orgId,
+  });
   const orgName = org.name;
 
   try {
@@ -164,7 +187,9 @@ export async function sendInvoiceDal(id: string) {
   }
 }
 
-export async function searchInvoicesDal(query: string): Promise<Result<Invoice[]>> {
+export async function searchInvoicesDal(
+  query: string,
+): Promise<Result<Invoice[]>> {
   const { orgId } = await auth.protect();
   if (!orgId) {
     return { data: null, error: "No org" };

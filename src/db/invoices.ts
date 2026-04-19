@@ -120,7 +120,8 @@ export async function searchInvoicesDb(
     SELECT 
       i.*,
       c.name as customer_name,
-      c.email as customer_email
+      c.email as customer_email,
+      c.status as customer_status
     FROM invoices i 
     JOIN customers c ON i.customer_id = c.id
     WHERE i.org_id = ${orgId} AND (
@@ -132,7 +133,11 @@ export async function searchInvoicesDb(
     )
     ORDER BY i.created_at DESC
     LIMIT 10
-  `) as (Invoice & { customer_name: string; customer_email: string })[];
+  `) as (Invoice & {
+    customer_name: string;
+    customer_email: string;
+    customer_status: "active" | "disabled" | "deleted";
+  })[];
 
   return data.map((inv) => ({
     ...inv,
@@ -141,6 +146,7 @@ export async function searchInvoicesDb(
       name: inv.customer_name,
       email: inv.customer_email,
       org_id: inv.org_id,
+      status: inv.customer_status,
     },
   })) as Invoice[];
 }
@@ -160,18 +166,24 @@ export async function fetchingInvoiceByIdDb(
     SELECT 
       i.*,
       c.name as customer_name,
-      c.email as customer_email
+      c.email as customer_email,
+      c.status as customer_status
     FROM invoices i
     JOIN customers c ON i.customer_id = c.id
     WHERE i.id = ${id} AND i.org_id = ${orgId}
-  `) as (Invoice & { customer_name: string; customer_email: string })[];
+  `) as (Invoice & {
+    customer_name: string;
+    customer_email: string;
+    customer_status: "active" | "disabled" | "deleted";
+  })[];
 
   if (!invoice) return null;
 
   const items = (await sql`
     SELECT 
       ii.*,
-      p.name as product_name
+      p.name as product_name,
+      p.status as product_status
     FROM invoice_items ii
     JOIN products p ON ii.product_id = p.id
     WHERE ii.invoice_id = ${id}
@@ -182,6 +194,7 @@ export async function fetchingInvoiceByIdDb(
     quantity: number;
     unit_price: number;
     product_name: string;
+    product_status: "active" | "disabled" | "deleted";
   }[];
 
   return {
@@ -191,6 +204,7 @@ export async function fetchingInvoiceByIdDb(
       name: invoice.customer_name,
       email: invoice.customer_email,
       org_id: invoice.org_id,
+      status: invoice.customer_status,
     },
     items: items.map((item) => ({
       ...item,
@@ -199,6 +213,7 @@ export async function fetchingInvoiceByIdDb(
         name: item.product_name,
         price: item.unit_price,
         org_id: invoice.org_id,
+        status: item.product_status,
       },
     })),
   };
@@ -417,3 +432,19 @@ export async function sendInvoiceDb(
   return result[0] as Invoice;
 }
 
+export async function getMonthlyInvoiceCount(orgId: string): Promise<number> {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const sql = neon(String(process.env.DATABASE_URL));
+  // Example using a standard Postgres client or Drizzle
+  const result = await sql`
+    SELECT count(*) as count 
+    FROM invoices 
+    WHERE org_id = ${orgId} 
+    AND created_at >= ${startOfMonth.toISOString()}
+  `;
+
+  return Number(result[0]?.count ?? 0);
+}

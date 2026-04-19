@@ -18,34 +18,39 @@ import { cn } from "@/lib/utils";
 import { useCreateCustomer } from "@/mutations/customers";
 
 interface CustomerFormProps {
-  orgId:string
+  orgId: string;
   onOptimistic?: (data: Customer) => void;
   isModal?: boolean;
 }
 
-export function CustomerForm({orgId, onOptimistic, isModal }: CustomerFormProps) {
+export function CustomerForm({ orgId, onOptimistic, isModal }: CustomerFormProps) {
   const { mutate, isPending } = useCreateCustomer();
 
   const form = useForm({
-  defaultValues: {
-    name: "",
-    email: "",
-  },
-  onSubmit: async ({ value }) => {
-    if (onOptimistic) {
-      startTransition(() => {
-        onOptimistic({
-          ...value,             // Spread name and email here
-          id: crypto.randomUUID(), 
-          org_id: orgId,        // Ensure orgId is defined (from useParams or props)
+    defaultValues: {
+      name: "",
+      email: "",
+    },
+    onSubmit: async ({ value }) => {
+      const fullData: Customer = {
+        ...value,
+        id: crypto.randomUUID(),
+        org_id: orgId,
+        status: "active",
+      };
+
+      if (onOptimistic) {
+        startTransition(() => {
+          onOptimistic(fullData);
         });
+      }
+      
+      mutate({
+        ...value,
+        status: "active",
       });
-      mutate(value);
-      return;
-    }
-    mutate(value);
-  },
-});
+    },
+  });
 
   const content = (
     <form
@@ -56,7 +61,6 @@ export function CustomerForm({orgId, onOptimistic, isModal }: CustomerFormProps)
       }}
     >
       <div className="space-y-4">
-        {/* Company Name Field */}
         <form.Field name="name">
           {(field) => (
             <div className="space-y-2">
@@ -78,7 +82,6 @@ export function CustomerForm({orgId, onOptimistic, isModal }: CustomerFormProps)
           )}
         </form.Field>
 
-        {/* Email Address Field */}
         <form.Field name="email">
           {(field) => (
             <div className="space-y-2">

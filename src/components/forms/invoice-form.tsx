@@ -2,8 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
-import { use, startTransition } from "react";
+import { startTransition, use } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,8 +29,8 @@ import type {
   Product,
   Result,
 } from "@/dal/types";
-import { useCreateInvoice } from "@/mutations/invoices";
 import { cn } from "@/lib/utils";
+import { useCreateInvoice } from "@/mutations/invoices";
 
 interface InvoiceFormProps {
   orgId: string;
@@ -98,11 +97,10 @@ export function InvoiceForm({
     },
   });
 
-
   if (productsError !== null) {
     return (
       <div className="flex flex-col items-center justify-center p-8 border rounded-lg bg-muted/20">
-        <p className="text-destructive mb-4">{productsError}</p>        
+        <p className="text-destructive mb-4">{productsError}</p>
       </div>
     );
   }
@@ -120,10 +118,12 @@ export function InvoiceForm({
           {(errors) =>
             errors.length > 0 ? (
               <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm border border-destructive/20 animate-in fade-in slide-in-from-top-1">
-                <p className="font-semibold mb-1">Please fix the following issues:</p>
+                <p className="font-semibold mb-1">
+                  Please fix the following issues:
+                </p>
                 <ul className="list-disc list-inside">
-                  {errors.map((error, i) => (
-                    <li key={i}>{error}</li>
+                  {errors.map((error) => (
+                    <li key={error}>{error}</li>
                   ))}
                 </ul>
               </div>
@@ -356,9 +356,7 @@ export function InvoiceForm({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() =>
-                                form.removeFieldValue("items", i)
-                              }
+                              onClick={() => form.removeFieldValue("items", i)}
                               disabled={field.state.value.length === 1}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -401,7 +399,12 @@ export function InvoiceForm({
         </div>
       </div>
 
-      <div className={cn("flex justify-end gap-3 mt-8", isModal && "pt-4 border-t")}>
+      <div
+        className={cn(
+          "flex justify-end gap-3 mt-8",
+          isModal && "pt-4 border-t",
+        )}
+      >
         <Button type="submit" size="lg" disabled={isPending}>
           {isPending ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -420,9 +423,7 @@ export function InvoiceForm({
   return (
     <Card className="max-w-4xl mx-auto shadow-lg border-muted/50">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold">
-          Create New Invoice
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold">Create New Invoice</CardTitle>
         <CardDescription>
           Generate a new invoice by selecting a customer and adding products.
         </CardDescription>

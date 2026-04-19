@@ -6,6 +6,7 @@ export const CustomerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.email("Invalid email address"),
   org_id: z.string(),
+  status: z.enum(["active", "disabled", "deleted"]),
 });
 
 export const CreateCustomerSchema = CustomerSchema.omit({
@@ -19,6 +20,7 @@ export const ProductSchema = z.object({
   name: z.string().min(2, "Product name must be at least 2 characters"),
   price: z.coerce.number().positive("Price must be positive"),
   org_id: z.string(),
+  status: z.enum(["active", "disabled", "deleted"]),
 });
 
 export const CreateProductSchema = ProductSchema.omit({

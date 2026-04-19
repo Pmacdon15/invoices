@@ -4,6 +4,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/tables/data-table";
 import type { Customer } from "@/dal/types";
 import DeleteCustomerButton from "../buttons/delete-customer-button";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface CustomersTableProps {
   data: Customer[];
@@ -29,8 +31,36 @@ export function CustomersTable({
   }
 
   const columns: ColumnDef<Customer>[] = [
-    { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <div className={cn(row.original.status === "disabled" && "opacity-50 grayscale")}>
+          {row.original.name}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ row }) => (
+        <div className={cn(row.original.status === "disabled" && "opacity-50 grayscale")}>
+          {row.original.email}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.status === "active" ? "default" : "secondary"}
+          className="capitalize"
+        >
+          {row.original.status}
+        </Badge>
+      ),
+    },
     {
       id: "actions",
       cell: ({ row }) => (

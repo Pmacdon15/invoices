@@ -5,6 +5,7 @@ import {
   createProductDb,
   deleteProductDb,
   fetchingProductsDb,
+  getProductCount,
   searchProductsDb,
 } from "@/db/products";
 import { CreateProductSchema, IdSchema } from "./schema";
@@ -34,10 +35,32 @@ export async function getProducts(
 }
 
 export async function createProductDal(input: CreateProductInput) {
-  const { orgId } = await auth.protect();
+  const { orgId, has } = await auth.protect();
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  let limit = 0;
+  if (has({ feature: "create_unlimited_products" })) {
+    limit = Infinity;
+  } else if (has({ feature: "create_up_to_10_products" })) {
+    limit = 10;
+  } else if (has({ feature: "create_up_to_5_products" })) {
+    limit = 5;
+  }
+
+  try {
+    const currentCount = await getProductCount(orgId);
+
+    if (currentCount >= limit) {
+      return errAsync({
+        reason: `Usage limit reached, limit: ${limit} products total with your plan. Consider upgrading`,
+      } as const);
+    }
+  } catch (e) {
+    console.error("Error failed to verify usage limits: ", e);
+    return errAsync({ reason: "Failed to verify usage limits" } as const);
   }
 
   const validation = CreateProductSchema.safeParse(input);

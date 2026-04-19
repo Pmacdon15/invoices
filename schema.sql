@@ -3,20 +3,22 @@ DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS customers;
 
+-- Status can be 'active', 'disabled', 'deleted'
 CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     org_id TEXT NOT NULL DEFAULT 'org001a',
-    deleted BOOLEAN NOT NULL DEFAULT False
+    status TEXT NOT NULL DEFAULT 'active'
 );
 
+-- Status can be 'active', 'disabled', 'deleted'
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     org_id TEXT NOT NULL DEFAULT 'org001a',
-    deleted BOOLEAN NOT NULL DEFAULT False
+    status TEXT NOT NULL DEFAULT 'active'
 );
 
 CREATE TABLE invoices (
@@ -34,12 +36,4 @@ CREATE TABLE invoice_items (
     product_id UUID REFERENCES products(id),
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price DECIMAL(10, 2) NOT NULL
-);
-
--- CREATE TABLE brandings (
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     org_id TEXT NOT NULL UNIQUE DEFAULT 'org001a',
---     logo_url TEXT,
---     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
--- );
-
+); 
