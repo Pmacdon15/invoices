@@ -64,13 +64,21 @@ export async function createInvoiceDal(input: CreateInvoiceInput) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
+  const PRO_SLUG = process.env.NEXT_PUBLIC_CLERK_PRO_INVOICES_SLUG || "create_up_to_100_invoices_a_month";
+  const BASIC_SLUG = process.env.NEXT_PUBLIC_CLERK_BASIC_INVOICES_SLUG || "create_up_to_10_invoices_a_month";
+  const FREE_SLUG = process.env.NEXT_PUBLIC_CLERK_FREE_INVOICES_SLUG || "create_up_to_5_invoices_a_month";
+
+  const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
+  const BASIC_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_INVOICE_LIMIT || "10", 10);
+  const FREE_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_INVOICE_LIMIT || "5", 10);
+
   let limit = 0;
-  if (has({ feature: "create_unlimited_invoices_a_month" })) {
-    limit = Infinity;
-  } else if (has({ feature: "create_up_to_10_invoices_a_month" })) {
-    limit = 10;
-  } else if (has({ feature: "create_up_to_5_invoices_a_month" })) {
-    limit = 5;
+  if (has({ feature: PRO_SLUG })) {
+    limit = PRO_LIMIT;
+  } else if (has({ feature: BASIC_SLUG })) {
+    limit = BASIC_LIMIT;
+  } else if (has({ feature: FREE_SLUG })) {
+    limit = FREE_LIMIT;
   }
 
   try {

@@ -41,13 +41,21 @@ export async function createProductDal(input: CreateProductInput) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
+  const PRO_SLUG = process.env.NEXT_PUBLIC_CLERK_PRO_PRODUCTS_SLUG || "create_up_to_100_products";
+  const BASIC_SLUG = process.env.NEXT_PUBLIC_CLERK_BASIC_PRODUCTS_SLUG || "create_up_to_10_products";
+  const FREE_SLUG = process.env.NEXT_PUBLIC_CLERK_FREE_PRODUCTS_SLUG || "create_up_to_5_products";
+
+  const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
+  const BASIC_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_PRODUCT_LIMIT || "10", 10);
+  const FREE_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_PRODUCT_LIMIT || "5", 10);
+
   let limit = 0;
-  if (has({ feature: "create_unlimited_products" })) {
-    limit = Infinity;
-  } else if (has({ feature: "create_up_to_10_products" })) {
-    limit = 10;
-  } else if (has({ feature: "create_up_to_5_products" })) {
-    limit = 5;
+  if (has({ feature: PRO_SLUG })) {
+    limit = PRO_LIMIT;
+  } else if (has({ feature: BASIC_SLUG })) {
+    limit = BASIC_LIMIT;
+  } else if (has({ feature: FREE_SLUG })) {
+    limit = FREE_LIMIT;
   }
 
   try {

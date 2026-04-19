@@ -51,45 +51,53 @@ export async function rebalanceOrgItems(orgId: string) {
 
   // --- Limit Determination ---
 
-  let customerLimit = 4;
-  let productLimit = 5;
-  let limitReasons: string[] = [];
+  const SLUG_PRO_CUSTOMERS = process.env.NEXT_PUBLIC_CLERK_PRO_CUSTOMERS_SLUG || "create_up_to_100_customers";
+  const SLUG_BASIC_CUSTOMERS = process.env.NEXT_PUBLIC_CLERK_BASIC_CUSTOMERS_SLUG || "create_up_to_8_customers";
+  const SLUG_FREE_CUSTOMERS = process.env.NEXT_PUBLIC_CLERK_FREE_CUSTOMERS_SLUG || "create_up_to_4_customers";
 
- 
-  const SLUG_UNLIMITED_CUSTOMERS = "create_unlimited_customers";
-  const SLUG_8_CUSTOMERS = "create_up_to_8_customers";
-  const SLUG_4_CUSTOMERS = "create_up_to_4_customers"; // Explicitly define default if needed as a feature
+  const SLUG_PRO_PRODUCTS = process.env.NEXT_PUBLIC_CLERK_PRO_PRODUCTS_SLUG || "create_up_to_100_products";
+  const SLUG_BASIC_PRODUCTS = process.env.NEXT_PUBLIC_CLERK_BASIC_PRODUCTS_SLUG || "create_up_to_10_products";
+  const SLUG_FREE_PRODUCTS = process.env.NEXT_PUBLIC_CLERK_FREE_PRODUCTS_SLUG || "create_up_to_5_products";
 
-  const SLUG_UNLIMITED_PRODUCTS = "create_unlimited_products";
-  const SLUG_10_PRODUCTS = "create_up_to_10_products";
+  const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
+  const BASIC_CUSTOMER_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_CUSTOMER_LIMIT || "8", 10);
+  const FREE_CUSTOMER_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_CUSTOMER_LIMIT || "4", 10);
+  const BASIC_PRODUCT_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_PRODUCT_LIMIT || "10", 10);
+  const FREE_PRODUCT_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_PRODUCT_LIMIT || "5", 10);
 
+  let customerLimit = FREE_CUSTOMER_LIMIT;
+  let productLimit = FREE_PRODUCT_LIMIT;
+  const limitReasons: string[] = [];
 
   if (foundFeatures.length > 0) {
     // Check for customer limits using feature names (slugs)
-    if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_UNLIMITED_CUSTOMERS)) {
-      customerLimit = Infinity;
-      limitReasons.push(`unlimited customers`);
-    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_8_CUSTOMERS)) {
-      customerLimit = 8;
-      limitReasons.push(`up to 8 customers`);
-    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_4_CUSTOMERS)) {
-      customerLimit = 4;
-      limitReasons.push(`up to 4 customers`);
+    if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_PRO_CUSTOMERS)) {
+      customerLimit = PRO_LIMIT;
+      limitReasons.push(`up to ${PRO_LIMIT} customers`);
+    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_BASIC_CUSTOMERS)) {
+      customerLimit = BASIC_CUSTOMER_LIMIT;
+      limitReasons.push(`up to ${BASIC_CUSTOMER_LIMIT} customers`);
+    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_FREE_CUSTOMERS)) {
+      customerLimit = FREE_CUSTOMER_LIMIT;
+      limitReasons.push(`up to ${FREE_CUSTOMER_LIMIT} customers`);
     }
 
     // Check for product limits using feature names (slugs)
-    if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_UNLIMITED_PRODUCTS)) {
-      productLimit = Infinity;
-      limitReasons.push(`unlimited products`);
-    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_10_PRODUCTS)) {
-      productLimit = 10;
-      limitReasons.push(`up to 10 products`);
+    if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_PRO_PRODUCTS)) {
+      productLimit = PRO_LIMIT;
+      limitReasons.push(`up to ${PRO_LIMIT} products`);
+    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_BASIC_PRODUCTS)) {
+      productLimit = BASIC_PRODUCT_LIMIT;
+      limitReasons.push(`up to ${BASIC_PRODUCT_LIMIT} products`);
+    } else if (foundFeatures.some(f => normalizeNameToSlug(f.name) === SLUG_FREE_PRODUCTS)) {
+      productLimit = FREE_PRODUCT_LIMIT;
+      limitReasons.push(`up to ${FREE_PRODUCT_LIMIT} products`);
     }
   }
 
   const finalLimitReason = limitReasons.length > 0 ? limitReasons.join(", ") : "default limits";
 
-  console.log(`📊 Limits set to -> Customers: ${customerLimit === Infinity ? "Unlimited" : customerLimit}, Products: ${productLimit === Infinity ? "Unlimited" : productLimit} (Reason: ${finalLimitReason})`);
+  console.log(`📊 Limits set to -> Customers: ${customerLimit}, Products: ${productLimit} (Reason: ${finalLimitReason})`);
 
   let hasChanged = false;
 

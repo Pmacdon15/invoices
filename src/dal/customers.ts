@@ -45,13 +45,21 @@ export async function createCustomerDal(input: CreateCustomerInput) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
+  const PRO_SLUG = process.env.NEXT_PUBLIC_CLERK_PRO_CUSTOMERS_SLUG || "create_up_to_100_customers";
+  const BASIC_SLUG = process.env.NEXT_PUBLIC_CLERK_BASIC_CUSTOMERS_SLUG || "create_up_to_8_customers";
+  const FREE_SLUG = process.env.NEXT_PUBLIC_CLERK_FREE_CUSTOMERS_SLUG || "create_up_to_4_customers";
+
+  const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
+  const BASIC_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_CUSTOMER_LIMIT || "8", 10);
+  const FREE_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_CUSTOMER_LIMIT || "4", 10);
+
   let limit = 0;
-  if (has({ feature: "create_unlimited_customers" })) {
-    limit = Infinity;
-  } else if (has({ feature: "create_up_to_8_customers" })) {
-    limit = 8;
-  } else if (has({ feature: "create_up_to_4_customers" })) {
-    limit = 4;
+  if (has({ feature: PRO_SLUG })) {
+    limit = PRO_LIMIT;
+  } else if (has({ feature: BASIC_SLUG })) {
+    limit = BASIC_LIMIT;
+  } else if (has({ feature: FREE_SLUG })) {
+    limit = FREE_LIMIT;
   }
 
   try {
