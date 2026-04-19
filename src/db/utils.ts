@@ -123,3 +123,23 @@ export async function rebalanceOrgItems(orgId: string) {
     console.log(`✨ Sync complete. No changes required.`);
   }
 }
+export async function deleteOrgData(orgId: string) {
+  console.log(`\n--- Deleting data for Org: ${orgId} ---`);
+
+  if (!process.env.DATABASE_URL) throw new Error("Config Error");
+  const sql = neon(process.env.DATABASE_URL);
+
+  try {
+    // Delete invoices first, which cascades to invoice_items
+    await sql`DELETE FROM invoices WHERE org_id = ${orgId}`;
+    
+    // Delete products and customers
+    await sql`DELETE FROM products WHERE org_id = ${orgId}`;
+    await sql`DELETE FROM customers WHERE org_id = ${orgId}`;
+
+    console.log(`✅ Successfully deleted all data for Org: ${orgId}`);
+  } catch (error) {
+    console.error(`❌ Error deleting data for Org ${orgId}:`, error);
+    throw error;
+  }
+}

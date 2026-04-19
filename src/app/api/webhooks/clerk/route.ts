@@ -1,6 +1,6 @@
 import { verifyWebhook } from "@clerk/backend/webhooks";
 import { type NextRequest, NextResponse } from "next/server";
-import { rebalanceOrgItems } from "@/db/utils";
+import { rebalanceOrgItems, deleteOrgData } from "@/db/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +15,11 @@ export async function POST(req: NextRequest) {
 
       if (orgId) {
         await rebalanceOrgItems(orgId);
+      }
+    } else if (evt.type === "organization.deleted") {
+      const orgId = evt.data.id;
+      if (orgId) {
+        await deleteOrgData(orgId);
       }
     }
 
