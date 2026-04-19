@@ -2,10 +2,10 @@ import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
 import type {
   CreateInvoiceInput,
-  UpdateInvoiceInput,
   FullInvoice,
   Invoice,
   PaginatedValue,
+  UpdateInvoiceInput,
 } from "@/dal/types";
 
 export async function fetchingInvoicesDb(
@@ -191,7 +191,6 @@ export async function fetchingInvoiceByIdDb(
     })),
   };
 }
-
 export async function createInvoiceDb(
   input: CreateInvoiceInput,
   orgId: string,
@@ -207,15 +206,31 @@ export async function createInvoiceDb(
     0,
   );
 
-  const [data] = (await sql`
-    WITH new_invoice AS (
+  const productIds = input.items.map((i) => i.product_id);
+  const uniqueProductIdsCount = new Set(productIds).size;
+
+  const results = (await sql`
+    WITH valid_customer AS (
+      SELECT id FROM customers 
+      WHERE id = ${customerId}::uuid 
+      AND status = 'active' 
+      AND org_id = ${orgId}
+    ),
+    valid_products AS (
+      SELECT id FROM products 
+      WHERE id = ANY(${productIds}::uuid[]) 
+      AND status = 'active' 
+      AND org_id = ${orgId}
+    ),
+    new_invoice AS (
       INSERT INTO invoices (customer_id, status, org_id, total)
-      VALUES (
-        ${customerId}::uuid, 
+      SELECT 
+        valid_customer.id, 
         ${input.status}, 
         ${orgId}, 
         ${totalAmount}
-      )
+      FROM valid_customer
+      WHERE (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
       RETURNING id, customer_id, total, status, org_id, created_at
     ),
     inserted_items AS (
@@ -232,10 +247,29 @@ export async function createInvoiceDb(
         ${input.items.map((i) => i.unit_price)}::numeric[]
       ) AS items(product_id, quantity, unit_price)
     )
-    SELECT * FROM new_invoice;
-  `) as Invoice[];
+    SELECT 
+      ni.*,
+      (SELECT COUNT(*) FROM valid_customer) as customer_ok,
+      (SELECT COUNT(*) FROM valid_products) as products_ok
+    FROM (SELECT 1) d
+    LEFT JOIN new_invoice ni ON true;
+  `) as (Invoice & { customer_ok: string; products_ok: string })[];
 
-  return data;
+  const result = results[0];
+
+  if (!result.id) {
+    if (Number(result?.customer_ok) === 0) {
+      throw new Error("Customer not found or is disabled");
+    }
+    if (Number(result?.products_ok) !== uniqueProductIdsCount) {
+      throw new Error("One or more products are not found or are disabled");
+    }
+    throw new Error("Failed to create invoice");
+  }
+
+  // Remove the extra properties before returning
+  const { customer_ok, products_ok, ...invoice } = result;
+  return invoice as Invoice;
 }
 
 export async function deleteInvoiceDb(

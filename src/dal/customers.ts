@@ -54,6 +54,7 @@ export async function createCustomerDal(input: CreateCustomerInput) {
   const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
   const BASIC_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_CUSTOMER_LIMIT || "8", 10);
   const FREE_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_CUSTOMER_LIMIT || "4", 10);
+  //  const FREE_LIMIT = 5
 
   let limit = 0;
   if (has({ feature: PRO_SLUG })) {
