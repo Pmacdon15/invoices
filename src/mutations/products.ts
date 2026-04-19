@@ -2,12 +2,9 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProductAction, deleteProductAction } from "@/actions/products";
-import type { CreateProductInput, Product } from "@/dal/types";
+import type { CreateProductInput } from "@/dal/types";
 
-export const useCreateProduct = (options?: {
-  onSuccess?: (data: Product) => void;
-  onError?: (error: Error) => void;
-}) => {
+export const useCreateProduct = () => {
   const router = useRouter();
   return useMutation({
     mutationFn: async (variables: CreateProductInput) => {
@@ -20,18 +17,11 @@ export const useCreateProduct = (options?: {
     },
     onSuccess: (data) => {
       toast.success("Product created!");
-      if (options?.onSuccess) {
-        options.onSuccess(data);
-      } else {
-        router.push("/products");
-      }
+
+      router.push("/products");
     },
     onError: (error: Error) => {
-      if (options?.onError) {
-        options.onError(error);
-      } else {
-        toast.error(error.message);
-      }
+      toast.error(error.message);
     },
   });
 };

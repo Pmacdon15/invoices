@@ -78,7 +78,7 @@ export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
             </DialogHeader>
             <ProductForm
               isModal
-              orgId={data.data[0].org_id}
+              orgId={data.data[0]?.org_id}
               onOptimistic={(newProduct) => {
                 setOptimistic({ type: "add", payload: newProduct });
                 setIsAddDialogOpen(false);
