@@ -17,22 +17,28 @@ export function Footer() {
             </p>
           </div>
 
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/terms" className="hover:text-foreground transition-colors">
-              Terms
-            </Link>
-            <Link href="/privacy" className="hover:text-foreground transition-colors">
-              Privacy
-            </Link>
-            <Link
-              href="https://github.com/pmacdon15"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 hover:text-foreground transition-colors"
-            >
-              <GitHubIcon className="h-5 w-5" />
-              <span>pmacdon15</span>
-            </Link>
+          <div className="flex flex-col md:flex-row items-center gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-6">
+              <Link href="/terms" className="hover:text-foreground transition-colors">
+                Terms
+              </Link>
+              <Link href="/privacy" className="hover:text-foreground transition-colors">
+                Privacy
+              </Link>
+            </div>
+            
+            <div className="flex items-center gap-4 border-l pl-6 border-muted-foreground/20">
+              <span className="text-[10px] uppercase tracking-widest font-bold opacity-50">Attribution</span>
+              <Link
+                href="https://github.com/pmacdon15"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 hover:text-foreground transition-colors"
+              >
+                <GitHubIcon className="h-5 w-5" />
+                <span className="font-medium">pmacdon15</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

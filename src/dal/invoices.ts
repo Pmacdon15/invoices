@@ -196,9 +196,10 @@ export async function sendInvoiceDal(id: string) {
     organizationId: orgId,
   });
   const orgName = org.name;
+  const orgImageUrl = org.imageUrl;
 
   try {
-    const invoice = await sendInvoiceDb(id, orgId, orgName);
+    const invoice = await sendInvoiceDb(id, orgId, orgName, orgImageUrl);
     return okAsync(invoice);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
