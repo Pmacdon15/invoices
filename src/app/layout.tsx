@@ -34,7 +34,7 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground`}
         >
           <Providers>
-            <div className="relative flex min-h-screen flex-col">
+            <div className="flex min-h-screen flex-col">
               <Navbar />
               <main className="flex-1">{children}</main>
               <Toaster />
