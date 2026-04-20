@@ -196,9 +196,10 @@ export async function updateInvoiceStatusDal(
 }
 
 export async function sendInvoiceDal(id: string) {
-  const { orgId } = await auth.protect();
+  const { orgId, has } = await auth.protect();
 
-  if (!orgId) {
+  const hasSendEmail = has({ feature: "send_email" });
+  if (!orgId || !hasSendEmail) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
