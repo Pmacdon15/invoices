@@ -1,18 +1,8 @@
 "use client";
 
-import { PlusCircle } from "lucide-react";
 import { use, useOptimistic, useState } from "react";
-import { InvoiceForm } from "@/components/forms/invoice-form";
+import { CreateInvoiceDialog } from "@/components/create-invoice-dialog";
 import { InvoicesTable } from "@/components/tables/invoices-table";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -44,7 +34,6 @@ export function InvoicesManagement({
   productsPromise,
 }: InvoicesManagementProps) {
   const { data, error } = use(invoicesPromise);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const [optimisticState, setOptimistic] = useOptimistic(
@@ -102,32 +91,14 @@ export function InvoicesManagement({
             </Select>
           </div>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" /> Create Invoice
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Invoice</DialogTitle>
-              <DialogDescription>
-                Generate a new invoice by selecting a customer and adding
-                products.
-              </DialogDescription>
-            </DialogHeader>
-            <InvoiceForm
-              isModal
-              orgId={data?.data[0]?.org_id ?? ""}
-              customersPromise={customersPromise}
-              productsPromise={productsPromise}
-              onOptimistic={(newInvoice) => {
-                setOptimistic({ type: "add", payload: newInvoice });
-                setIsCreateDialogOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <CreateInvoiceDialog
+          orgId={data?.data[0]?.org_id ?? ""}
+          customersPromise={customersPromise}
+          productsPromise={productsPromise}
+          onOptimistic={(newInvoice) => {
+            setOptimistic({ type: "add", payload: newInvoice });
+          }}
+        />
       </div>
 
       <InvoicesTable

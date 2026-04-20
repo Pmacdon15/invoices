@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { startTransition, use, useEffect } from "react";
+import { startTransition, use } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +32,7 @@ import type {
 } from "@/dal/types";
 import { cn } from "@/lib/utils";
 import { useCreateInvoice, useUpdateInvoice } from "@/mutations/invoices";
+import { CreateCustomerDialog } from "../create-customer-dialog";
 
 interface InvoiceFormProps {
   orgId: string;
@@ -55,12 +56,12 @@ export function InvoiceForm({
 
   const { mutate: createMutate, isPending: isCreating } = useCreateInvoice();
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateInvoice();
-  
+
   const isPending = isCreating || isUpdating;
 
   const form = useForm({
     defaultValues: initialData
-      ? {
+      ? ({
           customer_id: initialData.customer_id,
           status: initialData.status,
           items: initialData.items.map((item) => ({
@@ -68,12 +69,12 @@ export function InvoiceForm({
             quantity: item.quantity,
             unit_price: item.unit_price,
           })),
-        } as CreateInvoiceInput
-      : {
+        } as CreateInvoiceInput)
+      : ({
           customer_id: "",
           status: "draft" as const,
           items: [{ product_id: "", quantity: 1, unit_price: 0 }],
-        } as CreateInvoiceInput,
+        } as CreateInvoiceInput),
     validators: {
       onSubmit: ({ value }) => {
         const result = CreateInvoiceSchema.safeParse(value);
@@ -102,11 +103,13 @@ export function InvoiceForm({
             org_id: orgId,
             status: value.status,
             total: totalAmount,
-            created_at: initialData ? initialData.created_at : new Date().toISOString(),
+            created_at: initialData
+              ? initialData.created_at
+              : new Date().toISOString(),
             customer: selectedCustomer,
           } as Invoice);
         });
-        
+
         if (initialData) {
           updateMutate({ ...value, id: initialData.id });
         } else {
@@ -161,39 +164,43 @@ export function InvoiceForm({
           {/* Customer Selection */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Customer</Label>
-            <form.Field name="customer_id">
-              {(field) => (
-                <div className="space-y-1">
-                  <Select
-                    onValueChange={field.handleChange}
-                    value={field.state.value || ""}
-                  >
-                    <SelectTrigger
-                      className={
-                        field.state.meta.errors.length
-                          ? "border-destructive"
-                          : ""
-                      }
+            {Number(customers?.totalCount) > 0 ? (
+              <form.Field name="customer_id">
+                {(field) => (
+                  <div className="space-y-1">
+                    <Select
+                      onValueChange={field.handleChange}
+                      value={field.state.value || ""}
                     >
-                      <SelectValue placeholder="Select a customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customerError === null &&
-                        customers.data?.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  {field.state.meta.errors.length > 0 && (
-                    <p className="text-xs text-destructive">
-                      {field.state.meta.errors[0]}
-                    </p>
-                  )}
-                </div>
-              )}
-            </form.Field>
+                      <SelectTrigger
+                        className={
+                          field.state.meta.errors.length
+                            ? "border-destructive"
+                            : ""
+                        }
+                      >
+                        <SelectValue placeholder="Select a customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customerError === null &&
+                          customers.data?.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {field.state.meta.errors.length > 0 && (
+                      <p className="text-xs text-destructive">
+                        {field.state.meta.errors[0]}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </form.Field>
+            ) : (
+              <CreateCustomerDialog orgId={orgId} />
+            )}
           </div>
 
           {/* Status Selection */}
@@ -451,9 +458,13 @@ export function InvoiceForm({
   return (
     <Card className="max-w-4xl mx-auto shadow-lg border-muted/50">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold">{initialData ? "Edit Invoice" : "Create New Invoice"}</CardTitle>
+        <CardTitle className="text-2xl font-bold">
+          {initialData ? "Edit Invoice" : "Create New Invoice"}
+        </CardTitle>
         <CardDescription>
-          {initialData ? "Update the invoice details below." : "Generate a new invoice by selecting a customer and adding products."}
+          {initialData
+            ? "Update the invoice details below."
+            : "Generate a new invoice by selecting a customer and adding products."}
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>

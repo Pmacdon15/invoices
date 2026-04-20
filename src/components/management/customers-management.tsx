@@ -1,18 +1,8 @@
 "use client";
 
-import { PlusCircle } from "lucide-react";
-import { use, useOptimistic, useState } from "react";
-import { CustomerForm } from "@/components/forms/customer-form";
+import { use, useOptimistic } from "react";
+import { CreateCustomerDialog } from "@/components/create-customer-dialog";
 import { CustomersTable } from "@/components/tables/customer-table";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import type { Customer, PaginatedValue, Result } from "@/dal/types";
 
 interface CustomersManagementProps {
@@ -28,7 +18,6 @@ export function CustomersManagement({
   resultsPromise,
 }: CustomersManagementProps) {
   const { data, error } = use(resultsPromise);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const [optimisticState, setOptimistic] = useOptimistic(
     data,
@@ -74,29 +63,12 @@ export function CustomersManagement({
         <p className="text-muted-foreground">
           Manage your customer database.
         </p>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" /> Add Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
-              <DialogDescription>
-                Enter the customer's details to add them to your database.
-              </DialogDescription>
-            </DialogHeader>
-            <CustomerForm
-              orgId={data.data[0]?.org_id ?? ""}
-              isModal
-              onOptimistic={(newCustomer) => {
-                setOptimistic({ type: "add", payload: newCustomer });
-                setIsAddDialogOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <CreateCustomerDialog
+          orgId={data.data[0]?.org_id ?? ""}
+          onOptimistic={(newCustomer) => {
+            setOptimistic({ type: "add", payload: newCustomer });
+          }}
+        />
       </div>
 
       <CustomersTable
