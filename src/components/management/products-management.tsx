@@ -1,18 +1,8 @@
 "use client";
 
-import { PlusCircle } from "lucide-react";
-import { use, useOptimistic, useState } from "react";
-import { ProductForm } from "@/components/forms/product-form";
+import { use, useOptimistic } from "react";
+import { CreateProductDialog } from "@/components/create-product-dialog";
 import { ProductsTable } from "@/components/tables/products-table";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import type { PaginatedValue, Product, Result } from "@/dal/types";
 
 interface ProductsManagementProps {
@@ -26,7 +16,6 @@ type OptimisticAction =
 
 export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
   const { data, error } = use(dataPromise);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const [optimisticState, setOptimistic] = useOptimistic(
     data,
@@ -53,7 +42,7 @@ export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
         return {
           ...state,
           data: state.data.map((p) =>
-            p.id === action.payload.id ? action.payload : p
+            p.id === action.payload.id ? action.payload : p,
           ),
         };
       }
@@ -69,33 +58,14 @@ export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        {/* <div> */}
-        {/* <h1 className="text-3xl font-bold">Products</h1> */}
         <p className="text-muted-foreground">Manage your goods and services.</p>
-        {/* </div> */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" /> Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
-              <DialogDescription>
-                Define a new product or service for your invoices.
-              </DialogDescription>
-            </DialogHeader>
-            <ProductForm
-              isModal
-              orgId={data.data[0]?.org_id}
-              onOptimistic={(newProduct) => {
-                setOptimistic({ type: "add", payload: newProduct });
-                setIsAddDialogOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+
+        <CreateProductDialog
+          orgId={data.data[0]?.org_id}
+          onOptimistic={(newProduct) => {
+            setOptimistic({ type: "add", payload: newProduct });
+          }}
+        />
       </div>
 
       <ProductsTable

@@ -33,6 +33,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { useCreateInvoice, useUpdateInvoice } from "@/mutations/invoices";
 import { CreateCustomerDialog } from "../create-customer-dialog";
+import { CreateProductDialog } from "../create-product-dialog";
 
 interface InvoiceFormProps {
   orgId: string;
@@ -56,6 +57,7 @@ export function InvoiceForm({
 
   const { mutate: createMutate, isPending: isCreating } = useCreateInvoice();
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateInvoice();
+  const products1 = [];
 
   const isPending = isCreating || isUpdating;
 
@@ -283,39 +285,43 @@ export function InvoiceForm({
                           className="flex flex-col md:table-row p-4 md:p-0 border-b md:border-0 relative"
                         >
                           <td className="md:px-4 md:py-3 py-2">
-                            <form.Field name={`items[${i}].product_id`}>
-                              {(subField) => (
-                                <Select
-                                  onValueChange={(val) => {
-                                    subField.handleChange(val);
-                                    const product = products.data?.find(
-                                      (p) => p.id === val,
-                                    );
-                                    if (product) {
-                                      form.setFieldValue(
-                                        `items[${i}].unit_price`,
-                                        Number(product.price),
+                            {products1.totalCount > 0 ? (
+                              <form.Field name={`items[${i}].product_id`}>
+                                {(subField) => (
+                                  <Select
+                                    onValueChange={(val) => {
+                                      subField.handleChange(val);
+                                      const product = products.data?.find(
+                                        (p) => p.id === val,
                                       );
-                                    }
-                                  }}
-                                  value={subField.state.value}
-                                >
-                                  <SelectTrigger className="border-none shadow-none focus:ring-0 px-0 md:px-3 rounded-none bg-transparent">
-                                    <SelectValue placeholder="Select product" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {products.data?.map((product) => (
-                                      <SelectItem
-                                        key={product.id}
-                                        value={product.id}
-                                      >
-                                        {product.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </form.Field>
+                                      if (product) {
+                                        form.setFieldValue(
+                                          `items[${i}].unit_price`,
+                                          Number(product.price),
+                                        );
+                                      }
+                                    }}
+                                    value={subField.state.value}
+                                  >
+                                    <SelectTrigger className="border-none shadow-none focus:ring-0 px-0 md:px-3 rounded-none bg-transparent">
+                                      <SelectValue placeholder="Select product" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {products.data?.map((product) => (
+                                        <SelectItem
+                                          key={product.id}
+                                          value={product.id}
+                                        >
+                                          {product.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </form.Field>
+                            ) : (
+                              <CreateProductDialog orgId={orgId} />
+                            )}
                           </td>
                           <td className="md:px-4 md:py-3 py-2">
                             <form.Field name={`items[${i}].quantity`}>
