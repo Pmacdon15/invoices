@@ -4,6 +4,7 @@ export type ActionErrorReason =
   | "Not authorized"
   | "Validation failed"
   | "Unknown Db error"
+  | "Over organization membership limit"
   | "Db failed to create product"
   | "Db failed to update product"
   | "Db failed to delete product"
@@ -14,10 +15,10 @@ export type ActionErrorReason =
   | "Db failed to update invoice"
   | "Db failed to delete invoice"
   | "Failed to send invoice"
-  | "Failed to verify usage limits"
+  | "Failed to verify limits"
   | "Customer not found or is disabled"
   | "One or more products are not found or are disabled"
-  | `Usage limit reached, limit: ${string} with your plan. Consider upgrading`
+  | `Usage limit reached, limit: ${string}`
   | "Test";
 
 export interface ActionError {
@@ -27,8 +28,8 @@ export interface ActionError {
 }
 
 function isUsageLimitError(
-  reason: ActionErrorReason
-): reason is `Usage limit reached, limit: ${string} with your plan. Consider upgrading` {
+  reason: ActionErrorReason,
+): reason is `Usage limit reached, limit: ${string}` {
   return reason.startsWith("Usage limit reached");
 }
 
@@ -50,12 +51,11 @@ export function handleMutationError(error: ActionError) {
         errors: errors,
       };
 
-    case "Failed to verify usage limits":
-      return { message: "Could not verify subscription limits." };
-
+    case "Failed to verify limits":    
     case "Customer not found or is disabled":
     case "One or more products are not found or are disabled":
     case "Unknown Db error":
+    case"Over organization membership limit":
     case "Db failed to create product":
     case "Db failed to update product":
     case "Db failed to delete product":

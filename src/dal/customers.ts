@@ -26,7 +26,7 @@ export async function getCustomers(
   const { orgId } = await auth.protect();
 
   if (!orgId) {
-    return { data: null, error: "No org" };
+    return { data: null, error: "Not authorized" };
   }
   try {
     const data = await fetchingCustomersDb(orgId, page, all, query);
@@ -75,7 +75,7 @@ export async function createCustomerDal(input: CreateCustomerInput) {
     }
   } catch (e) {
     console.error("Error failed to verify usage limits: ", e);
-    return errAsync({ reason: "Failed to verify usage limits" } as const);
+    return errAsync({ reason: "Failed to verify limits" } as const);
   }
 
   const validation = CreateCustomerSchema.safeParse(input);

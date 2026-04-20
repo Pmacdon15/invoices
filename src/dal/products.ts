@@ -70,7 +70,7 @@ export async function createProductDal(input: CreateProductInput) {
     }
   } catch (e) {
     console.error("Error failed to verify usage limits: ", e);
-    return errAsync({ reason: "Failed to verify usage limits" } as const);
+    return errAsync({ reason: "Failed to verify limits" } as const);
   }
 
   const validation = CreateProductSchema.safeParse(input);

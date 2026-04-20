@@ -1,6 +1,7 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { errAsync, okAsync } from "neverthrow";
 import z from "zod";
+import { isOverMemberShipLimit } from "@/db/clerk";
 import {
   createInvoiceDb,
   deleteInvoiceDb,
@@ -9,22 +10,22 @@ import {
   getMonthlyInvoiceCount,
   searchInvoicesDb,
   sendInvoiceDb,
-  updateInvoiceStatusDb,
   updateInvoiceDb,
+  updateInvoiceStatusDb,
 } from "@/db/invoices";
 import {
   CreateInvoiceSchema,
   IdSchema,
-  UpdateInvoiceStatusSchema,
   UpdateInvoiceSchema,
+  UpdateInvoiceStatusSchema,
 } from "./schema";
 import type {
   CreateInvoiceInput,
-  UpdateInvoiceInput,
   FullInvoice,
   Invoice,
   PaginatedValue,
   Result,
+  UpdateInvoiceInput,
 } from "./types";
 
 export async function getInvoices(
@@ -67,13 +68,25 @@ export async function createInvoiceDal(input: CreateInvoiceInput) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
-  const PRO_SLUG = process.env.NEXT_PUBLIC_CLERK_PRO_INVOICES_SLUG || "create_up_to_100_invoices_a_month";
-  const BASIC_SLUG = process.env.NEXT_PUBLIC_CLERK_BASIC_INVOICES_SLUG || "create_up_to_10_invoices_a_month";
-  const FREE_SLUG = process.env.NEXT_PUBLIC_CLERK_FREE_INVOICES_SLUG || "create_up_to_5_invoices_a_month";
+  const PRO_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_PRO_INVOICES_SLUG ||
+    "create_up_to_100_invoices_a_month";
+  const BASIC_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_BASIC_INVOICES_SLUG ||
+    "create_up_to_10_invoices_a_month";
+  const FREE_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_FREE_INVOICES_SLUG ||
+    "create_up_to_5_invoices_a_month";
 
   const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
-  const BASIC_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_INVOICE_LIMIT || "10", 10);
-  const FREE_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_INVOICE_LIMIT || "5", 10);
+  const BASIC_LIMIT = parseInt(
+    process.env.NEXT_PUBLIC_BASIC_INVOICE_LIMIT || "10",
+    10,
+  );
+  const FREE_LIMIT = parseInt(
+    process.env.NEXT_PUBLIC_FREE_INVOICE_LIMIT || "5",
+    10,
+  );
 
   let limit = 0;
   if (has({ feature: PRO_SLUG })) {
@@ -85,16 +98,24 @@ export async function createInvoiceDal(input: CreateInvoiceInput) {
   }
 
   try {
-    const currentCount = await getMonthlyInvoiceCount(orgId);
+    const [isOverMemberShipLimitValue, currentCount] = await Promise.all([
+      isOverMemberShipLimit(orgId),
+      getMonthlyInvoiceCount(orgId),
+    ]);
+
+    if (isOverMemberShipLimitValue)
+      return errAsync({
+        reason: "Over organization membership limit",
+      } as const);
 
     if (currentCount >= limit) {
       return errAsync({
-        reason: `Usage limit reached, limit: ${limit} a month with your plan. Consider upgrading`,
+        reason: `Usage limit reached, limit: ${limit} a month with your plan. Consider upgrading.`,
       } as const);
     }
   } catch (e) {
-    console.error("Error failed to verify usage limits: ", e)
-    return errAsync({ reason: "Failed to verify usage limits" } as const);
+    console.error("Error failed to verify limits: ", e);
+    return errAsync({ reason: "Failed to verify limits" } as const);
   }
 
   const validation = CreateInvoiceSchema.safeParse(input);
@@ -194,23 +215,33 @@ export async function sendInvoiceDal(id: string) {
 
   const [org, memberships] = await Promise.all([
     client.organizations.getOrganization({ organizationId: orgId }),
-    client.organizations.getOrganizationMembershipList({ organizationId: orgId }),
+    client.organizations.getOrganizationMembershipList({
+      organizationId: orgId,
+    }),
   ]);
 
   const orgName = org.name;
   const orgImageUrl = org.imageUrl;
 
   // Find the first admin to get their email
-  const adminMembership = memberships.data.find(m => m.role === "org:admin");
+  const adminMembership = memberships.data.find((m) => m.role === "org:admin");
   let adminEmail: string | undefined;
 
-  if (adminMembership) {
-    const user = await client.users.getUser(adminMembership.publicUserData?.userId!);
+  if (adminMembership?.publicUserData?.userId) {
+    const user = await client.users.getUser(
+      adminMembership.publicUserData.userId, // TypeScript now knows this is a string
+    );
     adminEmail = user.emailAddresses[0]?.emailAddress;
   }
 
   try {
-    const invoice = await sendInvoiceDb(id, orgId, orgName, orgImageUrl, adminEmail);
+    const invoice = await sendInvoiceDb(
+      id,
+      orgId,
+      orgName,
+      orgImageUrl,
+      adminEmail,
+    );
     return okAsync(invoice);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
