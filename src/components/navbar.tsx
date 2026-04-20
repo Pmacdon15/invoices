@@ -86,12 +86,33 @@ export function Navbar() {
         <div className="flex items-center md:hidden">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              {/* <Button variant="ghost" className="md:hidden"> */}
+              <Button variant="ghost" className="p-0">
                 <Menu size={24} />
-                {/* <span className="sr-only">Toggle menu</span> */}
-              {/* </Button> */}
+                <span className="sr-only">Toggle menu</span>
+              </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="p-8">
+            <SheetContent
+              side="right"
+              className="p-8"
+              onPointerDownOutside={(e) => {
+                if (
+                  e.target instanceof Element &&
+                  (e.target.closest(".cl-portal") ||
+                    e.target.closest(".cl-organizationSwitcherPopoverCard"))
+                ) {
+                  e.preventDefault();
+                }
+              }}
+              onFocusOutside={(e) => {
+                if (
+                  e.target instanceof Element &&
+                  (e.target.closest(".cl-portal") ||
+                    e.target.closest(".cl-organizationSwitcherPopoverCard"))
+                ) {
+                  e.preventDefault();
+                }
+              }}
+            >
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   <ReceiptText className="h-5 w-5" />
