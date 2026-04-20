@@ -1,7 +1,8 @@
 "use client";
 
 import { PlusCircle } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import NewInvoiceFallback from "@/components/fallbacks/new-invoice-fallback";
 import { InvoiceForm } from "@/components/forms/invoice-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,14 +22,12 @@ import type {
 } from "@/dal/types";
 
 interface CreateInvoiceDialogProps {
-  orgId: string;
   customersPromise: Promise<Result<PaginatedValue<Customer>>>;
   productsPromise: Promise<Result<PaginatedValue<Product>>>;
   onOptimistic: (newInvoice: Invoice) => void;
 }
 
 export function CreateInvoiceDialog({
-  orgId,
   customersPromise,
   productsPromise,
   onOptimistic,
@@ -49,16 +48,17 @@ export function CreateInvoiceDialog({
             Generate a new invoice by selecting a customer and adding products.
           </DialogDescription>
         </DialogHeader>
-        <InvoiceForm
-          isModal
-          orgId={orgId}
-          customersPromise={customersPromise}
-          productsPromise={productsPromise}
-          onOptimistic={(newInvoice) => {
-            onOptimistic(newInvoice);
-            setIsOpen(false);
-          }}
-        />
+        <Suspense fallback={<NewInvoiceFallback isModal />}>
+          <InvoiceForm
+            isModal
+            customersPromise={customersPromise}
+            productsPromise={productsPromise}
+            onOptimistic={(newInvoice) => {
+              onOptimistic(newInvoice);
+              setIsOpen(false);
+            }}
+          />
+        </Suspense>
       </DialogContent>
     </Dialog>
   );

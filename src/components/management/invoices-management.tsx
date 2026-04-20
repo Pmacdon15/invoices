@@ -91,8 +91,7 @@ export function InvoicesManagement({
             </Select>
           </div>
         </div>
-        <CreateInvoiceDialog
-          orgId={data?.data[0]?.org_id ?? ""}
+        <CreateInvoiceDialog          
           customersPromise={customersPromise}
           productsPromise={productsPromise}
           onOptimistic={(newInvoice) => {

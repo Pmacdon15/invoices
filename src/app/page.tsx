@@ -49,7 +49,7 @@ export default function Home() {
             size="lg"
             className="px-8"
           >
-            <Link href="/invoices" className="flex items-center gap-2">
+            <Link href="/invoices/new" className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
               Create Invoice
             </Link>
