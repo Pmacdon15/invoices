@@ -151,3 +151,18 @@ export async function deleteOrgData(orgId: string) {
     throw error;
   }
 }
+
+export async function getAllOrgIds(): Promise<{ org_id: string }[]> {
+  if (!process.env.DATABASE_URL) throw new Error("Config Error");
+  const sql = neon(process.env.DATABASE_URL);
+
+  const orgs = await sql`
+    SELECT DISTINCT org_id FROM (
+      SELECT org_id FROM customers
+      UNION
+      SELECT org_id FROM products
+    ) as combined_orgs
+  `;
+
+  return orgs as { org_id: string }[];
+}
