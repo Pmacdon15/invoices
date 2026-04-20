@@ -57,7 +57,6 @@ export function InvoiceForm({
 
   const { mutate: createMutate, isPending: isCreating } = useCreateInvoice();
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateInvoice();
-  const products1 = [];
 
   const isPending = isCreating || isUpdating;
 
@@ -285,7 +284,7 @@ export function InvoiceForm({
                           className="flex flex-col md:table-row p-4 md:p-0 border-b md:border-0 relative"
                         >
                           <td className="md:px-4 md:py-3 py-2">
-                            {products1.totalCount > 0 ? (
+                            {products.totalCount > 0 ? (
                               <form.Field name={`items[${i}].product_id`}>
                                 {(subField) => (
                                   <Select
