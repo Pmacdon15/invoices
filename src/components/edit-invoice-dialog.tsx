@@ -45,8 +45,7 @@ export function EditInvoiceDialog({
           </DialogDescription>
         </DialogHeader>
         <InvoiceForm
-          isModal
-          orgId={invoice.org_id}
+          isModal          
           initialData={invoice}
           customersPromise={customersPromise}
           productsPromise={productsPromise}
