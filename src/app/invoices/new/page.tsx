@@ -8,7 +8,7 @@ export default function PageProps() {
   const customersPromise = getCustomers(1, true);
   const productsPromise = getProducts(1, true);
   return (
-    <div className="flex md:mt-16 w-full">
+    <div className="flex md:mt-16 mt-4 w-full">
       <Suspense fallback={<NewInvoiceFallback />}>
         <InvoiceForm
           customersPromise={customersPromise}
