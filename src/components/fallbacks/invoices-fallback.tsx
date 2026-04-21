@@ -1,6 +1,4 @@
-"use client";
-import { PlusCircle, Loader2 } from "lucide-react"; // Import Loader2
-import { getInvoicesColumns } from "../tables/invoice-columns";
+import { Loader2, PlusCircle } from "lucide-react"; // Import Loader2
 import { Button } from "../ui/button";
 import {
   Select,
@@ -11,10 +9,6 @@ import {
 } from "../ui/select";
 
 export default function InvoicesFallback() {
-  const columns = getInvoicesColumns({
-    setOptimistic: () => {},
-  });
-
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-end gap-4">
@@ -24,7 +18,7 @@ export default function InvoicesFallback() {
           </p>
           <div className="flex items-center gap-2">
             <Select value={"all"}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-37.5">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -39,9 +33,11 @@ export default function InvoicesFallback() {
       </div>
 
       {/* Spinner Section */}
-      <div className="flex flex-col items-center justify-center min-h-[400px] border rounded-lg bg-card/50">
+      <div className="flex flex-col items-center justify-center min-h-100 border rounded-lg bg-card/50">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="mt-2 text-sm text-muted-foreground">Loading invoices...</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Loading invoices...
+        </p>
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground px-2">

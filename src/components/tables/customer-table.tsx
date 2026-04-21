@@ -148,8 +148,8 @@ export function CustomersTable({
     <div className="py-4 space-y-4">
       <DataTable columns={columns} data={data} totalPages={totalPages} />
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>Total: {totalCount}</span>
+      <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
+        <span>Total Customers: {totalCount}</span>
         <span>
           Page {currentPage} of {totalPages}
         </span>

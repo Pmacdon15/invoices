@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import CustomersFallback from "@/components/fallbacks/customers-fallback";
 import { CustomersManagement } from "@/components/management/customers-management";
 import { SearchSelector } from "@/components/ui/search-selector";
 import { getCustomers } from "@/dal/customers";
@@ -22,7 +23,7 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
           />
         </Suspense>
       </div>
-      <Suspense fallback={<div>Loading customers...</div>}>
+      <Suspense fallback={<CustomersFallback />}>
         <CustomersManagement resultsPromise={dataPromise} />
       </Suspense>
     </div>

@@ -2,9 +2,9 @@ import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
 import type {
   CreateCustomerInput,
-  UpdateCustomerInput,
   Customer,
   PaginatedValue,
+  UpdateCustomerInput,
 } from "@/dal/types";
 
 export async function fetchingCustomersDb(
@@ -14,7 +14,9 @@ export async function fetchingCustomersDb(
   query?: string,
 ): Promise<PaginatedValue<Customer>> {
   "use cache";
-  const tag = all ? `customers-${orgId}-all` : `customers-${orgId}-page-${page}`;
+  const tag = all
+    ? `customers-${orgId}-all`
+    : `customers-${orgId}-page-${page}`;
   cacheTag(`customers-${orgId}`, tag);
 
   if (!process.env.DATABASE_URL) {
@@ -186,4 +188,3 @@ export async function updateCustomerDb(
   }
   return result[0] as Customer;
 }
-

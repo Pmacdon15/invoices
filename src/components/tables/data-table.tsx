@@ -21,19 +21,19 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  currentPage: number;
   totalPages?: number; // Added to know when to disable "Next"
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  totalPages = 1,
+  currentPage,
+  totalPages = 1,  
 }: DataTableProps<TData, TValue>) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-//TODO: pass current page down from server
-  const currentPage = Number(searchParams.get("page")) || 1;
+  const searchParams = useSearchParams(); 
 
   const table = useReactTable({
     data,

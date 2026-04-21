@@ -23,7 +23,7 @@ export async function getProducts(
   query?: string,
 ): Promise<Result<PaginatedValue<Product>>> {
   const { orgId } = await auth.protect();
-
+  
   if (!orgId) {
     return { data: null, error: "No org" };
   }

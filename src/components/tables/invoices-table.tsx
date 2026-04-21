@@ -21,7 +21,6 @@ export function InvoicesTable({
   totalCount,
   setOptimistic,
 }: InvoicesTableProps) {
-  
   const columns = useMemo(
     () => getInvoicesColumns({ setOptimistic }),
     [setOptimistic],
@@ -37,7 +36,12 @@ export function InvoicesTable({
 
   return (
     <div className="space-y-4">
-      <DataTable columns={columns} data={data} totalPages={totalPages} />
+      <DataTable
+        columns={columns}
+        data={data}
+        totalPages={totalPages}
+        currentPage={currentPage}
+      />
 
       <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
         <span>Total Invoices: {totalCount}</span>

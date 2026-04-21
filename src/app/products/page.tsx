@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import ProductsFallback from "@/components/fallbacks/products-fallback";
 import { ProductsManagement } from "@/components/management/products-management";
 import { SearchSelector } from "@/components/ui/search-selector";
 import { getProducts } from "@/dal/products";
@@ -28,7 +29,7 @@ export default async function ProductsPage(props: PageProps<"/products">) {
           />
         </Suspense>
       </div>
-      <Suspense fallback={<div>Loading products...</div>}>
+      <Suspense fallback={<ProductsFallback />}>
         <ProductsManagement dataPromise={dataPromise} />
       </Suspense>
     </div>
