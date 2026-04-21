@@ -1,15 +1,22 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { Edit2 } from "lucide-react";
+import { useState } from "react";
 import { DataTable } from "@/components/tables/data-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import type { Product } from "@/dal/types";
 import { cn } from "@/lib/utils";
 import DeleteProductButton from "../buttons/delete-product-button";
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Edit2 } from "lucide-react";
 import { ProductForm } from "../forms/product-form";
 
 const EditProductCell = ({
@@ -34,7 +41,9 @@ const EditProductCell = ({
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Product</DialogTitle>
-          <DialogDescription>Update the product details below.</DialogDescription>
+          <DialogDescription>
+            Update the product details below.
+          </DialogDescription>
         </DialogHeader>
         <ProductForm
           orgId={product.org_id}
@@ -56,7 +65,9 @@ interface ProductsTableProps {
   currentPage: number;
   totalCount: number;
   setOptimistic: (
-    action: { type: "delete"; payload: string } | { type: "update"; payload: Product }
+    action:
+      | { type: "delete"; payload: string }
+      | { type: "update"; payload: Product },
   ) => void;
 }
 
@@ -127,7 +138,10 @@ export function ProductsTable({
       id: "actions",
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-2">
-          <EditProductCell product={row.original} setOptimistic={setOptimistic} />
+          <EditProductCell
+            product={row.original}
+            setOptimistic={setOptimistic}
+          />
           <DeleteProductButton
             productId={row.original.id}
             setOptimisticProducts={(id) =>
@@ -141,7 +155,12 @@ export function ProductsTable({
 
   return (
     <div className="space-y-4">
-      <DataTable columns={columns} data={data} totalPages={totalPages} />
+      <DataTable
+        columns={columns}
+        data={data}
+        totalPages={totalPages}
+        currentPage={currentPage}
+      />
 
       <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
         <span>Total Products: {totalCount}</span>
