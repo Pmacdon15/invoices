@@ -32,7 +32,7 @@ export function DataTable<TData, TValue>({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
+//TODO: pass current page down from server
   const currentPage = Number(searchParams.get("page")) || 1;
 
   const table = useReactTable({
@@ -50,6 +50,58 @@ export function DataTable<TData, TValue>({
     router.push(`${pathname}?${params.toString()}` as Route);
   };
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return (
     <div>
       <div className="rounded-md border">

@@ -32,6 +32,7 @@ export async function getInvoices(
   page: number,
   query?: string,
 ): Promise<Result<PaginatedValue<Invoice>>> {
+  await new Promise(res => setTimeout(res, 3000))
   const { orgId } = await auth.protect();
   if (!orgId) {
     return { data: null, error: "No org" };

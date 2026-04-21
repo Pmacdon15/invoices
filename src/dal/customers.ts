@@ -12,10 +12,10 @@ import {
 import { CreateCustomerSchema, IdSchema, UpdateCustomerSchema } from "./schema";
 import type {
   CreateCustomerInput,
-  UpdateCustomerInput,
   Customer,
   PaginatedValue,
   Result,
+  UpdateCustomerInput,
 } from "./types";
 
 export async function getCustomers(
@@ -47,13 +47,25 @@ export async function createCustomerDal(input: CreateCustomerInput) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
-  const PRO_SLUG = process.env.NEXT_PUBLIC_CLERK_PRO_CUSTOMERS_SLUG || "create_up_to_100_customers";
-  const BASIC_SLUG = process.env.NEXT_PUBLIC_CLERK_BASIC_CUSTOMERS_SLUG || "create_up_to_8_customers";
-  const FREE_SLUG = process.env.NEXT_PUBLIC_CLERK_FREE_CUSTOMERS_SLUG || "create_up_to_4_customers";
+  const PRO_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_PRO_CUSTOMERS_SLUG ||
+    "create_up_to_100_customers";
+  const BASIC_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_BASIC_CUSTOMERS_SLUG ||
+    "create_up_to_8_customers";
+  const FREE_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_FREE_CUSTOMERS_SLUG ||
+    "create_up_to_4_customers";
 
   const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
-  const BASIC_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_CUSTOMER_LIMIT || "8", 10);
-  const FREE_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_CUSTOMER_LIMIT || "4", 10);
+  const BASIC_LIMIT = parseInt(
+    process.env.NEXT_PUBLIC_BASIC_CUSTOMER_LIMIT || "8",
+    10,
+  );
+  const FREE_LIMIT = parseInt(
+    process.env.NEXT_PUBLIC_FREE_CUSTOMER_LIMIT || "4",
+    10,
+  );
   //  const FREE_LIMIT = 5
 
   let limit = 0;
@@ -121,7 +133,9 @@ export async function deleteCustomerDal(id: string) {
   }
 }
 
-export async function searchCustomersDal(query: string): Promise<Result<Customer[]>> {
+export async function searchCustomersDal(
+  query: string,
+): Promise<Result<Customer[]>> {
   const { orgId } = await auth.protect();
   if (!orgId) {
     return { data: null, error: "No org" };

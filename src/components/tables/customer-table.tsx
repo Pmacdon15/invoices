@@ -1,16 +1,23 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/tables/data-table";
-import type { Customer } from "@/dal/types";
-import DeleteCustomerButton from "../buttons/delete-customer-button";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Edit2 } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import type { Customer } from "@/dal/types";
+import { cn } from "@/lib/utils";
+import DeleteCustomerButton from "../buttons/delete-customer-button";
 import { CustomerForm } from "../forms/customer-form";
+import { DataTable } from "./data-table";
 
 const EditCustomerCell = ({
   customer,
@@ -34,7 +41,9 @@ const EditCustomerCell = ({
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Customer</DialogTitle>
-          <DialogDescription>Update the customer details below.</DialogDescription>
+          <DialogDescription>
+            Update the customer details below.
+          </DialogDescription>
         </DialogHeader>
         <CustomerForm
           orgId={customer.org_id}
@@ -56,7 +65,9 @@ interface CustomersTableProps {
   currentPage: number;
   totalCount: number;
   setOptimistic: (
-    action: { type: "delete"; payload: string } | { type: "update"; payload: Customer }
+    action:
+      | { type: "delete"; payload: string }
+      | { type: "update"; payload: Customer },
   ) => void;
 }
 
@@ -80,7 +91,11 @@ export function CustomersTable({
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
-        <div className={cn(row.original.status === "disabled" && "opacity-50 grayscale")}>
+        <div
+          className={cn(
+            row.original.status === "disabled" && "opacity-50 grayscale",
+          )}
+        >
           {row.original.name}
         </div>
       ),
@@ -89,7 +104,11 @@ export function CustomersTable({
       accessorKey: "email",
       header: "Email",
       cell: ({ row }) => (
-        <div className={cn(row.original.status === "disabled" && "opacity-50 grayscale")}>
+        <div
+          className={cn(
+            row.original.status === "disabled" && "opacity-50 grayscale",
+          )}
+        >
           {row.original.email}
         </div>
       ),
@@ -110,10 +129,15 @@ export function CustomersTable({
       id: "actions",
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-2">
-          <EditCustomerCell customer={row.original} setOptimistic={setOptimistic} />
+          <EditCustomerCell
+            customer={row.original}
+            setOptimistic={setOptimistic}
+          />
           <DeleteCustomerButton
             rowId={row.original.id}
-            setOptimisticCustomers={(id) => setOptimistic({ type: "delete", payload: id })}
+            setOptimisticCustomers={(id) =>
+              setOptimistic({ type: "delete", payload: id })
+            }
           />
         </div>
       ),
@@ -122,11 +146,7 @@ export function CustomersTable({
 
   return (
     <div className="py-4 space-y-4">
-      <DataTable
-        columns={columns}
-        data={data}
-        totalPages={totalPages}
-      />
+      <DataTable columns={columns} data={data} totalPages={totalPages} />
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>Total: {totalCount}</span>

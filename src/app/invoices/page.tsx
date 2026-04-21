@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import InvoicesFallback from "@/components/fallbacks/invoices-fallback";
 import { InvoicesManagement } from "@/components/management/invoices-management";
 import { SearchSelector } from "@/components/ui/search-selector";
 import { getCustomers } from "@/dal/customers";
@@ -27,7 +28,7 @@ export default async function InvoicesPage(props: PageProps<"/invoices">) {
           />
         </Suspense>
       </div>
-      <Suspense fallback={<div>Loading invoices...</div>}>
+      <Suspense fallback={<InvoicesFallback />}>
         <InvoicesManagement
           invoicesPromise={invoicesPromise}
           customersPromise={customersPromise}
