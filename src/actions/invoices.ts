@@ -17,6 +17,7 @@ export async function createInvoiceAction(input: CreateInvoiceInput) {
   return result.match(
     (data) => {
       updateTag(`invoices-${data.org_id}`);
+      updateTag(`stats-${data.org_id}`);
       // redirect(`/products`);
       return { data };
     },
@@ -32,6 +33,7 @@ export async function deleteInvoiceAction(id: string) {
     (data) => {
       updateTag(`invoices-${data.org_id}`);
       updateTag(`invoice-${data.id}`);
+      updateTag(`stats-${data.org_id}`);
       return { data };
     },
     (err) => {
@@ -50,6 +52,7 @@ export async function updateInvoiceStatusAction(
     (data) => {
       updateTag(`invoices-${data.org_id}`);
       updateTag(`invoice-${data.id}`);
+      updateTag(`stats-${data.org_id}`);
       return { data };
     },
     (err) => {
@@ -65,6 +68,7 @@ export async function sendInvoiceAction(invoiceId: string) {
     (data) => {
       updateTag(`invoices-${data.org_id}`);
       updateTag(`invoice-${data.id}`);
+      updateTag(`stats-${data.org_id}`);
       return { data };
     },
     (err) => {
@@ -80,6 +84,7 @@ export async function updateInvoiceAction(input: UpdateInvoiceInput) {
     (data) => {
       updateTag(`invoices-${data.org_id}`);
       updateTag(`invoice-${data.id}`);
+      updateTag(`stats-${data.org_id}`);
       return { data };
     },
     (err) => {
