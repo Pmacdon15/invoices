@@ -7,6 +7,7 @@ import {
   SignOutButton,
   SignUpButton,
   UserButton,
+  useAuth,
 } from "@clerk/nextjs";
 import { Menu, ReceiptText } from "lucide-react";
 import type { Route } from "next";
@@ -33,11 +34,19 @@ const navItems = [
   { title: "Customers", href: "/customers" },
   { title: "Products", href: "/products" },
   { title: "Invoices", href: "/invoices" },
+  { title: "Stats", href: "/stats" },
   { title: "Plans", href: "/plans" },
 ];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
+  const { has } = useAuth();
+
+  const hasStats = has ? has({ feature: "stats" }) : false;
+  const filteredNavItems = navItems.filter((item) => {
+    if (item.title === "Stats" && !hasStats) return false;
+    return true;
+  });
 
   return (
     <header className="sticky top-0 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -55,7 +64,7 @@ export function Navbar() {
         <div className="hidden md:flex md:items-center md:gap-6">
           <NavigationMenu>
             <NavigationMenuList>
-              {navItems.map((item) => (
+              {filteredNavItems.map((item) => (
                 <NavigationMenuItem key={item.title}>
                   <NavigationMenuLink
                     asChild
@@ -102,7 +111,7 @@ export function Navbar() {
                 <Show when={"signed-in"}>
                   <OrganizationSwitcher />
                 </Show>
-                {navItems.map((item) => (
+                {filteredNavItems.map((item) => (
                   <Link
                     key={item.title}
                     href={item.href as Route}
