@@ -1,4 +1,11 @@
-import { ArrowRight, Plus, ChevronRight, Zap, Shield, Clock } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  Clock,
+  Plus,
+  Shield,
+  Zap,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -157,10 +164,6 @@ export default function Home() {
           <div className="flex items-center justify-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="font-serif text-primary">PM</span>
-            </div>
-            <div className="text-left">
-              <div className="font-medium text-sm">Patrick Macdonald</div>
-              <div className="text-xs text-muted-foreground">Founder</div>
             </div>
           </div>
         </div>

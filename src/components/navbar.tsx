@@ -1,5 +1,4 @@
 "use client";
-
 import {
   OrganizationSwitcher,
   Show,
@@ -9,6 +8,7 @@ import {
   UserButton,
   useAuth,
 } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import { Menu, ReceiptText } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -77,8 +77,11 @@ export function Navbar() {
           </Show>
           <Show when={"signed-in"}>
             <div className="flex items-center gap-4">
-              <UserButton />
-              <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
+              <UserButton appearance={{ theme: dark }} />
+              <OrganizationSwitcher
+                appearance={{ theme: dark }}
+                afterCreateOrganizationUrl="/dashboard"
+              />
             </div>
           </Show>
         </div>
@@ -87,7 +90,10 @@ export function Navbar() {
         <div className="flex items-center md:hidden">
           <Sheet open={isOpen} onOpenChange={setIsOpen} modal={false}>
             <SheetTrigger asChild>
-              <Button variant="ghost" className="p-0 text-sidebar-foreground hover:bg-sidebar-accent">
+              <Button
+                variant="ghost"
+                className="p-0 text-sidebar-foreground hover:bg-sidebar-accent"
+              >
                 <Menu size={24} />
                 <span className="sr-only">Toggle menu</span>
               </Button>
