@@ -1,14 +1,13 @@
-import { ArrowRight, Plus, ChevronRight } from "lucide-react";
+import { ArrowRight, Plus, ChevronRight, Zap, Shield, Clock } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
-  const stats = [
-    { value: "10k+", label: "Invoices Created" },
-    { value: "2.5k", label: "Happy Users" },
-    { value: "99%", label: "Uptime" },
-    { value: "24/7", label: "Support" },
+  const highlights = [
+    { icon: Zap, label: "Fast & Lightweight" },
+    { icon: Shield, label: "Secure by Default" },
+    { icon: Clock, label: "Save Hours Weekly" },
   ];
 
   const workflow = [
@@ -81,18 +80,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats Banner */}
-      <section className="bg-primary text-primary-foreground py-8">
+      {/* Highlights Strip */}
+      <section className="bg-primary text-primary-foreground py-6">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="font-serif text-4xl md:text-5xl mb-1">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-primary-foreground/70 uppercase tracking-wider">
-                  {stat.label}
-                </div>
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+            {highlights.map((item) => (
+              <div key={item.label} className="flex items-center gap-3">
+                <item.icon className="h-5 w-5" />
+                <span className="text-sm font-medium tracking-wide">
+                  {item.label}
+                </span>
               </div>
             ))}
           </div>
@@ -176,7 +173,7 @@ export default function Home() {
             Ready to get started?
           </h2>
           <p className="text-lg text-sidebar-foreground/70 mb-10 max-w-xl mx-auto">
-            Join thousands of businesses managing their invoices with ease.
+            Create your first invoice in minutes. No credit card required.
           </p>
           <Link href="/customers">
             <Button
