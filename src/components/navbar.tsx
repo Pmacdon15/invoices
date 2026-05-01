@@ -1,5 +1,4 @@
 "use client";
-
 import {
   OrganizationSwitcher,
   Show,
@@ -9,18 +8,12 @@ import {
   UserButton,
   useAuth,
 } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import { Menu, ReceiptText } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
 import {
   Sheet,
   SheetContent,
@@ -49,12 +42,12 @@ export function Navbar() {
   });
 
   return (
-    <header className="sticky top-0 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+    <header className="sticky top-0 w-full bg-sidebar text-sidebar-foreground shadow-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center space-x-2">
-            <ReceiptText className="h-6 w-6 text-primary" />
-            <span className="inline-block font-bold text-xl tracking-tight">
+            <ReceiptText className="h-6 w-6 text-sidebar-primary" />
+            <span className="inline-block font-serif text-xl tracking-tight">
               InvoicePro
             </span>
           </Link>
@@ -62,31 +55,33 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex md:items-center md:gap-6">
-          <NavigationMenu>
-            <NavigationMenuList>
-              {filteredNavItems.map((item) => (
-                <NavigationMenuItem key={item.title}>
-                  <NavigationMenuLink
-                    asChild
-                    className={navigationMenuTriggerStyle()}
-                  >
-                    <Link href={item.href as Route}>{item.title}</Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              ))}
-            </NavigationMenuList>
-          </NavigationMenu>
+          <nav className="flex items-center gap-1">
+            {filteredNavItems.map((item) => (
+              <Link
+                key={item.title}
+                href={item.href as Route}
+                className="px-3 py-2 text-sm font-medium text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+              >
+                {item.title}
+              </Link>
+            ))}
+          </nav>
 
           <Show when={"signed-out"}>
             <SignInButton>
-              <Button>Sign in</Button>
+              <Button className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground">
+                Sign in
+              </Button>
             </SignInButton>
             <SignUpButton />
           </Show>
           <Show when={"signed-in"}>
             <div className="flex items-center gap-4">
-              <UserButton />
-              <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
+              <UserButton appearance={{ theme: dark }} />
+              <OrganizationSwitcher
+                appearance={{ theme: dark }}
+                afterCreateOrganizationUrl="/dashboard"
+              />
             </div>
           </Show>
         </div>
@@ -95,7 +90,10 @@ export function Navbar() {
         <div className="flex items-center md:hidden">
           <Sheet open={isOpen} onOpenChange={setIsOpen} modal={false}>
             <SheetTrigger asChild>
-              <Button variant="ghost" className="p-0">
+              <Button
+                variant="ghost"
+                className="p-0 text-sidebar-foreground hover:bg-sidebar-accent"
+              >
                 <Menu size={24} />
                 <span className="sr-only">Toggle menu</span>
               </Button>

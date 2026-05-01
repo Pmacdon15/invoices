@@ -1,128 +1,192 @@
-import { ArrowRight, Package, Receipt, Users, Plus, LayoutGrid } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  Clock,
+  Plus,
+  Shield,
+  Zap,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export default function Home() {
-  const actions = [
+  const highlights = [
+    { icon: Zap, label: "Fast & Lightweight" },
+    { icon: Shield, label: "Secure by Default" },
+    { icon: Clock, label: "Save Hours Weekly" },
+  ];
+
+  const workflow = [
     {
-      title: "Customers",
+      step: "01",
+      title: "Add Your Customers",
       description:
-        "Manage your client database, add new customers and view history.",
-      icon: Users,
+        "Build your client database with detailed contact information and billing preferences. Track every interaction and maintain lasting relationships.",
       href: "/customers",
     },
     {
-      title: "Products",
-      description: "Keep track of your offerings and set standard pricing.",
-      icon: Package,
+      step: "02",
+      title: "Catalog Your Products",
+      description:
+        "Create a comprehensive product catalog with pricing, descriptions, and categories. Update inventory and manage your offerings effortlessly.",
       href: "/products",
     },
     {
-      title: "Invoices",
-      description: "Generate professional invoices and track payment status.",
-      icon: Receipt,
+      step: "03",
+      title: "Generate Invoices",
+      description:
+        "Combine customers and products to create professional invoices in seconds. Track payments, send reminders, and stay organized.",
       href: "/invoices",
     },
   ];
 
   return (
-    <div className="flex flex-col gap-12 py-12 px-4 container mx-auto">
-      <section className="flex flex-col items-center text-center gap-4 max-w-3xl mx-auto">
-        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-          Streamline Your <span className="text-primary">Invoicing</span>
-        </h1>
-        <p className="text-xl text-muted-foreground">
-          The all-in-one platform for managing customers, products, and
-          professional invoices. Built for efficiency and ease of use.
-        </p>
-        <div className="flex gap-4 mt-4">
-          <Button
-            asChild
-            size="lg"
-            className="px-8"
-          >
-            <Link href="/invoices/new" className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Create Invoice
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="px-8">
-            <Link href="/customers" className="flex items-center gap-2">
-              <LayoutGrid className="h-5 w-5" />
-              View Customers
-            </Link>
-          </Button>
+    <div className="flex flex-col">
+      {/* Hero Section - Bold Typography */}
+      <section className="relative overflow-hidden bg-sidebar text-sidebar-foreground min-h-[70vh] flex items-center">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.1),transparent_50%)]" />
+        <div className="container mx-auto px-4 py-20 relative">
+          <div className="max-w-5xl">
+            <p className="text-sidebar-primary font-medium tracking-widest uppercase text-sm mb-6">
+              Invoice Management Platform
+            </p>
+            <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95] mb-8">
+              Invoicing
+              <br />
+              <span className="text-sidebar-primary">made simple.</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-sidebar-foreground/70 max-w-xl mb-10 leading-relaxed">
+              The all-in-one platform for managing customers, products, and
+              professional invoices.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                asChild
+                size="lg"
+                className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white px-8 h-14 text-lg"
+              >
+                <Link href="/invoices/new" className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Create Invoice
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                size="lg"
+                className="text-sidebar-foreground hover:bg-sidebar-accent h-14 text-lg"
+              >
+                <Link href="/plans" className="flex items-center gap-2">
+                  View Plans
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {actions.map((action) => (
-          <Card
-            key={action.title}
-            className="hover:shadow-lg transition-shadow border-2 group"
-          >
-            <CardHeader>
-              <div
-                className="p-2 rounded-lg w-fit mb-2 text-primary bg-primary/10"
-              >
-                <action.icon className="h-6 w-6" />
+      {/* Highlights Strip */}
+      <section className="bg-primary text-primary-foreground py-6">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+            {highlights.map((item) => (
+              <div key={item.label} className="flex items-center gap-3">
+                <item.icon className="h-5 w-5" />
+                <span className="text-sm font-medium tracking-wide">
+                  {item.label}
+                </span>
               </div>
-              <CardTitle>{action.title}</CardTitle>
-              <CardDescription>{action.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                asChild
-                variant="link"
-                className="p-0 group-hover:translate-x-1 transition-transform"
-              >
-                <Link
-                  href={action.href as Route}
-                  className="flex items-center gap-1"
-                >
-                  Go to {action.title} <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="bg-slate-50 dark:bg-slate-900 rounded-3xl p-8 md:p-12 border">
-        <div className="grid md:grid-cols-2 gap-8 items-center">
-          <div className="flex flex-col gap-4">
-            <h2 className="text-3xl font-bold">Ready to grow?</h2>
-            <p className="text-muted-foreground text-lg">
-              Take control of your daily business operations with a tool built
-              for your professional needs.
+      {/* Workflow Section - Alternating Layout */}
+      <section className="py-24 px-4">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center mb-20">
+            <p className="text-primary font-medium tracking-widest uppercase text-sm mb-3">
+              How It Works
             </p>
-            <div className="flex gap-2 items-center text-sm font-medium">
-              {/* <div className="flex -space-x-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="h-8 w-8 rounded-full bg-slate-200 border-2 border-white dark:border-slate-800"
-                  />
-                ))}
-              </div> */}
-              <span>Built for professional efficiency</span>
+            <h2 className="font-serif text-4xl md:text-5xl">
+              Three steps to streamlined invoicing
+            </h2>
+          </div>
+
+          <div className="space-y-24">
+            {workflow.map((item, index) => (
+              <div
+                key={item.step}
+                className={`flex flex-col ${index % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"} gap-12 items-center`}
+              >
+                <div className="flex-1">
+                  <div className="text-8xl font-serif text-muted-foreground/20 mb-4">
+                    {item.step}
+                  </div>
+                  <h3 className="font-serif text-3xl md:text-4xl mb-4">
+                    {item.title}
+                  </h3>
+                  <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+                    {item.description}
+                  </p>
+                  <Link
+                    href={item.href as Route}
+                    className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
+                  >
+                    Get Started <ChevronRight className="h-5 w-5" />
+                  </Link>
+                </div>
+                <div className="flex-1 w-full">
+                  <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-muted to-muted/50 border flex items-center justify-center">
+                    <div className="text-6xl font-serif text-muted-foreground/30">
+                      {item.step}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Quote Section */}
+      <section className="py-20 px-4 bg-muted/50">
+        <div className="container mx-auto max-w-4xl text-center">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-8">
+            Recognition
+          </p>
+          <blockquote className="font-serif text-2xl md:text-3xl lg:text-4xl leading-relaxed mb-8">
+            &ldquo;Simple, powerful, and exactly what we needed for our growing
+            business.&rdquo;
+          </blockquote>
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="font-serif text-primary">PM</span>
             </div>
           </div>
-          <div className="flex justify-end">
-            <Link href={"/customers"}>
-              <Button size="lg" className="rounded-full px-12 h-14 text-lg">
-                Get Started Now
-              </Button>
-            </Link>
-          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 px-4 bg-sidebar text-sidebar-foreground">
+        <div className="container mx-auto max-w-3xl text-center">
+          <h2 className="font-serif text-4xl md:text-5xl mb-6">
+            Ready to get started?
+          </h2>
+          <p className="text-lg text-sidebar-foreground/70 mb-10 max-w-xl mx-auto">
+            Create your first invoice in minutes. No credit card required.
+          </p>
+          <Link href="/customers">
+            <Button
+              size="lg"
+              className="bg-sidebar-primary hover:bg-sidebar-primary/90 text-white px-12 h-14 text-lg"
+            >
+              Start Free Today
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
         </div>
       </section>
     </div>
