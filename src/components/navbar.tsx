@@ -42,7 +42,7 @@ export function Navbar() {
   });
 
   return (
-    <header className="sticky top-0 w-full bg-sidebar text-sidebar-foreground shadow-md">
+    <header className="sticky top-0 z-50 w-full bg-sidebar text-sidebar-foreground shadow-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center space-x-2">

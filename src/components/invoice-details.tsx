@@ -26,9 +26,9 @@ export function InvoiceDetails({
   customersPromise: Promise<Result<PaginatedValue<Customer>>>;
   productsPromise: Promise<Result<PaginatedValue<Product>>>;
 }) {
-  const { data: invoice, error } = use(invoicePromise);
   const { has } = useAuth();
   const { organization } = useOrganization();
+  const { data: invoice, error } = use(invoicePromise);
   const hasSendEmail = has({ feature: "send_email" });
 
   if (error !== null || !invoice) {
@@ -91,7 +91,8 @@ export function InvoiceDetails({
         className="space-y-6 bg-background p-4 md:p-8 rounded-xl border border-muted/20"
       >
         <div className="flex flex-col gap-4">
-          {organization?.imageUrl && !!organization?.hasImage && (
+          {
+          organization?.imageUrl && !!organization?.hasImage && (
             <Image
               src={organization?.imageUrl}
               alt="Organization Logo"

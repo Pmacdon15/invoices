@@ -3,9 +3,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { InvoiceDetails } from "@/components/invoice-details";
 import { Button } from "@/components/ui/button";
-
-import { getInvoiceById } from "@/dal/invoices";
 import { getCustomers } from "@/dal/customers";
+import { getInvoiceById } from "@/dal/invoices";
 import { getProducts } from "@/dal/products";
 
 export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
@@ -34,8 +33,8 @@ export default function InvoicePage(props: PageProps<"/invoices/[id]">) {
           </div>
         }
       >
-        <InvoiceDetails 
-          invoicePromise={invoicePromise} 
+        <InvoiceDetails
+          invoicePromise={invoicePromise}
           customersPromise={customersPromise}
           productsPromise={productsPromise}
         />

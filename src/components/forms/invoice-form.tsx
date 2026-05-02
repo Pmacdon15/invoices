@@ -52,13 +52,13 @@ export function InvoiceForm({
   initialData,
 }: InvoiceFormProps) {
   const { orgId } = useAuth();
-  const { data: customers, error: customerError } = use(customersPromise);
-  const { data: products, error: productsError } = use(productsPromise);
-
   const { mutate: createMutate, isPending: isCreating } = useCreateInvoice();
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateInvoice();
 
   const isPending = isCreating || isUpdating;
+
+  const { data: customers, error: customerError } = use(customersPromise);
+  const { data: products, error: productsError } = use(productsPromise);
 
   const form = useForm({
     defaultValues: initialData
