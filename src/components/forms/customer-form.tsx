@@ -24,13 +24,18 @@ interface CustomerFormProps {
   initialData?: Customer;
 }
 
-export function CustomerForm({ orgId, onOptimistic, isModal, initialData }: CustomerFormProps) {
+export function CustomerForm({
+  orgId,
+  onOptimistic,
+  isModal,
+  initialData,
+}: CustomerFormProps) {
   const { mutate: createMutate, isPending: isCreating } = useCreateCustomer();
   const { mutate: updateMutate, isPending: isUpdating } = useUpdateCustomer();
   const isPending = isCreating || isUpdating;
 
   const form = useForm({
-    defaultValues: initialData 
+    defaultValues: initialData
       ? {
           name: initialData.name,
           email: initialData.email,
@@ -52,9 +57,13 @@ export function CustomerForm({ orgId, onOptimistic, isModal, initialData }: Cust
           onOptimistic(fullData);
         });
       }
-      
+
       if (initialData) {
-        updateMutate({ ...value, id: initialData.id, status: initialData.status });
+        updateMutate({
+          ...value,
+          id: initialData.id,
+          status: initialData.status,
+        });
       } else {
         createMutate({ ...value, status: "active" });
       }
@@ -143,9 +152,13 @@ export function CustomerForm({ orgId, onOptimistic, isModal, initialData }: Cust
   return (
     <Card className="max-w-xl mx-auto">
       <CardHeader>
-        <CardTitle>{initialData ? "Edit Customer" : "Add New Customer"}</CardTitle>
+        <CardTitle>
+          {initialData ? "Edit Customer" : "Add New Customer"}
+        </CardTitle>
         <CardDescription>
-          {initialData ? "Update the customer's details below." : "Enter the customer's details to add them to your database."}
+          {initialData
+            ? "Update the customer's details below."
+            : "Enter the customer's details to add them to your database."}
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>

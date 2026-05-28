@@ -13,7 +13,7 @@ export default function PlansPage() {
       </div>
 
       <div className="max-w-6xl mx-auto">
-        <PricingTable for='organization' />
+        <PricingTable for="organization" />
       </div>
     </div>
   );

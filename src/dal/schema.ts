@@ -80,6 +80,7 @@ export const InvoiceSchema = z.object({
   id: z.uuid(),
   customer_id: z.uuid("Please select a customer"),
   total: z.coerce.number().nonnegative(),
+  tax_rate: z.coerce.number().nonnegative().min(0).max(100).default(0),
   status: InvoiceStatusSchema,
   org_id: z.string(),
   created_at: z.string(),

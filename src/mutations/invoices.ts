@@ -6,8 +6,8 @@ import {
   createInvoiceAction,
   deleteInvoiceAction,
   sendInvoiceAction,
-  updateInvoiceStatusAction,
   updateInvoiceAction,
+  updateInvoiceStatusAction,
 } from "@/actions/invoices";
 
 import type { CreateInvoiceInput, UpdateInvoiceInput } from "@/dal/types";

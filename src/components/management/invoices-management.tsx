@@ -65,10 +65,11 @@ export function InvoicesManagement({
     return <div className="text-destructive">Error: {error}</div>;
   }
 
-  const filteredInvoices = optimisticState?.data.filter((invoice) => {
-    if (statusFilter === "all") return true;
-    return invoice.status === statusFilter;
-  }) ?? [];
+  const filteredInvoices =
+    optimisticState?.data.filter((invoice) => {
+      if (statusFilter === "all") return true;
+      return invoice.status === statusFilter;
+    }) ?? [];
 
   return (
     <div className="space-y-8">
@@ -91,7 +92,7 @@ export function InvoicesManagement({
             </Select>
           </div>
         </div>
-        <CreateInvoiceDialog          
+        <CreateInvoiceDialog
           customersPromise={customersPromise}
           productsPromise={productsPromise}
           onOptimistic={(newInvoice) => {

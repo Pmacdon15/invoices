@@ -60,9 +60,18 @@ export function ProductForm({
       }
 
       if (initialData) {
-        updateMutate({ ...value, id: initialData.id, status: initialData.status, price: Number(value.price) });
+        updateMutate({
+          ...value,
+          id: initialData.id,
+          status: initialData.status,
+          price: Number(value.price),
+        });
       } else {
-        createMutate({ ...value, price: Number(value.price), status: "active" });
+        createMutate({
+          ...value,
+          price: Number(value.price),
+          status: "active",
+        });
       }
     },
   });
@@ -150,9 +159,13 @@ export function ProductForm({
   return (
     <Card className="max-w-xl mx-auto">
       <CardHeader>
-        <CardTitle>{initialData ? "Edit Product" : "Add New Product"}</CardTitle>
+        <CardTitle>
+          {initialData ? "Edit Product" : "Add New Product"}
+        </CardTitle>
         <CardDescription>
-          {initialData ? "Update the product details below." : "Define a new product or service for your invoices."}
+          {initialData
+            ? "Update the product details below."
+            : "Define a new product or service for your invoices."}
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>

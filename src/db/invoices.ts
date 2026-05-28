@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
-import { cacheTag } from "next/cache";
 import { jsPDF } from "jspdf";
+import { cacheTag } from "next/cache";
 import type {
   CreateInvoiceInput,
   FullInvoice,
@@ -202,10 +202,12 @@ export async function createInvoiceDb(
   const sql = neon(process.env.DATABASE_URL);
   const customerId = input.customer_id;
 
-  const totalAmount = input.items.reduce(
+  const subtotal = input.items.reduce(
     (sum, item) => sum + item.quantity * item.unit_price,
     0,
   );
+  const taxRate = input.tax_rate ?? 0;
+  const totalAmount = subtotal + (subtotal * taxRate) / 100;
 
   const productIds = input.items.map((i) => i.product_id);
   const uniqueProductIdsCount = new Set(productIds).size;
@@ -224,15 +226,16 @@ export async function createInvoiceDb(
       AND org_id = ${orgId}
     ),
     new_invoice AS (
-      INSERT INTO invoices (customer_id, status, org_id, total)
+      INSERT INTO invoices (customer_id, status, org_id, total, tax_rate)
       SELECT 
         valid_customer.id, 
         ${input.status}, 
         ${orgId}, 
-        ${totalAmount}
+        ${totalAmount},
+        ${taxRate}
       FROM valid_customer
       WHERE (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
-      RETURNING id, customer_id, total, status, org_id, created_at
+      RETURNING id, customer_id, total, tax_rate, status, org_id, created_at
     ),
     inserted_items AS (
       INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price)
@@ -357,7 +360,11 @@ async function generateInvoicePdf(
   yOffset += 5;
   doc.text(`Invoice ID: ${invoice.id}`, 20, yOffset);
   yOffset += 5;
-  doc.text(`Date: ${new Date(invoice.created_at).toLocaleDateString()}`, 20, yOffset);
+  doc.text(
+    `Date: ${new Date(invoice.created_at).toLocaleDateString()}`,
+    20,
+    yOffset,
+  );
   yOffset += 20;
 
   // Billed To
@@ -388,16 +395,39 @@ async function generateInvoicePdf(
     doc.text(item.product_name, 20, yOffset);
     doc.text(item.quantity.toString(), 120, yOffset, { align: "center" });
     doc.text(fmt.format(item.unit_price), 150, yOffset, { align: "right" });
-    doc.text(fmt.format(item.quantity * item.unit_price), 190, yOffset, { align: "right" });
+    doc.text(fmt.format(item.quantity * item.unit_price), 190, yOffset, {
+      align: "right",
+    });
     yOffset += 10;
   }
 
   // Footer Total
   doc.line(20, yOffset, 190, yOffset);
   yOffset += 10;
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.quantity * item.unit_price,
+    0,
+  );
+  const taxRate = Number(invoice.tax_rate ?? 0);
+  const taxAmount = subtotal * (taxRate / 100);
+  const totalAmount = Number(invoice.total);
+
+  doc.setFontSize(10);
+  doc.text("Subtotal:", 150, yOffset, { align: "right" });
+  doc.text(fmt.format(subtotal), 190, yOffset, { align: "right" });
+  yOffset += 7;
+
+  if (taxRate > 0) {
+    doc.text(`Tax (${taxRate}%):`, 150, yOffset, { align: "right" });
+    doc.text(fmt.format(taxAmount), 190, yOffset, { align: "right" });
+    yOffset += 7;
+  }
+
   doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
   doc.text("TOTAL DUE:", 150, yOffset, { align: "right" });
-  doc.text(fmt.format(Number(invoice.total)), 190, yOffset, { align: "right" });
+  doc.text(fmt.format(totalAmount), 190, yOffset, { align: "right" });
 
   return Buffer.from(doc.output("arraybuffer"));
 }
@@ -457,11 +487,11 @@ export async function sendInvoiceDb(
     )
     .join("");
 
-  const logoHtml = orgImageUrl 
+  const logoHtml = orgImageUrl
     ? `<img src="${orgImageUrl}" alt="${orgName}" width="48" height="48" style="height:48px;width:48px;border-radius:6px;display:block;margin-bottom:16px;object-fit:cover;background-color:#ffffff !important;color-scheme:only light;" class="logo-img">`
     : "";
 
-  const adminEmailHtml = adminEmail 
+  const adminEmailHtml = adminEmail
     ? `<p style="color:#6b7280;font-size:14px;margin-top:16px;" class="text-muted">This invoice was sent by your organization administrator: <strong>${adminEmail}</strong></p>`
     : "";
 
@@ -559,8 +589,22 @@ export async function sendInvoiceDb(
           <tbody>${itemsHtml}</tbody>
           <tfoot>
             <tr>
-              <td colspan="3" style="padding:32px 12px 0 12px;text-align:right;font-weight:700;text-transform:uppercase;font-size:13px;color:#6b7280;letter-spacing:0.05em" class="text-muted">Total Due</td>
-              <td style="padding:32px 12px 0 12px;text-align:right;font-weight:900;font-size:24px;color:#111827" class="text-main">${fmt.format(invoice.total as unknown as number)}</td>
+              <td colspan="3" style="padding:16px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted">Subtotal</td>
+              <td style="padding:16px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0))}</td>
+            </tr>
+            ${
+              Number(invoice.tax_rate) > 0
+                ? `
+            <tr>
+              <td colspan="3" style="padding:8px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted">Tax (${invoice.tax_rate}%)</td>
+              <td style="padding:8px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * (Number(invoice.tax_rate) / 100))}</td>
+            </tr>
+            `
+                : ""
+            }
+            <tr>
+              <td colspan="3" style="padding:16px 12px 0 12px;text-align:right;font-weight:700;text-transform:uppercase;font-size:13px;color:#6b7280;letter-spacing:0.05em" class="text-muted">Total Due</td>
+              <td style="padding:16px 12px 0 12px;text-align:right;font-weight:900;font-size:24px;color:#111827" class="text-main">${fmt.format(invoice.total as unknown as number)}</td>
             </tr>
           </tfoot>
         </table>
@@ -579,7 +623,12 @@ export async function sendInvoiceDb(
 </html>
   `;
 
-  const pdfBuffer = await generateInvoicePdf(invoice, items, orgName, orgImageUrl);
+  const pdfBuffer = await generateInvoicePdf(
+    invoice,
+    items,
+    orgName,
+    orgImageUrl,
+  );
   const pdfBase64 = pdfBuffer.toString("base64");
 
   const fromEmail = process.env.SES_FROM_EMAIL ?? "invoices@yourdomain.com";
@@ -601,16 +650,18 @@ export async function sendInvoiceDb(
     "",
     `--${boundary}`,
     'Content-Type: application/pdf; name="invoice.pdf"',
-    'Content-Description: invoice.pdf',
-    'Content-Disposition: attachment; filename="invoice.pdf"; size=' + pdfBuffer.length,
+    "Content-Description: invoice.pdf",
+    `Content-Disposition: attachment; filename="invoice.pdf"; size=${pdfBuffer.length}`,
     "Content-Transfer-Encoding: base64",
     "",
     pdfBase64.match(/.{1,76}/g)?.join("\n"),
     "",
-    `--${boundary}--`
+    `--${boundary}--`,
   ].join("\n");
 
-  const { SESClient, SendRawEmailCommand } = await import("@aws-sdk/client-ses");
+  const { SESClient, SendRawEmailCommand } = await import(
+    "@aws-sdk/client-ses"
+  );
   const ses = new SESClient({
     region: process.env.AWS_REGION ?? "us-east-1",
     credentials: {
@@ -635,7 +686,6 @@ export async function sendInvoiceDb(
 
   return result[0] as Invoice;
 }
-
 
 export async function getMonthlyInvoiceCount(orgId: string): Promise<number> {
   const startOfMonth = new Date();
@@ -664,10 +714,12 @@ export async function updateInvoiceDb(
   const sql = neon(process.env.DATABASE_URL);
   const customerId = input.customer_id;
 
-  const totalAmount = input.items.reduce(
+  const subtotal = input.items.reduce(
     (sum, item) => sum + item.quantity * item.unit_price,
     0,
   );
+  const taxRate = input.tax_rate ?? 0;
+  const totalAmount = subtotal + (subtotal * taxRate) / 100;
 
   const [data] = (await sql`
     WITH deleted_items AS (
@@ -678,9 +730,10 @@ export async function updateInvoiceDb(
       UPDATE invoices
       SET customer_id = ${customerId}::uuid,
           status = ${input.status},
-          total = ${totalAmount}
+          total = ${totalAmount},
+          tax_rate = ${taxRate}
       WHERE id = ${input.id} AND org_id = ${orgId}
-      RETURNING id, customer_id, total, status, org_id, created_at
+      RETURNING id, customer_id, total, tax_rate, status, org_id, created_at
     ),
     inserted_items AS (
       INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price)

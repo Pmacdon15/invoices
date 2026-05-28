@@ -29,11 +29,11 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   currentPage,
-  totalPages = 1,  
+  totalPages = 1,
 }: DataTableProps<TData, TValue>) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams(); 
+  const searchParams = useSearchParams();
 
   const table = useReactTable({
     data,
@@ -49,58 +49,6 @@ export function DataTable<TData, TValue>({
     params.set("page", newPage.toString());
     router.push(`${pathname}?${params.toString()}` as Route);
   };
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   return (
     <div>

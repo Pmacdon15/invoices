@@ -1,6 +1,11 @@
 import { neon } from "@neondatabase/serverless";
 import { cacheTag } from "next/cache";
-import type { CreateProductInput, UpdateProductInput, PaginatedValue, Product } from "@/dal/types";
+import type {
+  CreateProductInput,
+  PaginatedValue,
+  Product,
+  UpdateProductInput,
+} from "@/dal/types";
 export async function fetchingProductsDb(
   orgId: string,
   page: number = 1,

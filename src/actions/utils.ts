@@ -51,11 +51,11 @@ export function handleMutationError(error: ActionError) {
         errors: errors,
       };
 
-    case "Failed to verify limits":    
+    case "Failed to verify limits":
     case "Customer not found or is disabled":
     case "One or more products are not found or are disabled":
     case "Unknown Db error":
-    case"Over organization membership limit":
+    case "Over organization membership limit":
     case "Db failed to create product":
     case "Db failed to update product":
     case "Db failed to delete product":

@@ -1,8 +1,6 @@
 "use client";
 import { Loader2, Trash2 } from "lucide-react";
 import { startTransition } from "react";
-import { useDeleteCustomer } from "@/mutations/customers";
-import { Button } from "../ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +12,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useDeleteCustomer } from "@/mutations/customers";
+import { Button } from "../ui/button";
 
 export default function DeleteCustomerButton({
   rowId,
@@ -51,8 +51,8 @@ export default function DeleteCustomerButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the customer
-            and all associated data.
+            This action cannot be undone. This will permanently delete the
+            customer and all associated data.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
