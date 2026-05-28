@@ -1,8 +1,6 @@
 "use client";
 import { Loader2, Trash2 } from "lucide-react";
 import { startTransition } from "react";
-import { useDeleteProduct } from "@/mutations/products";
-import { Button } from "../ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +12,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useDeleteProduct } from "@/mutations/products";
+import { Button } from "../ui/button";
 
 export default function DeleteProductButton({
   productId,
@@ -51,8 +51,8 @@ export default function DeleteProductButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the product
-            and remove it from our servers.
+            This action cannot be undone. This will permanently delete the
+            product and remove it from our servers.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

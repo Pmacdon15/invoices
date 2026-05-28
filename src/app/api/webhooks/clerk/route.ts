@@ -1,6 +1,6 @@
 import { verifyWebhook } from "@clerk/backend/webhooks";
 import { type NextRequest, NextResponse } from "next/server";
-import { rebalanceOrgItems, deleteOrgData } from "@/db/utils";
+import { deleteOrgData, rebalanceOrgItems } from "@/db/utils";
 
 export async function POST(req: NextRequest) {
   try {

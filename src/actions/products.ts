@@ -1,7 +1,11 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { createProductDal, deleteProductDal, updateProductDal } from "@/dal/products";
+import {
+  createProductDal,
+  deleteProductDal,
+  updateProductDal,
+} from "@/dal/products";
 import type { CreateProductInput, UpdateProductInput } from "@/dal/types";
 import { handleMutationError } from "./utils";
 

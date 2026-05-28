@@ -16,7 +16,7 @@ import type { Customer } from "@/dal/types";
 
 interface CreateCustomerDialogProps {
   orgId: string;
-  // This is already marked as optional with '?', 
+  // This is already marked as optional with '?',
   // but we must handle the logic inside the component.
   onOptimistic?: (newCustomer: Customer) => void;
 }

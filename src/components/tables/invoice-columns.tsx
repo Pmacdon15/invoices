@@ -30,7 +30,7 @@ export const getInvoicesColumns = ({
             href={isOptimistic ? "#" : `/invoices/${id}`}
             className={cn(
               "font-mono uppercase text-xs text-primary hover:underline",
-              isOptimistic && "opacity-50 pointer-events-none"
+              isOptimistic && "opacity-50 pointer-events-none",
             )}
           >
             #{id.slice(0, 8)}

@@ -91,8 +91,7 @@ export function InvoiceDetails({
         className="space-y-6 bg-background p-4 md:p-8 rounded-xl border border-muted/20"
       >
         <div className="flex flex-col gap-4">
-          {
-          organization?.imageUrl && !!organization?.hasImage && (
+          {organization?.imageUrl && !!organization?.hasImage && (
             <Image
               src={organization?.imageUrl}
               alt="Organization Logo"
@@ -165,13 +164,46 @@ export function InvoiceDetails({
                   </div>
                 </div>
               ))}
-              <div className="bg-primary/5 p-4 flex justify-between items-center">
-                <span className="text-xs font-bold uppercase">
-                  Total Amount
-                </span>
-                <span className="text-xl font-black text-primary">
-                  {currencyFormatter.format(invoice.total)}
-                </span>
+              <div className="bg-muted/10 p-4 space-y-2 text-sm border-t">
+                {Number(invoice.tax_rate) > 0 ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>
+                        {currencyFormatter.format(
+                          invoice.items.reduce(
+                            (sum, item) =>
+                              sum + item.quantity * item.unit_price,
+                            0,
+                          ),
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Tax ({invoice.tax_rate}%)
+                      </span>
+                      <span>
+                        {currencyFormatter.format(
+                          invoice.items.reduce(
+                            (sum, item) =>
+                              sum + item.quantity * item.unit_price,
+                            0,
+                          ) *
+                            (Number(invoice.tax_rate) / 100),
+                        )}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
+                <div className="flex justify-between items-center font-bold text-base pt-1 border-t">
+                  <span className="uppercase text-xs font-black tracking-wider">
+                    Total Due
+                  </span>
+                  <span className="text-xl font-black text-primary">
+                    {currencyFormatter.format(invoice.total)}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -216,13 +248,46 @@ export function InvoiceDetails({
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-muted/30 font-bold border-t-2 border-primary/20">
-                <tr>
+              <tfoot className="bg-muted/30 border-t border-muted/50 font-bold">
+                {Number(invoice.tax_rate) > 0 ? (
+                  <>
+                    <tr className="text-muted-foreground text-xs uppercase">
+                      <td colSpan={3} className="px-6 py-3 text-right">
+                        Subtotal
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        {currencyFormatter.format(
+                          invoice.items.reduce(
+                            (sum, item) =>
+                              sum + item.quantity * item.unit_price,
+                            0,
+                          ),
+                        )}
+                      </td>
+                    </tr>
+                    <tr className="text-muted-foreground text-xs uppercase">
+                      <td colSpan={3} className="px-6 py-3 text-right">
+                        Tax ({invoice.tax_rate}%)
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        {currencyFormatter.format(
+                          invoice.items.reduce(
+                            (sum, item) =>
+                              sum + item.quantity * item.unit_price,
+                            0,
+                          ) *
+                            (Number(invoice.tax_rate) / 100),
+                        )}
+                      </td>
+                    </tr>
+                  </>
+                ) : null}
+                <tr className="border-t bg-primary/5">
                   <td
                     colSpan={3}
-                    className="px-6 py-4 text-right uppercase tracking-wider"
+                    className="px-6 py-4 text-right uppercase tracking-wider text-sm text-muted-foreground font-black"
                   >
-                    Total Amount
+                    Total Due
                   </td>
                   <td className="px-6 py-4 text-right text-xl text-primary font-black">
                     {currencyFormatter.format(invoice.total)}

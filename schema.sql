@@ -25,6 +25,7 @@ CREATE TABLE invoices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id UUID REFERENCES customers(id),
     total DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    tax_rate DECIMAL(5, 2) NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'draft',
     org_id TEXT NOT NULL DEFAULT 'org001a',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

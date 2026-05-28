@@ -12,10 +12,10 @@ import {
 import { CreateProductSchema, IdSchema, UpdateProductSchema } from "./schema";
 import type {
   CreateProductInput,
-  UpdateProductInput,
   PaginatedValue,
   Product,
   Result,
+  UpdateProductInput,
 } from "./types";
 export async function getProducts(
   page = 1,
@@ -23,7 +23,7 @@ export async function getProducts(
   query?: string,
 ): Promise<Result<PaginatedValue<Product>>> {
   const { orgId } = await auth.protect();
-  
+
   if (!orgId) {
     return { data: null, error: "No org" };
   }
@@ -43,13 +43,25 @@ export async function createProductDal(input: CreateProductInput) {
     return errAsync({ reason: "Not authorized" } as const);
   }
 
-  const PRO_SLUG = process.env.NEXT_PUBLIC_CLERK_PRO_PRODUCTS_SLUG || "create_up_to_100_products";
-  const BASIC_SLUG = process.env.NEXT_PUBLIC_CLERK_BASIC_PRODUCTS_SLUG || "create_up_to_10_products";
-  const FREE_SLUG = process.env.NEXT_PUBLIC_CLERK_FREE_PRODUCTS_SLUG || "create_up_to_5_products";
+  const PRO_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_PRO_PRODUCTS_SLUG ||
+    "create_up_to_100_products";
+  const BASIC_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_BASIC_PRODUCTS_SLUG ||
+    "create_up_to_10_products";
+  const FREE_SLUG =
+    process.env.NEXT_PUBLIC_CLERK_FREE_PRODUCTS_SLUG ||
+    "create_up_to_5_products";
 
   const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_PRO_LIMIT || "100", 10);
-  const BASIC_LIMIT = parseInt(process.env.NEXT_PUBLIC_BASIC_PRODUCT_LIMIT || "10", 10);
-  const FREE_LIMIT = parseInt(process.env.NEXT_PUBLIC_FREE_PRODUCT_LIMIT || "5", 10);
+  const BASIC_LIMIT = parseInt(
+    process.env.NEXT_PUBLIC_BASIC_PRODUCT_LIMIT || "10",
+    10,
+  );
+  const FREE_LIMIT = parseInt(
+    process.env.NEXT_PUBLIC_FREE_PRODUCT_LIMIT || "5",
+    10,
+  );
 
   let limit = 0;
   if (has({ feature: PRO_SLUG })) {
@@ -116,7 +128,9 @@ export async function deleteProductDal(id: string) {
   }
 }
 
-export async function searchProductsDal(query: string): Promise<Result<Product[]>> {
+export async function searchProductsDal(
+  query: string,
+): Promise<Result<Product[]>> {
   const { orgId } = await auth.protect();
   if (!orgId) {
     return { data: null, error: "No org" };

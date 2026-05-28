@@ -44,7 +44,7 @@ export function CustomersManagement({
         return {
           ...state,
           data: state.data.map((c) =>
-            c.id === action.payload.id ? action.payload : c
+            c.id === action.payload.id ? action.payload : c,
           ),
         };
       }
@@ -60,9 +60,7 @@ export function CustomersManagement({
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <p className="text-muted-foreground">
-          Manage your customer database.
-        </p>
+        <p className="text-muted-foreground">Manage your customer database.</p>
         <CreateCustomerDialog
           orgId={data.data[0]?.org_id ?? ""}
           onOptimistic={(newCustomer) => {

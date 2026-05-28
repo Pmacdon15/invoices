@@ -23,7 +23,6 @@ export async function getCustomers(
   all = false,
   query?: string,
 ): Promise<Result<PaginatedValue<Customer>>> {
-  
   const { orgId } = await auth.protect();
 
   if (!orgId) {

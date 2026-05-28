@@ -1,8 +1,6 @@
 "use client";
 import { Loader2, Trash2 } from "lucide-react";
 import { useTransition } from "react";
-import { useDeleteInvoice } from "@/mutations/invoices";
-import { Button } from "../ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +12,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useDeleteInvoice } from "@/mutations/invoices";
+import { Button } from "../ui/button";
 
 export default function DeleteInvoiceButton({
   rowId,
@@ -52,7 +52,8 @@ export default function DeleteInvoiceButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the invoice.
+            This action cannot be undone. This will permanently delete the
+            invoice.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

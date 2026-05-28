@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import { useForm } from "@tanstack/react-form";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -110,7 +110,7 @@ export default function NewInvoiceFallback({ isModal }: InvoiceFormProps) {
           <div className="space-y-4">
             <Label className="text-base font-semibold">Invoice Details</Label>
             <form.Field name="status">
-              {(field) => (
+              {(_field) => (
                 <div className="space-y-1">
                   <Label className="text-xs uppercase text-muted-foreground font-bold tracking-wider">
                     Status
@@ -120,7 +120,7 @@ export default function NewInvoiceFallback({ isModal }: InvoiceFormProps) {
                       <SelectValue placeholder="Draft" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>                      
+                      <SelectItem value="draft">Draft</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

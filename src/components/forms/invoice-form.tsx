@@ -65,6 +65,7 @@ export function InvoiceForm({
       ? ({
           customer_id: initialData.customer_id,
           status: initialData.status,
+          tax_rate: initialData.tax_rate ?? 0,
           items: initialData.items.map((item) => ({
             product_id: item.product_id,
             quantity: item.quantity,
@@ -74,6 +75,7 @@ export function InvoiceForm({
       : ({
           customer_id: "",
           status: "draft" as const,
+          tax_rate: 0,
           items: [{ product_id: "", quantity: 1, unit_price: 0 }],
         } as CreateInvoiceInput),
     validators: {
@@ -92,10 +94,12 @@ export function InvoiceForm({
         const selectedCustomer = customers?.data?.find(
           (c) => c.id === value.customer_id,
         );
-        const totalAmount = value.items.reduce(
-          (sum, item) => sum + item.quantity * item.unit_price,
+        const subtotal = value.items.reduce(
+          (sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0),
           0,
         );
+        const taxRate = value.tax_rate ?? 0;
+        const totalAmount = subtotal + (subtotal * taxRate) / 100;
 
         startTransition(() => {
           onOptimistic({
@@ -103,6 +107,7 @@ export function InvoiceForm({
             customer_id: value.customer_id,
             org_id: orgId,
             status: value.status,
+            tax_rate: taxRate,
             total: totalAmount,
             created_at: initialData
               ? initialData.created_at
@@ -204,33 +209,57 @@ export function InvoiceForm({
             )}
           </div>
 
-          {/* Status Selection */}
+          {/* Status & Tax Rate Selection */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Invoice Details</Label>
-            <form.Field name="status">
-              {(field) => (
-                <div className="space-y-1">
-                  <Label className="text-xs uppercase text-muted-foreground font-bold tracking-wider">
-                    Status
-                  </Label>
-                  <Select
-                    onValueChange={(value) =>
-                      field.handleChange(value as "draft" | "sent" | "paid")
-                    }
-                    value={field.state.value}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="sent">Sent</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </form.Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form.Field name="status">
+                {(field) => (
+                  <div className="space-y-1">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold tracking-wider">
+                      Status
+                    </Label>
+                    <Select
+                      onValueChange={(value) =>
+                        field.handleChange(value as "draft" | "sent" | "paid")
+                      }
+                      value={field.state.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </form.Field>
+
+              <form.Field name="tax_rate">
+                {(field) => (
+                  <div className="space-y-1">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold tracking-wider">
+                      Tax Rate (%)
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={field.state.value === 0 ? "" : field.state.value}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        field.handleChange(val === "" ? 0 : Number(val));
+                      }}
+                    />
+                  </div>
+                )}
+              </form.Field>
+            </div>
           </div>
         </div>
 
@@ -409,26 +438,56 @@ export function InvoiceForm({
             </table>
           </div>
 
-          <form.Subscribe selector={(state) => state.values.items}>
-            {(items) => {
-              const total = items.reduce(
+          <form.Subscribe
+            selector={(state) =>
+              [state.values.items, state.values.tax_rate] as const
+            }
+          >
+            {([items, taxRateVal]) => {
+              const subtotal = items.reduce(
                 (sum, item) =>
                   sum + (item.quantity || 0) * (item.unit_price || 0),
                 0,
               );
+              const taxRate = Number(taxRateVal ?? 0);
+              const taxAmount = subtotal * (taxRate / 100);
+              const grandTotal = subtotal + taxAmount;
 
               return (
                 <div className="flex justify-end p-6 bg-muted/20 border rounded-xl">
-                  <div className="flex flex-col gap-1 items-end">
-                    <span className="text-xs text-muted-foreground uppercase font-black tracking-widest">
-                      Grand Total
-                    </span>
-                    <span className="text-4xl font-black text-primary">
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                      }).format(total)}
-                    </span>
+                  <div className="flex flex-col gap-2 items-end w-64">
+                    <div className="flex justify-between w-full text-sm text-muted-foreground">
+                      <span>Subtotal:</span>
+                      <span>
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(subtotal)}
+                      </span>
+                    </div>
+                    {taxRate > 0 && (
+                      <div className="flex justify-between w-full text-sm text-muted-foreground">
+                        <span>Tax ({taxRate}%):</span>
+                        <span>
+                          {new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: "USD",
+                          }).format(taxAmount)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="border-t w-full my-1" />
+                    <div className="flex justify-between w-full items-baseline">
+                      <span className="text-xs text-muted-foreground uppercase font-black tracking-widest">
+                        Grand Total
+                      </span>
+                      <span className="text-3xl font-black text-primary">
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(grandTotal)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
