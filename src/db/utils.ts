@@ -19,19 +19,10 @@ export async function rebalanceOrgItems(orgId: string) {
     );
     const subscription =
       await client.billing.getOrganizationBillingSubscription(cleanOrgId);
-    interface PlanFeature {
-      id: string;
-      name?: string;
-    }
-    interface SubscriptionItem {
-      plan?: {
-        features?: PlanFeature[];
-      };
-    }
     if (subscription?.subscriptionItems) {
       foundFeatures = subscription.subscriptionItems.flatMap(
-        (item: SubscriptionItem) =>
-          item.plan?.features?.map((f: PlanFeature) => ({
+        (item) =>
+          item.plan?.features?.map((f) => ({
             id: f.id,
             name: f.name,
           })) || [],
