@@ -479,10 +479,10 @@ export async function sendInvoiceDb(
     .map(
       (item) => `
       <tr>
-        <td style="padding:12px;border-bottom:1px solid #f3f4f6;color:#374151;">${item.product_name}</td>
-        <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:center;color:#374151;">${item.quantity}</td>
-        <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;">${fmt.format(item.unit_price)}</td>
-        <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:#111827;">${fmt.format(item.quantity * item.unit_price)}</td>
+        <td style="padding:12px;border-bottom:1px solid #f3f4f6;color:#374151;word-break:break-word;" class="td-desc">${item.product_name}</td>
+        <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:center;color:#374151;" class="td-qty">${item.quantity}</td>
+        <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;" class="td-price">${fmt.format(item.unit_price)}</td>
+        <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:#111827;" class="td-amt">${fmt.format(item.quantity * item.unit_price)}</td>
       </tr>`,
     )
     .join("");
@@ -560,51 +560,94 @@ export async function sendInvoiceDb(
       .text-main { color: #111827 !important; }
       .border-light { border-color: #f3f4f6 !important; }
     }
+
+    /* Responsive Overrides */
+    @media screen and (max-width: 600px) {
+      .body-wrapper {
+        padding: 16px 8px !important;
+      }
+      .invoice-card {
+        border-radius: 8px !important;
+        border: 1px solid #e5e7eb !important;
+      }
+      .card-header {
+        padding: 24px 16px !important;
+      }
+      .card-body {
+        padding: 24px 16px !important;
+      }
+      .invoice-table {
+        margin: 24px 0 !important;
+      }
+      .invoice-table th {
+        padding: 8px 4px !important;
+        font-size: 11px !important;
+      }
+      .invoice-table td {
+        padding: 8px 4px !important;
+        font-size: 13px !important;
+      }
+      .td-desc, .th-desc {
+        padding-left: 0 !important;
+      }
+      .td-amt, .th-amt {
+        padding-right: 0 !important;
+      }
+      .td-foot-label, .td-foot-value {
+        padding: 12px 4px 0 4px !important;
+      }
+      .total-label {
+        font-size: 12px !important;
+      }
+      .total-value {
+        font-size: 20px !important;
+      }
+    }
   </style>
 </head>
 <body style="margin:0;padding:40px 0;word-spacing:normal;background-color:#ffffff;" class="body-wrapper">
   <div role="article" aria-roledescription="email" lang="en" style="text-size-adjust:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
-    <div style="font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px 0 rgba(0,0,0,0.1);" class="invoice-card">
-      <div style="padding:40px;border-bottom:1px solid #f3f4f6" class="border-light">
+    <div style="font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;max-width:600px;width:100%;margin:0 auto;background-color:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px 0 rgba(0,0,0,0.1);" class="invoice-card">
+      <div style="padding:40px;border-bottom:1px solid #f3f4f6" class="border-light card-header">
         ${logoHtml}
         <p style="color:#6b7280;font-size:12px;margin:0 0 4px 0;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;" class="text-muted">Invoice from</p>
         <h1 style="color:#111827;font-size:28px;font-weight:800;margin:0;letter-spacing:-0.02em" class="text-main">${orgName}</h1>
       </div>
-      <div style="padding:40px">
+      <div style="padding:40px" class="card-body">
         <p style="color:#6b7280;font-size:13px;margin:0 0 32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;" class="text-muted">ID: ${invoice.id}</p>
         <p style="margin:0 0 8px 0;font-size:18px;color:#111827" class="text-main">Hi <strong>${invoice.customer_name}</strong>,</p>
         <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below and attached as a PDF. Payment is due upon receipt. Thank you for choosing <strong>${orgName}</strong>.</p>
         
         ${adminEmailHtml}
 
-        <table style="width:100%;border-collapse:collapse;margin:32px 0 40px 0">
+        <table style="width:100%;border-collapse:collapse;margin:32px 0 40px 0" class="invoice-table">
           <thead>
             <tr>
-              <th style="padding:12px;text-align:left;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light">Description</th>
-              <th style="padding:12px;text-align:center;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light">Qty</th>
-              <th style="padding:12px;text-align:right;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light">Price</th>
-              <th style="padding:12px;text-align:right;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light">Amount</th>
+              <th style="padding:12px;text-align:left;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light th-desc">Description</th>
+              <th style="padding:12px;text-align:center;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light th-qty">Qty</th>
+              <th style="padding:12px;text-align:right;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light th-price">Price</th>
+              <th style="padding:12px;text-align:right;font-size:12px;text-transform:uppercase;color:#9ca3af;border-bottom:2px solid #f3f4f6;font-weight:700;letter-spacing:0.05em" class="border-light th-amt">Amount</th>
             </tr>
           </thead>
           <tbody>${itemsHtml}</tbody>
           <tfoot>
             <tr>
-              <td colspan="3" style="padding:16px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted">Subtotal</td>
-              <td style="padding:16px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0))}</td>
+              <td colspan="3" style="padding:16px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted td-foot-label">Subtotal</td>
+              <td style="padding:16px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main td-foot-value">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0))}</td>
             </tr>
             ${
               Number(invoice.tax_rate) > 0
                 ? `
             <tr>
-              <td colspan="3" style="padding:8px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted">Tax (${invoice.tax_rate}%)</td>
-              <td style="padding:8px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * (Number(invoice.tax_rate) / 100))}</td>
+              <td colspan="3" style="padding:8px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted td-foot-label">Tax (${invoice.tax_rate}%)</td>
+              <td style="padding:8px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main td-foot-value">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * (Number(invoice.tax_rate) / 100))}</td>
             </tr>
             `
                 : ""
             }
             <tr>
-              <td colspan="3" style="padding:16px 12px 0 12px;text-align:right;font-weight:700;text-transform:uppercase;font-size:13px;color:#6b7280;letter-spacing:0.05em" class="text-muted">Total Due</td>
-              <td style="padding:16px 12px 0 12px;text-align:right;font-weight:900;font-size:24px;color:#111827" class="text-main">${fmt.format(invoice.total as unknown as number)}</td>
+              <td colspan="3" style="padding:16px 12px 0 12px;text-align:right;font-weight:700;text-transform:uppercase;font-size:13px;color:#6b7280;letter-spacing:0.05em" class="text-muted td-foot-label total-label">Total Due</td>
+              <td style="padding:16px 12px 0 12px;text-align:right;font-weight:900;font-size:24px;color:#111827" class="text-main td-foot-value total-value">${fmt.format(invoice.total as unknown as number)}</td>
             </tr>
           </tfoot>
         </table>
@@ -665,8 +708,8 @@ export async function sendInvoiceDb(
   const ses = new SESClient({
     region: process.env.AWS_REGION ?? "us-east-1",
     credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
     },
   });
 

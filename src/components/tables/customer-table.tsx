@@ -24,7 +24,11 @@ const EditCustomerCell = ({
   setOptimistic,
 }: {
   customer: Customer;
-  setOptimistic: (action: any) => void;
+  setOptimistic: (
+    action:
+      | { type: "delete"; payload: string }
+      | { type: "update"; payload: Customer },
+  ) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (

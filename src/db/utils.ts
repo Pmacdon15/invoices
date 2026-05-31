@@ -21,9 +21,11 @@ export async function rebalanceOrgItems(orgId: string) {
       await client.billing.getOrganizationBillingSubscription(cleanOrgId);
     if (subscription?.subscriptionItems) {
       foundFeatures = subscription.subscriptionItems.flatMap(
-        (item: any) =>
-          item.plan?.features?.map((f: any) => ({ id: f.id, name: f.name })) ||
-          [],
+        (item) =>
+          item.plan?.features?.map((f) => ({
+            id: f.id,
+            name: f.name,
+          })) || [],
       );
 
       if (foundFeatures.length > 0) {
@@ -44,7 +46,8 @@ export async function rebalanceOrgItems(orgId: string) {
         `ℹ️ No subscription items found for ${cleanOrgId}. Using defaults.`,
       );
     }
-  } catch (e: any) {
+  } catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
     console.error(
       `[DEBUG] Clerk API Full Error Object for ${orgId}:`,
       JSON.stringify(e, null, 2),
