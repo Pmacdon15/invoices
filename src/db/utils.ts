@@ -19,11 +19,22 @@ export async function rebalanceOrgItems(orgId: string) {
     );
     const subscription =
       await client.billing.getOrganizationBillingSubscription(cleanOrgId);
+    interface PlanFeature {
+      id: string;
+      name?: string;
+    }
+    interface SubscriptionItem {
+      plan?: {
+        features?: PlanFeature[];
+      };
+    }
     if (subscription?.subscriptionItems) {
       foundFeatures = subscription.subscriptionItems.flatMap(
-        (item: any) =>
-          item.plan?.features?.map((f: any) => ({ id: f.id, name: f.name })) ||
-          [],
+        (item: SubscriptionItem) =>
+          item.plan?.features?.map((f: PlanFeature) => ({
+            id: f.id,
+            name: f.name,
+          })) || [],
       );
 
       if (foundFeatures.length > 0) {
@@ -44,7 +55,8 @@ export async function rebalanceOrgItems(orgId: string) {
         `ℹ️ No subscription items found for ${cleanOrgId}. Using defaults.`,
       );
     }
-  } catch (e: any) {
+  } catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
     console.error(
       `[DEBUG] Clerk API Full Error Object for ${orgId}:`,
       JSON.stringify(e, null, 2),

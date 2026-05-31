@@ -13,10 +13,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+interface SearchSelectorItem {
+  id: string;
+  name?: string;
+  email?: string;
+  price?: number | string;
+  customer?: {
+    name: string;
+  };
+  total?: number | string;
+  status?: string;
+}
+
 interface SearchSelectorProps {
   placeholder?: string;
   apiEndpoint: string;
-  renderItem?: (item: any) => React.ReactNode;
+  renderItem?: (item: SearchSelectorItem) => React.ReactNode;
 }
 
 export function SearchSelector({
@@ -62,7 +74,7 @@ export function SearchSelector({
         `${apiEndpoint}?query=${encodeURIComponent(debouncedValue)}`,
       );
       const json = await res.json();
-      return (json.data || []) as any[];
+      return (json.data || []) as SearchSelectorItem[];
     },
     enabled: debouncedValue.length > 0,
   });
@@ -89,13 +101,13 @@ export function SearchSelector({
     }
   };
 
-  const handleSelect = (item: any) => {
+  const handleSelect = (item: SearchSelectorItem) => {
     const value = item.name || (item.customer ? item.customer.name : "");
     setInputValue(value);
     updateSearchParams(value);
   };
 
-  const defaultRenderItem = (item: any) => {
+  const defaultRenderItem = (item: SearchSelectorItem) => {
     if (item.name) {
       return (
         <div className="flex flex-col">

@@ -35,7 +35,7 @@ export function Footer() {
             <div className="flex items-center gap-4 border-l pl-6 border-sidebar-foreground/20">
               <span className="text-[10px] uppercase tracking-widest font-bold text-sidebar-foreground/40">
                 Attribution
-              </span>             
+              </span>
             </div>
           </div>
         </div>
