@@ -1,6 +1,5 @@
 import { ReceiptText } from "lucide-react";
 import Link from "next/link";
-import { GitHubIcon } from "./icons";
 
 export function Footer() {
   return (
@@ -36,16 +35,7 @@ export function Footer() {
             <div className="flex items-center gap-4 border-l pl-6 border-sidebar-foreground/20">
               <span className="text-[10px] uppercase tracking-widest font-bold text-sidebar-foreground/40">
                 Attribution
-              </span>
-              <Link
-                href="https://github.com/pmacdon15"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 hover:text-sidebar-foreground transition-colors"
-              >
-                <GitHubIcon className="h-5 w-5" />
-                <span className="font-medium">pmacdon15</span>
-              </Link>
+              </span>             
             </div>
           </div>
         </div>
