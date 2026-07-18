@@ -1,8 +1,10 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+const authedPages = ["/stats", "/invoices", "/customers", "/products"];
+
 export default clerkMiddleware(async (auth, req) => {
-  if (req.nextUrl.pathname.startsWith("/stats")) {
+  if (authedPages.some((page) => req.nextUrl.pathname.startsWith(page))) {
     const { has } = await auth();
     if (!has({ feature: "stats" })) {
       return NextResponse.redirect(new URL("/", req.url));

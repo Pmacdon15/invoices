@@ -6,7 +6,7 @@ import { getCustomers } from "@/dal/customers";
 import { getInvoices } from "@/dal/invoices";
 import { getProducts } from "@/dal/products";
 
-export default async function InvoicesPage(props: PageProps<"/invoices">) {
+export default function InvoicesPage(props: PageProps<"/invoices">) {
   const invoicesPromise = props.searchParams.then((params) => {
     const page =
       Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1;
