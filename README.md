@@ -112,6 +112,16 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the app.
 
+## Running Tests
+
+Run the unit test suite with:
+
+```bash
+bun run test
+```
+
+Use `bun run test:watch` while developing to rerun tests as files change.
+
 ---
 
 ## License & Commercial Use
