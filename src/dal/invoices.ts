@@ -127,7 +127,7 @@ export async function createInvoiceDal(input: CreateInvoiceInput) {
   }
 
   try {
-    const invoice = await createInvoiceDb(input, orgId);
+    const invoice = await createInvoiceDb(validation.data, orgId);
     return okAsync(invoice);
   } catch (e: unknown) {
     console.error("Database Insert Error:", e);
@@ -283,10 +283,19 @@ export async function updateInvoiceDal(input: UpdateInvoiceInput) {
   }
 
   try {
-    const invoice = await updateInvoiceDb(input, orgId);
+    const invoice = await updateInvoiceDb(validation.data, orgId);
     return okAsync(invoice);
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
+    const message = e instanceof Error ? e.message : "";
+    if (message === "Customer not found or is disabled") {
+      return errAsync({ reason: "Customer not found or is disabled" } as const);
+    }
+    if (message === "One or more products are not found or are disabled") {
+      return errAsync({
+        reason: "One or more products are not found or are disabled",
+      } as const);
+    }
     return errAsync({ reason: "Db failed to update invoice" } as const);
   }
 }
