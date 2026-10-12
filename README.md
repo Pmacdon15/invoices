@@ -124,7 +124,7 @@ bun run test
 
 Use `bun run test:watch` while developing to rerun tests as files change.
 
-----
+---
 
 ## License & Commercial Use
 
