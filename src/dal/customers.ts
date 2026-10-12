@@ -165,7 +165,7 @@ export async function updateCustomerDal(input: UpdateCustomerInput) {
   }
 
   try {
-    const customer = await updateCustomerDb(input, orgId);
+    const customer = await updateCustomerDb(validation.data, orgId);
     return okAsync(customer);
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
