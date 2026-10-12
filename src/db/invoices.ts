@@ -318,6 +318,9 @@ export async function updateInvoiceStatusDb(
     WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *;
   `;
+  if (!result[0]) {
+    throw new Error("Invoice not found or not authorized");
+  }
   return result[0] as Invoice;
 }
 
@@ -726,6 +729,9 @@ export async function sendInvoiceDb(
     WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *;
   `;
+  if (!result[0]) {
+    throw new Error("Invoice not found or not authorized");
+  }
 
   return result[0] as Invoice;
 }

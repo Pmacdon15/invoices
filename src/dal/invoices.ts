@@ -212,27 +212,38 @@ export async function sendInvoiceDal(id: string) {
     } as const);
   }
 
-  const client = await clerkClient();
-
-  const [org, memberships] = await Promise.all([
-    client.organizations.getOrganization({ organizationId: orgId }),
-    client.organizations.getOrganizationMembershipList({
-      organizationId: orgId,
-    }),
-  ]);
-
-  const orgName = org.name;
-  const orgImageUrl = org.imageUrl;
-
-  // Find the first admin to get their email
-  const adminMembership = memberships.data.find((m) => m.role === "org:admin");
+  let orgName: string;
+  let orgImageUrl: string | undefined;
   let adminEmail: string | undefined;
 
-  if (adminMembership?.publicUserData?.userId) {
-    const user = await client.users.getUser(
-      adminMembership.publicUserData.userId, // TypeScript now knows this is a string
+  try {
+    const client = await clerkClient();
+
+    const [org, memberships] = await Promise.all([
+      client.organizations.getOrganization({ organizationId: orgId }),
+      client.organizations.getOrganizationMembershipList({
+        organizationId: orgId,
+      }),
+    ]);
+
+    orgName = org.name;
+    orgImageUrl = org.imageUrl;
+
+    // Find the first admin to get their email
+    const adminMembership = memberships.data.find(
+      (m) => m.role === "org:admin",
     );
-    adminEmail = user.emailAddresses[0]?.emailAddress;
+
+    if (adminMembership?.publicUserData?.userId) {
+      const user = await client.users.getUser(
+        adminMembership.publicUserData.userId,
+      );
+      adminEmail = user.emailAddresses[0]?.emailAddress;
+    }
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    console.error("Send Invoice Error (Clerk lookup):", e);
+    return errAsync({ reason: "Failed to send invoice", message } as const);
   }
 
   try {
