@@ -4,7 +4,7 @@ A robust B2B SaaS application for managing invoices, customers, and products, bu
 
 ## Overview
 
-This application provides a multi-tenant, organization-based environment to manage your billing and customer data. It comes with built-in subscription tier limits controlled by your Clerk dashboard and configured through environment variables.
+This application provides a multi-tenant, organization-based environment to manage your billing and customer data. It comes with built-in subscription tier limits controlled by your Clerk dashboard[...]
 
 ### Services Used
 - **Authentication & Billing**: [Clerk](https://clerk.com/)
@@ -133,3 +133,5 @@ If you intend to use this software to make money (commercial use), you **must**:
 2. Provide clear **attribution** to Patrick MacDonald and link to the GitHub profile: [pmacdon15](https://github.com/pmacdon15).
 
 Once you have fulfilled these two conditions, you are free to use it for commercial purposes. See the `LICENSE` file for full details.
+
+<!-- copilot-noop: trigger vercel build -->
