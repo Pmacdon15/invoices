@@ -764,40 +764,74 @@ export async function updateInvoiceDb(
   const taxRate = input.tax_rate ?? 0;
   const totalAmount = subtotal + (subtotal * taxRate) / 100;
 
-  const [data] = (await sql`
-    WITH deleted_items AS (
-      DELETE FROM invoice_items
-      WHERE invoice_id = ${input.id} AND invoice_id IN (SELECT id FROM invoices WHERE org_id = ${orgId})
+  const productIds = input.items.map((i) => i.product_id);
+  const uniqueProductIdsCount = new Set(productIds).size;
+
+  // The customer and every product must belong to the caller's org (and not be
+  // deleted) before the invoice is touched; otherwise an invoice could be
+  // pointed at another org's records and leak them via the invoice view/email.
+  const results = (await sql`
+    WITH valid_customer AS (
+      SELECT id FROM customers
+      WHERE id = ${customerId}::uuid
+      AND status != 'deleted'
+      AND org_id = ${orgId}
+    ),
+    valid_products AS (
+      SELECT id FROM products
+      WHERE id = ANY(${productIds}::uuid[])
+      AND status != 'deleted'
+      AND org_id = ${orgId}
     ),
     updated_invoice AS (
       UPDATE invoices
-      SET customer_id = ${customerId}::uuid,
+      SET customer_id = (SELECT id FROM valid_customer),
           status = ${input.status},
           total = ${totalAmount},
           tax_rate = ${taxRate}
       WHERE id = ${input.id} AND org_id = ${orgId}
+      AND EXISTS (SELECT 1 FROM valid_customer)
+      AND (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
       RETURNING id, customer_id, total, tax_rate, status, org_id, created_at
+    ),
+    deleted_items AS (
+      DELETE FROM invoice_items
+      WHERE invoice_id IN (SELECT id FROM updated_invoice)
     ),
     inserted_items AS (
       INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price)
       SELECT 
-        ${input.id}, 
+        updated_invoice.id, 
         items.product_id, 
         items.quantity, 
         items.unit_price
-      FROM UNNEST(
-        ${input.items.map((i) => i.product_id)}::uuid[],
+      FROM updated_invoice
+      CROSS JOIN UNNEST(
+        ${productIds}::uuid[],
         ${input.items.map((i) => i.quantity)}::int[],
         ${input.items.map((i) => i.unit_price)}::numeric[]
       ) AS items(product_id, quantity, unit_price)
-      WHERE EXISTS (SELECT 1 FROM updated_invoice)
     )
-    SELECT * FROM updated_invoice;
-  `) as Invoice[];
+    SELECT
+      ui.*,
+      (SELECT COUNT(*) FROM valid_customer) as customer_ok,
+      (SELECT COUNT(*) FROM valid_products) as products_ok
+    FROM (SELECT 1) d
+    LEFT JOIN updated_invoice ui ON true;
+  `) as (Invoice & { customer_ok: string; products_ok: string })[];
 
-  if (!data) {
+  const result = results[0];
+
+  if (!result?.id) {
+    if (Number(result?.customer_ok) === 0) {
+      throw new Error("Customer not found or is disabled");
+    }
+    if (Number(result?.products_ok) !== uniqueProductIdsCount) {
+      throw new Error("One or more products are not found or are disabled");
+    }
     throw new Error("Invoice not found or not authorized");
   }
 
-  return data;
+  const { customer_ok, products_ok, ...invoice } = result;
+  return invoice as Invoice;
 }
