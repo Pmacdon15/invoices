@@ -8,6 +8,7 @@ import type {
   PaginatedValue,
   UpdateInvoiceInput,
 } from "@/dal/types";
+import { calculateInvoiceTotals } from "@/lib/invoice-totals";
 
 export async function fetchingInvoicesDb(
   orgId: string,
@@ -202,12 +203,8 @@ export async function createInvoiceDb(
   const sql = neon(process.env.DATABASE_URL);
   const customerId = input.customer_id;
 
-  const subtotal = input.items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
-    0,
-  );
   const taxRate = input.tax_rate ?? 0;
-  const totalAmount = subtotal + (subtotal * taxRate) / 100;
+  const { total: totalAmount } = calculateInvoiceTotals(input.items, taxRate);
 
   const productIds = input.items.map((i) => i.product_id);
   const uniqueProductIdsCount = new Set(productIds).size;
@@ -405,12 +402,9 @@ async function generateInvoicePdf(
   doc.line(20, yOffset, 190, yOffset);
   yOffset += 10;
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
-    0,
-  );
+  const { subtotal } = calculateInvoiceTotals(items);
   const taxRate = Number(invoice.tax_rate ?? 0);
-  const taxAmount = subtotal * (taxRate / 100);
+  const { tax: taxAmount } = calculateInvoiceTotals(items, taxRate);
   const totalAmount = Number(invoice.total);
 
   doc.setFontSize(10);
@@ -490,6 +484,10 @@ export async function sendInvoiceDb(
   const logoHtml = orgImageUrl
     ? `<img src="${orgImageUrl}" alt="${orgName}" width="48" height="48" style="height:48px;width:48px;border-radius:6px;display:block;margin-bottom:16px;object-fit:cover;background-color:#ffffff !important;color-scheme:only light;" class="logo-img">`
     : "";
+  const emailTotals = calculateInvoiceTotals(
+    items,
+    Number(invoice.tax_rate ?? 0),
+  );
 
   const adminEmailHtml = adminEmail
     ? `<p style="color:#6b7280;font-size:14px;margin-top:16px;" class="text-muted">This invoice was sent by your organization administrator: <strong>${adminEmail}</strong></p>`
@@ -633,14 +631,14 @@ export async function sendInvoiceDb(
           <tfoot>
             <tr>
               <td colspan="3" style="padding:16px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted td-foot-label">Subtotal</td>
-              <td style="padding:16px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main td-foot-value">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0))}</td>
+              <td style="padding:16px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main td-foot-value">${fmt.format(emailTotals.subtotal)}</td>
             </tr>
             ${
               Number(invoice.tax_rate) > 0
                 ? `
             <tr>
               <td colspan="3" style="padding:8px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted td-foot-label">Tax (${invoice.tax_rate}%)</td>
-              <td style="padding:8px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main td-foot-value">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * (Number(invoice.tax_rate) / 100))}</td>
+              <td style="padding:8px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main td-foot-value">${fmt.format(emailTotals.tax)}</td>
             </tr>
             `
                 : ""
@@ -757,12 +755,8 @@ export async function updateInvoiceDb(
   const sql = neon(process.env.DATABASE_URL);
   const customerId = input.customer_id;
 
-  const subtotal = input.items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
-    0,
-  );
   const taxRate = input.tax_rate ?? 0;
-  const totalAmount = subtotal + (subtotal * taxRate) / 100;
+  const { total: totalAmount } = calculateInvoiceTotals(input.items, taxRate);
 
   const [data] = (await sql`
     WITH deleted_items AS (
