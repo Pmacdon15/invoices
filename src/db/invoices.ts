@@ -8,6 +8,11 @@ import type {
   PaginatedValue,
   UpdateInvoiceInput,
 } from "@/dal/types";
+import {
+  encodeEmailHeader,
+  escapeHtml,
+  stripHeaderNewlines,
+} from "@/lib/email";
 
 export async function fetchingInvoicesDb(
   orgId: string,
@@ -479,7 +484,7 @@ export async function sendInvoiceDb(
     .map(
       (item) => `
       <tr>
-        <td style="padding:12px;border-bottom:1px solid #f3f4f6;color:#374151;word-break:break-word;" class="td-desc">${item.product_name}</td>
+        <td style="padding:12px;border-bottom:1px solid #f3f4f6;color:#374151;word-break:break-word;" class="td-desc">${escapeHtml(item.product_name)}</td>
         <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:center;color:#374151;" class="td-qty">${item.quantity}</td>
         <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;" class="td-price">${fmt.format(item.unit_price)}</td>
         <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:#111827;" class="td-amt">${fmt.format(item.quantity * item.unit_price)}</td>
@@ -488,11 +493,11 @@ export async function sendInvoiceDb(
     .join("");
 
   const logoHtml = orgImageUrl
-    ? `<img src="${orgImageUrl}" alt="${orgName}" width="48" height="48" style="height:48px;width:48px;border-radius:6px;display:block;margin-bottom:16px;object-fit:cover;background-color:#ffffff !important;color-scheme:only light;" class="logo-img">`
+    ? `<img src="${escapeHtml(orgImageUrl)}" alt="${escapeHtml(orgName)}" width="48" height="48" style="height:48px;width:48px;border-radius:6px;display:block;margin-bottom:16px;object-fit:cover;background-color:#ffffff !important;color-scheme:only light;" class="logo-img">`
     : "";
 
   const adminEmailHtml = adminEmail
-    ? `<p style="color:#6b7280;font-size:14px;margin-top:16px;" class="text-muted">This invoice was sent by your organization administrator: <strong>${adminEmail}</strong></p>`
+    ? `<p style="color:#6b7280;font-size:14px;margin-top:16px;" class="text-muted">This invoice was sent by your organization administrator: <strong>${escapeHtml(adminEmail)}</strong></p>`
     : "";
 
   const html = `
@@ -611,12 +616,12 @@ export async function sendInvoiceDb(
       <div style="padding:40px;border-bottom:1px solid #f3f4f6" class="border-light card-header">
         ${logoHtml}
         <p style="color:#6b7280;font-size:12px;margin:0 0 4px 0;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;" class="text-muted">Invoice from</p>
-        <h1 style="color:#111827;font-size:28px;font-weight:800;margin:0;letter-spacing:-0.02em" class="text-main">${orgName}</h1>
+        <h1 style="color:#111827;font-size:28px;font-weight:800;margin:0;letter-spacing:-0.02em" class="text-main">${escapeHtml(orgName)}</h1>
       </div>
       <div style="padding:40px" class="card-body">
-        <p style="color:#6b7280;font-size:13px;margin:0 0 32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;" class="text-muted">ID: ${invoice.id}</p>
-        <p style="margin:0 0 8px 0;font-size:18px;color:#111827" class="text-main">Hi <strong>${invoice.customer_name}</strong>,</p>
-        <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below and attached as a PDF. Payment is due upon receipt. Thank you for choosing <strong>${orgName}</strong>.</p>
+        <p style="color:#6b7280;font-size:13px;margin:0 0 32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;" class="text-muted">ID: ${escapeHtml(invoice.id)}</p>
+        <p style="margin:0 0 8px 0;font-size:18px;color:#111827" class="text-main">Hi <strong>${escapeHtml(invoice.customer_name)}</strong>,</p>
+        <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below and attached as a PDF. Payment is due upon receipt. Thank you for choosing <strong>${escapeHtml(orgName)}</strong>.</p>
         
         ${adminEmailHtml}
 
@@ -639,7 +644,7 @@ export async function sendInvoiceDb(
               Number(invoice.tax_rate) > 0
                 ? `
             <tr>
-              <td colspan="3" style="padding:8px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted td-foot-label">Tax (${invoice.tax_rate}%)</td>
+              <td colspan="3" style="padding:8px 12px 0 12px;text-align:right;font-size:13px;color:#6b7280;" class="text-muted td-foot-label">Tax (${escapeHtml(invoice.tax_rate)}%)</td>
               <td style="padding:8px 12px 0 12px;text-align:right;font-size:14px;color:#111827" class="text-main td-foot-value">${fmt.format(items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * (Number(invoice.tax_rate) / 100))}</td>
             </tr>
             `
@@ -653,8 +658,8 @@ export async function sendInvoiceDb(
         </table>
 
         <div style="border-top:1px solid #f3f4f6;padding-top:32px;margin-top:32px" class="border-light">
-           <p style="color:#9ca3af;font-size:14px;margin:0;line-height:1.6">If you have any questions or require further assistance, please don't hesitate to reach out to our support team at <a href="mailto:${invoice.customer_email}" style="color:#111827;text-decoration:none;font-weight:600;border-bottom:1px solid #e5e7eb;" class="text-main">${invoice.customer_email}</a>.</p>
-           <p style="color:#111827;font-size:14px;margin:16px 0 0 0;font-weight:700;" class="text-main">Best regards,<br>${orgName}</p>
+           <p style="color:#9ca3af;font-size:14px;margin:0;line-height:1.6">If you have any questions or require further assistance, please don't hesitate to reach out to our support team at <a href="mailto:${escapeHtml(invoice.customer_email)}" style="color:#111827;text-decoration:none;font-weight:600;border-bottom:1px solid #e5e7eb;" class="text-main">${escapeHtml(invoice.customer_email)}</a>.</p>
+           <p style="color:#111827;font-size:14px;margin:16px 0 0 0;font-weight:700;" class="text-main">Best regards,<br>${escapeHtml(orgName)}</p>
         </div>
       </div>
     </div>
@@ -679,9 +684,9 @@ export async function sendInvoiceDb(
   const boundary = `NextPart_${Date.now().toString(16)}`;
 
   const rawMessage = [
-    `From: ${orgName} <${fromEmail}>`,
-    `To: ${invoice.customer_email}`,
-    `Subject: ${subject}`,
+    `From: ${encodeEmailHeader(orgName)} <${fromEmail}>`,
+    `To: ${stripHeaderNewlines(invoice.customer_email)}`,
+    `Subject: ${encodeEmailHeader(subject)}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",
