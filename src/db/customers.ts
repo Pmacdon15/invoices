@@ -177,10 +177,12 @@ export async function updateCustomerDb(
     throw new Error("Config Error");
   }
   const sql = neon(process.env.DATABASE_URL);
+  // status is managed server-side (plan limits via rebalanceOrgItems, soft
+  // delete via delete action) and must not be settable by the client.
   const result = await sql`
     UPDATE customers 
-    SET name = ${input.name}, email = ${input.email}, status = ${input.status}
-    WHERE id = ${input.id} AND org_id = ${orgId}
+    SET name = ${input.name}, email = ${input.email}
+    WHERE id = ${input.id} AND org_id = ${orgId} AND status != 'deleted'
     RETURNING *
   `;
   if (!result[0]) {
