@@ -124,7 +124,7 @@ bun run test
 
 Use `bun run test:watch` while developing to rerun tests as files change.
 
----
+----
 
 ## License & Commercial Use
 
@@ -134,4 +134,4 @@ If you intend to use this software to make money (commercial use), you **must**:
 1. Completely **rebrand** the application (change logos, names, and branding).
 2. Provide clear **attribution** to Patrick MacDonald and link to the GitHub profile: [pmacdon15](https://github.com/pmacdon15).
 
-Once you have fulfilled these two conditions, you are free to use it for commercial purposes. See the `LICENSE` file for full details.
+Once you have fulfilled these two conditions, you are free to use it for commercial purposes. See the `LICENSE` file for full details. 
