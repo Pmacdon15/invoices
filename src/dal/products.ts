@@ -160,7 +160,7 @@ export async function updateProductDal(input: UpdateProductInput) {
   }
 
   try {
-    const product = await updateProductDb(input, orgId);
+    const product = await updateProductDb(validation.data, orgId);
     return okAsync(product);
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
