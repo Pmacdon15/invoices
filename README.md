@@ -1,3 +1,5 @@
+<!-- copilot-noop: trigger vercel build 2 -->
+
 # Invoices App
 
 A robust B2B SaaS application for managing invoices, customers, and products, built with Next.js 16, Neon, and Clerk.
@@ -133,5 +135,3 @@ If you intend to use this software to make money (commercial use), you **must**:
 2. Provide clear **attribution** to Patrick MacDonald and link to the GitHub profile: [pmacdon15](https://github.com/pmacdon15).
 
 Once you have fulfilled these two conditions, you are free to use it for commercial purposes. See the `LICENSE` file for full details.
-
-<!-- copilot-noop: trigger vercel build -->
