@@ -156,6 +156,7 @@ export function ProductsTable({
       ),
     },
   ];
+  
 
   return (
     <div className="space-y-4">

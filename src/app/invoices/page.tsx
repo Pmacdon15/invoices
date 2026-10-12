@@ -7,12 +7,12 @@ import { getInvoices } from "@/dal/invoices";
 import { getProducts } from "@/dal/products";
 
 export default function InvoicesPage(props: PageProps<"/invoices">) {
-  const invoicesPromise = props.searchParams.then((params) => {
-    const page =
-      Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1;
-    const query = Array.isArray(params.query) ? params.query[0] : params.query;
-    return getInvoices(page, query);
-  });
+  const invoicesPromise = props.searchParams.then((params) =>
+    getInvoices(
+      Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1,
+      Array.isArray(params.query) ? params.query[0] : params.query,
+    ),
+  );
 
   const customersPromise = getCustomers(1, true);
   const productsPromise = getProducts(1, true);
