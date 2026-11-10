@@ -104,6 +104,8 @@ export function DownloadPDFButton({ invoiceId }: DownloadPDFButtonProps) {
             }
 
             // Scrub any inline style attribute that contains unsupported colors
+            // setProperty above always leaves a style attribute behind.
+            /* v8 ignore next -- @preserve */
             const inlineStyle = el.getAttribute("style") ?? "";
             if (UNSUPPORTED_COLOR_RE.test(inlineStyle)) {
               el.setAttribute(

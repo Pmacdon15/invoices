@@ -82,6 +82,8 @@ describe("NewInvoiceFallback", () => {
     expect(qty).toHaveValue(null);
     await userEvent.type(qty, "3");
     await userEvent.type(price, "2.5");
+    fireEvent.blur(price);
+    expect(price).toHaveValue(2.5);
     expect(grandTotal()).toBe("$7.50");
     expect(within(rows()[0]).getByText("$7.50")).toBeInTheDocument();
 

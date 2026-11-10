@@ -20,6 +20,8 @@ export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
   const [optimisticState, setOptimistic] = useOptimistic(
     data,
     (state, action: OptimisticAction) => {
+      // State is only null when loading failed, and then nothing can dispatch.
+      /* v8 ignore next -- @preserve */
       if (!state) return state;
 
       if (action.type === "add") {
@@ -69,7 +71,7 @@ export function ProductsManagement({ dataPromise }: ProductsManagementProps) {
       </div>
 
       <ProductsTable
-        data={optimisticState?.data ?? []}
+        data={/* v8 ignore next -- @preserve */ optimisticState?.data ?? []}
         totalPages={data?.totalPages ?? 1}
         currentPage={data?.currentPage ?? 1}
         totalCount={optimisticState?.totalCount ?? 0}

@@ -76,7 +76,7 @@ jobs:
           merge-multiple: true
       # Fails if lines, branches, functions or statements drop below 100%.
       - run: >-
-          bunx vitest --merge-reports --coverage
+          bunx vitest --merge-reports=.vitest-reports --coverage
           --coverage.reporter=text --coverage.reporter=json
       # The merge only knows files some job loaded; catch any no test imports.
       - run: bun scripts/check-untested-files.ts

@@ -26,7 +26,9 @@ vi.mock("@clerk/nextjs", () => ({
 }));
 vi.mock("next/image", () => ({
   // biome-ignore lint/performance/noImgElement: stand-in for next/image
-  default: (props: { src: string; alt: string }) => <img {...props} />,
+  default: ({ src, alt }: { src: string; alt: string }) => (
+    <img src={src} alt={alt} />
+  ),
 }));
 vi.mock("@/components/buttons/send-invoice-button", () => ({
   SendInvoiceButton: ({ currentStatus }: { currentStatus: string }) => (

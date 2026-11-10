@@ -444,7 +444,9 @@ export async function sendInvoiceDb(
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  if (!accessKeyId || !secretAccessKey) {
     throw new Error("AWS SES credentials are not configured");
   }
 
@@ -713,10 +715,7 @@ export async function sendInvoiceDb(
   );
   const ses = new SESClient({
     region: process.env.AWS_REGION ?? "us-east-1",
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
-    },
+    credentials: { accessKeyId, secretAccessKey },
   });
 
   await ses.send(

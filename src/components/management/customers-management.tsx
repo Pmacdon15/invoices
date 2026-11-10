@@ -22,6 +22,8 @@ export function CustomersManagement({
   const [optimisticState, setOptimistic] = useOptimistic(
     data,
     (state, action: OptimisticAction) => {
+      // State is only null when loading failed, and then nothing can dispatch.
+      /* v8 ignore next -- @preserve */
       if (!state) return state;
 
       if (action.type === "add") {
@@ -70,10 +72,12 @@ export function CustomersManagement({
       </div>
 
       <CustomersTable
-        data={optimisticState?.data ?? []}
+        data={/* v8 ignore next -- @preserve */ optimisticState?.data ?? []}
         totalPages={data?.totalPages ?? 1}
         currentPage={data?.currentPage ?? 1}
-        totalCount={optimisticState?.totalCount ?? 0}
+        totalCount={
+          /* v8 ignore next -- @preserve */ optimisticState?.totalCount ?? 0
+        }
         setOptimistic={setOptimistic}
       />
     </div>

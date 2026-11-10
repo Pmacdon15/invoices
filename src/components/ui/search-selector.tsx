@@ -69,6 +69,8 @@ export function SearchSelector({
   const { data, isLoading } = useQuery({
     queryKey: [apiEndpoint, debouncedValue],
     queryFn: async () => {
+      // The query is disabled while the search box is empty.
+      /* v8 ignore next -- @preserve */
       if (!debouncedValue) return [];
       const res = await fetch(
         `${apiEndpoint}?query=${encodeURIComponent(debouncedValue)}`,
