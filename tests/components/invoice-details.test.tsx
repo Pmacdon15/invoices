@@ -132,4 +132,44 @@ describe("InvoiceDetails", () => {
     expect(await screen.findByText("My Shop")).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
+
+  it("shows the customer's phone and address, one-off items and a manual total", async () => {
+    const base = fullInvoice();
+    await renderDetails(
+      ok(
+        fullInvoice({
+          total: 150,
+          total_override: 150,
+          customer: customer({
+            phone: "403-555-0100",
+            address_line1: "1 Main St",
+            city: "Calgary",
+            region: "AB",
+            postal_code: "T2P 1J9",
+            country: "Canada",
+          }),
+          items: [
+            ...base.items,
+            {
+              ...base.items[0],
+              id: "item-2",
+              product_id: null,
+              description: "Call-out fee",
+              product: null,
+            },
+          ],
+        }),
+      ),
+    );
+    expect(await screen.findByText("403-555-0100")).toBeInTheDocument();
+    expect(screen.getByText("1 Main St")).toBeInTheDocument();
+    expect(screen.getByText("Calgary, AB T2P 1J9")).toBeInTheDocument();
+    expect(screen.getByText("Canada")).toBeInTheDocument();
+    expect(screen.getAllByText("Call-out fee")).toHaveLength(2);
+    expect(screen.getByText("One-off")).toBeInTheDocument();
+    expect(screen.getByText("One-off item")).toBeInTheDocument();
+    expect(
+      screen.getByText("Manual total (line items and tax not used)"),
+    ).toBeInTheDocument();
+  });
 });

@@ -1,14 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
 import { errAsync, okAsync } from "neverthrow";
 import z from "zod";
 import {
   createCustomerDb,
   deleteCustomerDb,
   fetchingCustomersDb,
+  getCustomerByIdDb,
   getCustomerCount,
   searchCustomersDb,
   updateCustomerDb,
 } from "@/db/customers";
+import { type AuthContext, resolveAuth } from "@/lib/auth-context";
 import { CreateCustomerSchema, IdSchema, UpdateCustomerSchema } from "./schema";
 import type {
   CreateCustomerInput,
@@ -22,8 +23,9 @@ export async function getCustomers(
   page = 1,
   all = false,
   query?: string,
+  ctx?: AuthContext,
 ): Promise<Result<PaginatedValue<Customer>>> {
-  const { orgId } = await auth.protect();
+  const { orgId } = await resolveAuth(ctx);
 
   if (!orgId) {
     return { data: null, error: "Not authorized" };
@@ -40,8 +42,11 @@ export async function getCustomers(
   }
 }
 
-export async function createCustomerDal(input: CreateCustomerInput) {
-  const { orgId, has } = await auth.protect();
+export async function createCustomerDal(
+  input: CreateCustomerInput,
+  ctx?: AuthContext,
+) {
+  const { orgId, has } = await resolveAuth(ctx);
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
@@ -101,7 +106,7 @@ export async function createCustomerDal(input: CreateCustomerInput) {
   }
 
   try {
-    const customer = await createCustomerDb(input, orgId);
+    const customer = await createCustomerDb(validation.data, orgId);
     return okAsync(customer);
   } catch (e: unknown) {
     console.error("Database Insert Error:", e);
@@ -109,8 +114,8 @@ export async function createCustomerDal(input: CreateCustomerInput) {
   }
 }
 
-export async function deleteCustomerDal(id: string) {
-  const { orgId } = await auth.protect();
+export async function deleteCustomerDal(id: string, ctx?: AuthContext) {
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
   }
@@ -135,8 +140,9 @@ export async function deleteCustomerDal(id: string) {
 
 export async function searchCustomersDal(
   query: string,
+  ctx?: AuthContext,
 ): Promise<Result<Customer[]>> {
-  const { orgId } = await auth.protect();
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return { data: null, error: "No org" };
   }
@@ -149,8 +155,11 @@ export async function searchCustomersDal(
   }
 }
 
-export async function updateCustomerDal(input: UpdateCustomerInput) {
-  const { orgId } = await auth.protect();
+export async function updateCustomerDal(
+  input: UpdateCustomerInput,
+  ctx?: AuthContext,
+) {
+  const { orgId } = await resolveAuth(ctx);
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
@@ -170,5 +179,27 @@ export async function updateCustomerDal(input: UpdateCustomerInput) {
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
     return errAsync({ reason: "Db failed to update customer" } as const);
+  }
+}
+
+/** One customer of the org by ID (not deleted), uncached. */
+export async function getCustomerByIdDal(
+  id: string,
+  ctx?: AuthContext,
+): Promise<Result<Customer>> {
+  const { orgId } = await resolveAuth(ctx);
+  if (!orgId) {
+    return { data: null, error: "No org" };
+  }
+  if (!IdSchema.safeParse({ id }).success) {
+    return { data: null, error: "Invalid customer ID" };
+  }
+  try {
+    const data = await getCustomerByIdDb(id, orgId);
+    if (!data) return { data: null, error: "Customer not found" };
+    return { data, error: null };
+  } catch (e: unknown) {
+    console.error("Database Fetch Error:", e);
+    return { data: null, error: "Database error occurred." };
   }
 }

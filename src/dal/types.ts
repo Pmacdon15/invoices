@@ -18,7 +18,8 @@ export type Invoice = z.infer<typeof InvoiceSchema>;
 export type Branding = z.infer<typeof BrandingSchema>;
 
 export type FullInvoiceItem = InvoiceItem & {
-  product: Product;
+  /** The catalog product, or null for a one-off line item. */
+  product: Product | null;
 };
 
 export type FullInvoice = Invoice & {

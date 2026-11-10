@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless";
+import { type NeonQueryFunction, neon } from "@neondatabase/serverless";
 import { jsPDF } from "jspdf";
 import { cacheTag } from "next/cache";
 import type {
@@ -8,17 +8,107 @@ import type {
   PaginatedValue,
   UpdateInvoiceInput,
 } from "@/dal/types";
+import { addressLines } from "@/lib/address";
 import {
   encodeEmailHeader,
   escapeHtml,
   stripHeaderNewlines,
 } from "@/lib/email";
-import { calculateInvoiceTotals } from "@/lib/invoice-totals";
+import {
+  calculateInvoiceTotals,
+  invoiceTotal,
+  lineItemName,
+} from "@/lib/invoice-totals";
+
+/** The customer columns an invoice view, PDF or email shows. */
+type CustomerColumns = {
+  customer_name: string;
+  customer_email: string;
+  customer_status: "active" | "disabled" | "deleted";
+  customer_phone: string | null;
+  customer_address_line1: string | null;
+  customer_address_line2: string | null;
+  customer_city: string | null;
+  customer_region: string | null;
+  customer_postal_code: string | null;
+  customer_country: string | null;
+};
+
+/** A line item row joined to its product (null for a one-off item). */
+type ItemRow = {
+  id: string;
+  invoice_id: string;
+  product_id: string | null;
+  description: string | null;
+  quantity: number;
+  unit_price: number;
+  product_name: string | null;
+  product_status: "active" | "disabled" | "deleted" | null;
+};
+
+type InvoiceRow = Invoice & CustomerColumns;
+
+async function selectInvoiceWithItems(
+  sql: NeonQueryFunction<false, false>,
+  id: string,
+  orgId: string,
+): Promise<{ invoice: InvoiceRow; items: ItemRow[] } | null> {
+  const [invoice] = (await sql`
+    SELECT
+      i.*,
+      c.name as customer_name,
+      c.email as customer_email,
+      c.status as customer_status,
+      c.phone as customer_phone,
+      c.address_line1 as customer_address_line1,
+      c.address_line2 as customer_address_line2,
+      c.city as customer_city,
+      c.region as customer_region,
+      c.postal_code as customer_postal_code,
+      c.country as customer_country
+    FROM invoices i
+    JOIN customers c ON i.customer_id = c.id
+    WHERE i.id = ${id} AND i.org_id = ${orgId}
+  `) as InvoiceRow[];
+
+  if (!invoice) return null;
+
+  const items = (await sql`
+    SELECT
+      ii.*,
+      p.name as product_name,
+      p.status as product_status
+    FROM invoice_items ii
+    LEFT JOIN products p ON ii.product_id = p.id
+    WHERE ii.invoice_id = ${id}
+  `) as ItemRow[];
+
+  return { invoice, items };
+}
+
+/** The customer of a joined invoice row, contact details included. */
+function customerOf(invoice: InvoiceRow) {
+  return {
+    id: invoice.customer_id,
+    name: invoice.customer_name,
+    email: invoice.customer_email,
+    phone: invoice.customer_phone,
+    address_line1: invoice.customer_address_line1,
+    address_line2: invoice.customer_address_line2,
+    city: invoice.customer_city,
+    region: invoice.customer_region,
+    postal_code: invoice.customer_postal_code,
+    country: invoice.customer_country,
+    org_id: invoice.org_id,
+    status: invoice.customer_status,
+  };
+}
 
 export async function fetchingInvoicesDb(
   orgId: string,
   page: number = 1,
   query?: string,
+  status?: Invoice["status"],
 ): Promise<PaginatedValue<Invoice>> {
   "use cache";
   // Including the page in the tag ensures specific pages can be purged or cached independently
@@ -33,14 +123,14 @@ export async function fetchingInvoicesDb(
   const offset = (page - 1) * pageSize;
 
   const whereClause = query
-    ? sql`WHERE i.org_id = ${orgId} AND (
+    ? sql`WHERE i.org_id = ${orgId} AND (${status ?? null}::TEXT IS NULL OR i.status = ${status ?? null}) AND (
         c.name ILIKE ${`%${query}%`} OR 
         c.email ILIKE ${`%${query}%`} OR 
         i.id::TEXT ILIKE ${`%${query}%`} OR 
         i.total::TEXT ILIKE ${`%${query}%`} OR 
         i.created_at::TEXT ILIKE ${`%${query}%`}
       )`
-    : sql`WHERE i.org_id = ${orgId}`;
+    : sql`WHERE i.org_id = ${orgId} AND (${status ?? null}::TEXT IS NULL OR i.status = ${status ?? null})`;
 
   const [data, countResult] = await Promise.all([
     sql`
@@ -136,65 +226,57 @@ export async function fetchingInvoiceByIdDb(
   orgId: string,
 ): Promise<FullInvoice | null> {
   "use cache";
-  cacheTag(`invoice-${id}`);
+  // The org tag too: a customer or product edit changes what invoices show.
+  cacheTag(`invoice-${id}`, `invoices-${orgId}`);
+  return loadInvoiceByIdDb(id, orgId);
+}
+
+/**
+ * The invoice straight from the database, bypassing the cache. The MCP server
+ * reads with this right after a change, in the same request, where the cached
+ * copy could still be the old one.
+ */
+export async function loadInvoiceByIdDb(
+  id: string,
+  orgId: string,
+): Promise<FullInvoice | null> {
   if (!process.env.DATABASE_URL) {
     throw new Error("Config Error");
   }
   const sql = neon(process.env.DATABASE_URL);
 
-  const [invoice] = (await sql`
-    SELECT 
-      i.*,
-      c.name as customer_name,
-      c.email as customer_email,
-      c.status as customer_status
-    FROM invoices i
-    JOIN customers c ON i.customer_id = c.id
-    WHERE i.id = ${id} AND i.org_id = ${orgId}
-  `) as (Invoice & {
-    customer_name: string;
-    customer_email: string;
-    customer_status: "active" | "disabled" | "deleted";
-  })[];
+  const found = await selectInvoiceWithItems(sql, id, orgId);
+  if (!found) return null;
+  const { invoice, items } = found;
 
-  if (!invoice) return null;
-
-  const items = (await sql`
-    SELECT 
-      ii.*,
-      p.name as product_name,
-      p.status as product_status
-    FROM invoice_items ii
-    JOIN products p ON ii.product_id = p.id
-    WHERE ii.invoice_id = ${id}
-  `) as {
-    id: string;
-    invoice_id: string;
-    product_id: string;
-    quantity: number;
-    unit_price: number;
-    product_name: string;
-    product_status: "active" | "disabled" | "deleted";
-  }[];
+  const {
+    customer_name,
+    customer_email,
+    customer_status,
+    customer_phone,
+    customer_address_line1,
+    customer_address_line2,
+    customer_city,
+    customer_region,
+    customer_postal_code,
+    customer_country,
+    ...rest
+  } = invoice;
 
   return {
-    ...invoice,
-    customer: {
-      id: invoice.customer_id,
-      name: invoice.customer_name,
-      email: invoice.customer_email,
-      org_id: invoice.org_id,
-      status: invoice.customer_status,
-    },
-    items: items.map((item) => ({
+    ...rest,
+    customer: customerOf(invoice),
+    items: items.map(({ product_name, product_status, ...item }) => ({
       ...item,
-      product: {
-        id: item.product_id,
-        name: item.product_name,
-        price: item.unit_price,
-        org_id: invoice.org_id,
-        status: item.product_status,
-      },
+      product: item.product_id
+        ? {
+            id: item.product_id,
+            name: product_name ?? "",
+            price: item.unit_price,
+            org_id: invoice.org_id,
+            status: product_status ?? "deleted",
+          }
+        : null,
     })),
   };
 }
@@ -209,9 +291,11 @@ export async function createInvoiceDb(
   const customerId = input.customer_id;
 
   const taxRate = input.tax_rate ?? 0;
-  const { total: totalAmount } = calculateInvoiceTotals(input.items, taxRate);
+  const totalOverride = input.total_override ?? null;
+  const totalAmount = invoiceTotal(input.items, taxRate, totalOverride);
 
-  const productIds = input.items.map((i) => i.product_id);
+  // One-off line items have no product to check.
+  const productIds = catalogProductIds(input.items);
   const uniqueProductIdsCount = new Set(productIds).size;
 
   const results = (await sql`
@@ -228,30 +312,33 @@ export async function createInvoiceDb(
       AND org_id = ${orgId}
     ),
     new_invoice AS (
-      INSERT INTO invoices (customer_id, status, org_id, total, tax_rate)
+      INSERT INTO invoices (customer_id, status, org_id, total, tax_rate, total_override)
       SELECT 
         valid_customer.id, 
         ${input.status}, 
         ${orgId}, 
         ${totalAmount},
-        ${taxRate}
+        ${taxRate},
+        ${totalOverride}
       FROM valid_customer
       WHERE (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
-      RETURNING id, customer_id, total, tax_rate, status, org_id, created_at
+      RETURNING id, customer_id, total, tax_rate, total_override, status, org_id, created_at
     ),
     inserted_items AS (
-      INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price)
+      INSERT INTO invoice_items (invoice_id, product_id, description, quantity, unit_price)
       SELECT 
         new_invoice.id, 
         items.product_id, 
+        items.description,
         items.quantity, 
         items.unit_price
       FROM new_invoice
       CROSS JOIN UNNEST(
-        ${input.items.map((i) => i.product_id)}::uuid[],
+        ${input.items.map((i) => i.product_id || null)}::uuid[],
+        ${input.items.map((i) => i.description || null)}::text[],
         ${input.items.map((i) => i.quantity)}::int[],
         ${input.items.map((i) => i.unit_price)}::numeric[]
-      ) AS items(product_id, quantity, unit_price)
+      ) AS items(product_id, description, quantity, unit_price)
     )
     SELECT 
       ni.*,
@@ -326,9 +413,16 @@ export async function updateInvoiceStatusDb(
   return result[0] as Invoice;
 }
 
+/** The catalog product IDs on an invoice; one-off items have none. */
+function catalogProductIds(items: { product_id?: string | null }[]): string[] {
+  return items
+    .map((i) => i.product_id)
+    .filter((id): id is string => Boolean(id));
+}
+
 async function generateInvoicePdf(
-  invoice: Invoice & { customer_name: string; customer_email: string },
-  items: { product_name: string; quantity: number; unit_price: number }[],
+  invoice: InvoiceRow,
+  items: ItemRow[],
   orgName: string,
   orgImageUrl?: string,
 ): Promise<Buffer> {
@@ -380,7 +474,16 @@ async function generateInvoicePdf(
   doc.text(invoice.customer_name, 20, yOffset);
   yOffset += 5;
   doc.text(invoice.customer_email, 20, yOffset);
-  yOffset += 20;
+  yOffset += 5;
+  const customer = customerOf(invoice);
+  for (const line of [
+    ...(customer.phone ? [customer.phone] : []),
+    ...addressLines(customer),
+  ]) {
+    doc.text(line, 20, yOffset);
+    yOffset += 5;
+  }
+  yOffset += 15;
 
   // Items Table Header
   doc.setFontSize(10);
@@ -397,7 +500,7 @@ async function generateInvoicePdf(
       doc.addPage();
       yOffset = 20;
     }
-    doc.text(item.product_name, 20, yOffset);
+    doc.text(lineItemName(item), 20, yOffset);
     doc.text(item.quantity.toString(), 120, yOffset, { align: "center" });
     doc.text(fmt.format(item.unit_price), 150, yOffset, { align: "right" });
     doc.text(fmt.format(item.quantity * item.unit_price), 190, yOffset, {
@@ -434,6 +537,42 @@ async function generateInvoicePdf(
   return Buffer.from(doc.output("arraybuffer"));
 }
 
+/** The customer's phone and postal address for the email, or nothing. */
+function customerContactHtml(invoice: InvoiceRow): string {
+  const customer = customerOf(invoice);
+  const lines = [
+    ...addressLines(customer),
+    ...(customer.phone ? [customer.phone] : []),
+  ];
+  if (lines.length === 0) return "";
+  return `<p style="margin:0 0 24px 0;color:#6b7280;font-size:14px;line-height:1.5;" class="text-muted">${lines.map(escapeHtml).join("<br>")}</p>`;
+}
+
+/**
+ * The invoice as a PDF (the same document the email attaches), for the MCP
+ * server to hand to the assistant. Null when the invoice isn't the org's.
+ */
+export async function getInvoicePdfDb(
+  id: string,
+  orgId: string,
+  orgName: string,
+  orgImageUrl?: string,
+): Promise<{ pdf: Buffer; invoice: Invoice } | null> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const found = await selectInvoiceWithItems(sql, id, orgId);
+  if (!found) return null;
+  const pdf = await generateInvoicePdf(
+    found.invoice,
+    found.items,
+    orgName,
+    orgImageUrl,
+  );
+  return { pdf, invoice: found.invoice };
+}
+
 export async function sendInvoiceDb(
   id: string,
   orgId: string,
@@ -453,26 +592,9 @@ export async function sendInvoiceDb(
   const sql = neon(process.env.DATABASE_URL);
 
   // Fetch the full invoice with customer + items
-  const [invoice] = (await sql`
-    SELECT 
-      i.*,
-      c.name as customer_name,
-      c.email as customer_email
-    FROM invoices i
-    JOIN customers c ON i.customer_id = c.id
-    WHERE i.id = ${id} AND i.org_id = ${orgId}
-  `) as (Invoice & { customer_name: string; customer_email: string })[];
-
-  if (!invoice) throw new Error("Invoice not found or not authorized");
-
-  const items = (await sql`
-    SELECT 
-      ii.*,
-      p.name as product_name
-    FROM invoice_items ii
-    JOIN products p ON ii.product_id = p.id
-    WHERE ii.invoice_id = ${id}
-  `) as { product_name: string; quantity: number; unit_price: number }[];
+  const found = await selectInvoiceWithItems(sql, id, orgId);
+  if (!found) throw new Error("Invoice not found or not authorized");
+  const { invoice, items } = found;
 
   const fmt = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -483,7 +605,7 @@ export async function sendInvoiceDb(
     .map(
       (item) => `
       <tr>
-        <td style="padding:12px;border-bottom:1px solid #f3f4f6;color:#374151;word-break:break-word;" class="td-desc">${escapeHtml(item.product_name)}</td>
+        <td style="padding:12px;border-bottom:1px solid #f3f4f6;color:#374151;word-break:break-word;" class="td-desc">${escapeHtml(lineItemName(item))}</td>
         <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:center;color:#374151;" class="td-qty">${item.quantity}</td>
         <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;" class="td-price">${fmt.format(item.unit_price)}</td>
         <td style="padding:12px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:#111827;" class="td-amt">${fmt.format(item.quantity * item.unit_price)}</td>
@@ -624,6 +746,7 @@ export async function sendInvoiceDb(
       <div style="padding:40px" class="card-body">
         <p style="color:#6b7280;font-size:13px;margin:0 0 32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;" class="text-muted">ID: ${escapeHtml(invoice.id)}</p>
         <p style="margin:0 0 8px 0;font-size:18px;color:#111827" class="text-main">Hi <strong>${escapeHtml(invoice.customer_name)}</strong>,</p>
+        ${customerContactHtml(invoice)}
         <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below and attached as a PDF. Payment is due upon receipt. Thank you for choosing <strong>${escapeHtml(orgName)}</strong>.</p>
         
         ${adminEmailHtml}
@@ -766,9 +889,11 @@ export async function updateInvoiceDb(
   const customerId = input.customer_id;
 
   const taxRate = input.tax_rate ?? 0;
-  const { total: totalAmount } = calculateInvoiceTotals(input.items, taxRate);
+  const totalOverride = input.total_override ?? null;
+  const totalAmount = invoiceTotal(input.items, taxRate, totalOverride);
 
-  const productIds = input.items.map((i) => i.product_id);
+  // One-off line items have no product to check.
+  const productIds = catalogProductIds(input.items);
   const uniqueProductIdsCount = new Set(productIds).size;
 
   // The customer and every product must belong to the caller's org (and not be
@@ -792,29 +917,32 @@ export async function updateInvoiceDb(
       SET customer_id = (SELECT id FROM valid_customer),
           status = ${input.status},
           total = ${totalAmount},
-          tax_rate = ${taxRate}
+          tax_rate = ${taxRate},
+          total_override = ${totalOverride}
       WHERE id = ${input.id} AND org_id = ${orgId}
       AND EXISTS (SELECT 1 FROM valid_customer)
       AND (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
-      RETURNING id, customer_id, total, tax_rate, status, org_id, created_at
+      RETURNING id, customer_id, total, tax_rate, total_override, status, org_id, created_at
     ),
     deleted_items AS (
       DELETE FROM invoice_items
       WHERE invoice_id IN (SELECT id FROM updated_invoice)
     ),
     inserted_items AS (
-      INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price)
+      INSERT INTO invoice_items (invoice_id, product_id, description, quantity, unit_price)
       SELECT 
         updated_invoice.id, 
         items.product_id, 
+        items.description,
         items.quantity, 
         items.unit_price
       FROM updated_invoice
       CROSS JOIN UNNEST(
-        ${productIds}::uuid[],
+        ${input.items.map((i) => i.product_id || null)}::uuid[],
+        ${input.items.map((i) => i.description || null)}::text[],
         ${input.items.map((i) => i.quantity)}::int[],
         ${input.items.map((i) => i.unit_price)}::numeric[]
-      ) AS items(product_id, quantity, unit_price)
+      ) AS items(product_id, description, quantity, unit_price)
     )
     SELECT
       ui.*,

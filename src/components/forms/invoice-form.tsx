@@ -66,8 +66,10 @@ export function InvoiceForm({
           customer_id: initialData.customer_id,
           status: initialData.status,
           tax_rate: initialData.tax_rate ?? 0,
+          total_override: initialData.total_override ?? null,
           items: initialData.items.map((item) => ({
-            product_id: item.product_id,
+            product_id: item.product_id ?? null,
+            description: item.description ?? null,
             quantity: item.quantity,
             unit_price: item.unit_price,
           })),
@@ -76,6 +78,7 @@ export function InvoiceForm({
           customer_id: "",
           status: "draft" as const,
           tax_rate: 0,
+          total_override: null,
           items: [{ product_id: "", quantity: 1, unit_price: 0 }],
         } as CreateInvoiceInput),
     validators: {
@@ -102,7 +105,8 @@ export function InvoiceForm({
         );
         const taxRate = value.tax_rate ?? 0;
         /* v8 ignore stop -- @preserve */
-        const totalAmount = subtotal + (subtotal * taxRate) / 100;
+        const totalAmount =
+          value.total_override ?? subtotal + (subtotal * taxRate) / 100;
 
         startTransition(() => {
           onOptimistic({
@@ -112,6 +116,7 @@ export function InvoiceForm({
             status: value.status,
             tax_rate: taxRate,
             total: totalAmount,
+            total_override: value.total_override ?? null,
             created_at: initialData
               ? initialData.created_at
               : new Date().toISOString(),
@@ -266,6 +271,31 @@ export function InvoiceForm({
                   </div>
                 )}
               </form.Field>
+
+              <form.Field name="total_override">
+                {(field) => (
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label
+                      htmlFor="total_override"
+                      className="text-xs uppercase text-muted-foreground font-bold tracking-wider"
+                    >
+                      Manual Total (optional)
+                    </Label>
+                    <Input
+                      id="total_override"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Calculated from items and tax"
+                      value={field.state.value ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        field.handleChange(val === "" ? null : Number(val));
+                      }}
+                    />
+                  </div>
+                )}
+              </form.Field>
             </div>
           </div>
         </div>
@@ -316,11 +346,18 @@ export function InvoiceForm({
                     <>
                       {field.state.value.map((value, i) => (
                         <tr
-                          key={value.product_id}
+                          key={value.product_id || `row-${i}`}
                           className="flex flex-col md:table-row p-4 md:p-0 border-b md:border-0 relative"
                         >
                           <td className="md:px-4 md:py-3 py-2">
-                            {products.totalCount > 0 ? (
+                            {!value.product_id && value.description ? (
+                              <span className="block md:px-3 font-medium">
+                                {value.description}
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  (one-off)
+                                </span>
+                              </span>
+                            ) : products.totalCount > 0 ? (
                               <form.Field name={`items[${i}].product_id`}>
                                 {(subField) => (
                                   <Select
@@ -338,7 +375,7 @@ export function InvoiceForm({
                                         );
                                       }
                                     }}
-                                    value={subField.state.value}
+                                    value={subField.state.value ?? ""}
                                   >
                                     <SelectTrigger className="border-none shadow-none focus:ring-0 px-0 md:px-3 rounded-none bg-transparent">
                                       <SelectValue placeholder="Select product" />
@@ -449,10 +486,14 @@ export function InvoiceForm({
 
           <form.Subscribe
             selector={(state) =>
-              [state.values.items, state.values.tax_rate] as const
+              [
+                state.values.items,
+                state.values.tax_rate,
+                state.values.total_override,
+              ] as const
             }
           >
-            {([items, taxRateVal]) => {
+            {([items, taxRateVal, totalOverride]) => {
               const subtotal = items.reduce(
                 (sum, item) =>
                   sum + (item.quantity || 0) * (item.unit_price || 0),
@@ -462,7 +503,7 @@ export function InvoiceForm({
               /* v8 ignore next -- @preserve */
               const taxRate = Number(taxRateVal ?? 0);
               const taxAmount = subtotal * (taxRate / 100);
-              const grandTotal = subtotal + taxAmount;
+              const grandTotal = totalOverride ?? subtotal + taxAmount;
 
               return (
                 <div className="flex justify-end p-6 bg-muted/20 border rounded-xl">

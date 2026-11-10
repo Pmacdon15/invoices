@@ -6,6 +6,7 @@ import type {
   PaginatedValue,
   UpdateCustomerInput,
 } from "@/dal/types";
+import { blankToNull } from "@/lib/address";
 
 export async function fetchingCustomersDb(
   orgId: string,
@@ -130,8 +131,16 @@ export async function createCustomerDb(
 ): Promise<Customer> {
   const sql = neon(String(process.env.DATABASE_URL));
   const [newCustomer] = (await sql`
-    INSERT INTO customers (name, email, org_id)
-    VALUES (${input.name}, ${input.email}, ${orgId})
+    INSERT INTO customers (
+      name, email, phone, address_line1, address_line2,
+      city, region, postal_code, country, org_id
+    )
+    VALUES (
+      ${input.name}, ${input.email}, ${blankToNull(input.phone)},
+      ${blankToNull(input.address_line1)}, ${blankToNull(input.address_line2)},
+      ${blankToNull(input.city)}, ${blankToNull(input.region)},
+      ${blankToNull(input.postal_code)}, ${blankToNull(input.country)}, ${orgId}
+    )
     RETURNING *
   `) as Customer[];
   return newCustomer;
@@ -181,7 +190,15 @@ export async function updateCustomerDb(
   // delete via delete action) and must not be settable by the client.
   const result = await sql`
     UPDATE customers 
-    SET name = ${input.name}, email = ${input.email}
+    SET name = ${input.name},
+        email = ${input.email},
+        phone = ${blankToNull(input.phone)},
+        address_line1 = ${blankToNull(input.address_line1)},
+        address_line2 = ${blankToNull(input.address_line2)},
+        city = ${blankToNull(input.city)},
+        region = ${blankToNull(input.region)},
+        postal_code = ${blankToNull(input.postal_code)},
+        country = ${blankToNull(input.country)}
     WHERE id = ${input.id} AND org_id = ${orgId} AND status != 'deleted'
     RETURNING *
   `;
@@ -189,4 +206,20 @@ export async function updateCustomerDb(
     throw new Error("Customer not found or not authorized");
   }
   return result[0] as Customer;
+}
+
+/** One customer of the org (not deleted), straight from the database. */
+export async function getCustomerByIdDb(
+  id: string,
+  orgId: string,
+): Promise<Customer | null> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const [customer] = (await sql`
+    SELECT * FROM customers
+    WHERE id = ${id} AND org_id = ${orgId} AND status != 'deleted'
+  `) as Customer[];
+  return customer ?? null;
 }

@@ -1,10 +1,21 @@
 import { z } from "zod";
 
+/** An optional piece of contact detail; blank or missing is stored as NULL. */
+const contactField = (max: number) =>
+  z.string().trim().max(max, `Must be at most ${max} characters`).nullish();
+
 // --- Customer ---
 export const CustomerSchema = z.object({
   id: z.uuid(),
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.email("Invalid email address"),
+  phone: contactField(40),
+  address_line1: contactField(200),
+  address_line2: contactField(200),
+  city: contactField(100),
+  region: contactField(100),
+  postal_code: contactField(20),
+  country: contactField(100),
   org_id: z.string(),
   status: z.enum(["active", "disabled", "deleted"]),
 });
@@ -40,15 +51,24 @@ export const UpdateProductSchema = CreateProductSchema.extend({
 export const InvoiceItemSchema = z.object({
   id: z.uuid(),
   invoice_id: z.uuid(),
-  product_id: z.uuid("Please select a product"),
+  // NULL for a one-off line item, which is named by `description` instead.
+  product_id: z.uuid("Please select a product").nullish(),
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description must be at most 500 characters")
+    .nullish(),
   quantity: z.coerce.number().int().positive("Quantity must be at least 1"),
   unit_price: z.coerce.number().nonnegative("Price cannot be negative"),
-  product: ProductSchema.optional(),
+  product: ProductSchema.nullish(),
 });
 
 export const CreateInvoiceItemSchema = InvoiceItemSchema.omit({
   id: true,
   invoice_id: true,
+}).refine((item) => Boolean(item.product_id || item.description), {
+  message: "Please select a product",
+  path: ["product_id"],
 });
 
 // --- Branding ---
@@ -81,6 +101,11 @@ export const InvoiceSchema = z.object({
   customer_id: z.uuid("Please select a customer"),
   total: z.coerce.number().nonnegative(),
   tax_rate: z.coerce.number().nonnegative().min(0).max(100).default(0),
+  // A manual total that replaces the computed one; NULL means computed.
+  total_override: z.coerce
+    .number()
+    .nonnegative("Total cannot be negative")
+    .nullish(),
   status: InvoiceStatusSchema,
   org_id: z.string(),
   created_at: z.string(),

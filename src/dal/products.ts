@@ -1,14 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
 import { errAsync, okAsync } from "neverthrow";
 import z from "zod";
 import {
   createProductDb,
   deleteProductDb,
   fetchingProductsDb,
+  getProductByIdDb,
   getProductCount,
   searchProductsDb,
   updateProductDb,
 } from "@/db/products";
+import { type AuthContext, resolveAuth } from "@/lib/auth-context";
 import { CreateProductSchema, IdSchema, UpdateProductSchema } from "./schema";
 import type {
   CreateProductInput,
@@ -21,8 +22,9 @@ export async function getProducts(
   page = 1,
   all = false,
   query?: string,
+  ctx?: AuthContext,
 ): Promise<Result<PaginatedValue<Product>>> {
-  const { orgId } = await auth.protect();
+  const { orgId } = await resolveAuth(ctx);
 
   if (!orgId) {
     return { data: null, error: "No org" };
@@ -36,8 +38,11 @@ export async function getProducts(
   }
 }
 
-export async function createProductDal(input: CreateProductInput) {
-  const { orgId, has } = await auth.protect();
+export async function createProductDal(
+  input: CreateProductInput,
+  ctx?: AuthContext,
+) {
+  const { orgId, has } = await resolveAuth(ctx);
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
@@ -104,8 +109,8 @@ export async function createProductDal(input: CreateProductInput) {
   }
 }
 
-export async function deleteProductDal(id: string) {
-  const { orgId } = await auth.protect();
+export async function deleteProductDal(id: string, ctx?: AuthContext) {
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
   }
@@ -130,8 +135,9 @@ export async function deleteProductDal(id: string) {
 
 export async function searchProductsDal(
   query: string,
+  ctx?: AuthContext,
 ): Promise<Result<Product[]>> {
-  const { orgId } = await auth.protect();
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return { data: null, error: "No org" };
   }
@@ -144,8 +150,11 @@ export async function searchProductsDal(
   }
 }
 
-export async function updateProductDal(input: UpdateProductInput) {
-  const { orgId } = await auth.protect();
+export async function updateProductDal(
+  input: UpdateProductInput,
+  ctx?: AuthContext,
+) {
+  const { orgId } = await resolveAuth(ctx);
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
@@ -165,5 +174,27 @@ export async function updateProductDal(input: UpdateProductInput) {
   } catch (e: unknown) {
     console.error("Database Update Error:", e);
     return errAsync({ reason: "Db failed to update product" } as const);
+  }
+}
+
+/** One product of the org by ID (not deleted), uncached. */
+export async function getProductByIdDal(
+  id: string,
+  ctx?: AuthContext,
+): Promise<Result<Product>> {
+  const { orgId } = await resolveAuth(ctx);
+  if (!orgId) {
+    return { data: null, error: "No org" };
+  }
+  if (!IdSchema.safeParse({ id }).success) {
+    return { data: null, error: "Invalid product ID" };
+  }
+  try {
+    const data = await getProductByIdDb(id, orgId);
+    if (!data) return { data: null, error: "Product not found" };
+    return { data, error: null };
+  } catch (e: unknown) {
+    console.error("Database Fetch Error:", e);
+    return { data: null, error: "Database error occurred." };
   }
 }

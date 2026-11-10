@@ -17,6 +17,34 @@ import type { Customer } from "@/dal/types";
 import { cn } from "@/lib/utils";
 import { useCreateCustomer, useUpdateCustomer } from "@/mutations/customers";
 
+/** The optional contact fields, in the order the form shows them. */
+const CONTACT_FIELDS = [
+  {
+    name: "phone",
+    label: "Phone",
+    placeholder: "+1 403 555 0100",
+    type: "tel",
+  },
+  { name: "address_line1", label: "Address", placeholder: "123 Main St" },
+  {
+    name: "address_line2",
+    label: "Address Line 2",
+    placeholder: "Suite 400",
+  },
+  { name: "city", label: "City", placeholder: "Calgary" },
+  { name: "region", label: "Province / State", placeholder: "AB" },
+  { name: "postal_code", label: "Postal Code", placeholder: "T2P 1J9" },
+  { name: "country", label: "Country", placeholder: "Canada" },
+] as const;
+
+type ContactFieldName = (typeof CONTACT_FIELDS)[number]["name"];
+
+function contactDefaults(customer?: Customer) {
+  return Object.fromEntries(
+    CONTACT_FIELDS.map(({ name }) => [name, customer?.[name] ?? ""]),
+  ) as Record<ContactFieldName, string>;
+}
+
 interface CustomerFormProps {
   orgId: string;
   onOptimistic?: (data: Customer) => void;
@@ -39,10 +67,12 @@ export function CustomerForm({
       ? {
           name: initialData.name,
           email: initialData.email,
+          ...contactDefaults(initialData),
         }
       : {
           name: "",
           email: "",
+          ...contactDefaults(),
         },
     onSubmit: async ({ value }) => {
       const fullData: Customer = {
@@ -127,6 +157,27 @@ export function CustomerForm({
             </div>
           )}
         </form.Field>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {CONTACT_FIELDS.map((contact) => (
+            <form.Field key={contact.name} name={contact.name}>
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>{contact.label}</Label>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    type={"type" in contact ? contact.type : "text"}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder={contact.placeholder}
+                  />
+                </div>
+              )}
+            </form.Field>
+          ))}
+        </div>
       </div>
 
       <div

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   protect: vi.fn(),
+  getCustomerByIdDb: vi.fn(),
   has: vi.fn(),
   createCustomerDb: vi.fn(),
   deleteCustomerDb: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock("@clerk/nextjs/server", () => ({
   auth: { protect: mocks.protect },
 }));
 vi.mock("@/db/customers", () => ({
+  getCustomerByIdDb: mocks.getCustomerByIdDb,
   createCustomerDb: mocks.createCustomerDb,
   deleteCustomerDb: mocks.deleteCustomerDb,
   fetchingCustomersDb: mocks.fetchingCustomersDb,
@@ -26,6 +28,7 @@ vi.mock("@/db/customers", () => ({
 import {
   createCustomerDal,
   deleteCustomerDal,
+  getCustomerByIdDal,
   getCustomers,
   searchCustomersDal,
   updateCustomerDal,
@@ -303,5 +306,38 @@ describe("updateCustomerDal", () => {
     expect((await updateCustomerDal(update))._unsafeUnwrapErr()).toEqual({
       reason: "Db failed to update customer",
     });
+  });
+});
+
+describe("getCustomerByIdDal", () => {
+  it("reads one of the org's customers", async () => {
+    mocks.getCustomerByIdDb.mockResolvedValue({ id: ID });
+    await expect(getCustomerByIdDal(ID)).resolves.toEqual({
+      data: { id: ID },
+      error: null,
+    });
+    expect(mocks.getCustomerByIdDb).toHaveBeenCalledWith(ID, "org_1");
+  });
+
+  it("uses a given context instead of the session", async () => {
+    mocks.getCustomerByIdDb.mockResolvedValue({ id: ID });
+    mocks.protect.mockClear();
+    await getCustomerByIdDal(ID, { orgId: "org_mcp", has: () => false });
+    expect(mocks.getCustomerByIdDb).toHaveBeenCalledWith(ID, "org_mcp");
+    expect(mocks.protect).not.toHaveBeenCalled();
+  });
+
+  it("explains a missing org, a bad ID, a missing customer or a failure", async () => {
+    mocks.protect.mockResolvedValueOnce({ orgId: null, has: () => false });
+    expect((await getCustomerByIdDal(ID)).error).toBe("No org");
+    expect((await getCustomerByIdDal("nope")).error).toBe(
+      "Invalid customer ID",
+    );
+    mocks.getCustomerByIdDb.mockResolvedValue(null);
+    expect((await getCustomerByIdDal(ID)).error).toBe("Customer not found");
+    mocks.getCustomerByIdDb.mockRejectedValue(new Error("boom"));
+    expect((await getCustomerByIdDal(ID)).error).toBe(
+      "Database error occurred.",
+    );
   });
 });

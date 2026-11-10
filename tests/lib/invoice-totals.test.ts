@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { calculateInvoiceTotals } from "@/lib/invoice-totals";
+import {
+  calculateInvoiceTotals,
+  invoiceTotal,
+  lineItemName,
+} from "@/lib/invoice-totals";
 
 describe("calculateInvoiceTotals", () => {
   it("returns zero amounts for an empty invoice", () => {
@@ -57,5 +61,35 @@ describe("calculateInvoiceTotals", () => {
     expect(totals.subtotal).toBeCloseTo(0.3);
     expect(totals.tax).toBeCloseTo(0.0225);
     expect(totals.total).toBeCloseTo(0.3225);
+  });
+});
+
+describe("invoiceTotal", () => {
+  const items = [{ quantity: 2, unit_price: 50 }];
+
+  it("uses the manual total when one is set, even zero", () => {
+    expect(invoiceTotal(items, 10, 80)).toBe(80);
+    expect(invoiceTotal(items, 10, 0)).toBe(0);
+  });
+
+  it("otherwise adds tax to the line items", () => {
+    expect(invoiceTotal(items, 10, null)).toBe(110);
+    expect(invoiceTotal(items, 10)).toBe(110);
+    expect(invoiceTotal(items)).toBe(100);
+  });
+});
+
+describe("lineItemName", () => {
+  it("prefers the product's name, then a joined name, then the description", () => {
+    expect(
+      lineItemName({ product: { name: "Design" }, description: "x" }),
+    ).toBe("Design");
+    expect(lineItemName({ product: null, product_name: "Support" })).toBe(
+      "Support",
+    );
+    expect(lineItemName({ product_name: null, description: "Call-out" })).toBe(
+      "Call-out",
+    );
+    expect(lineItemName({})).toBe("Item");
   });
 });
