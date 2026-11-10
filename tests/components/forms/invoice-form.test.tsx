@@ -171,6 +171,7 @@ describe("InvoiceForm", () => {
         customer_id: globex.id,
         status: "sent",
         tax_rate: 10,
+        total_override: null,
         items: [{ product_id: consulting.id, quantity: 3, unit_price: 100 }],
       }),
     );
@@ -282,6 +283,7 @@ describe("InvoiceForm", () => {
       status: "draft",
       tax_rate: 50,
       total: 60,
+      total_override: null,
       created_at: "2026-03-01T00:00:00.000Z",
       customer: acme,
     });
@@ -308,7 +310,15 @@ describe("InvoiceForm", () => {
         customer_id: existing.customer_id,
         status: "paid",
         tax_rate: 5,
-        items: [{ product_id: consulting.id, quantity: 2, unit_price: 100 }],
+        total_override: null,
+        items: [
+          {
+            product_id: consulting.id,
+            description: null,
+            quantity: 2,
+            unit_price: 100,
+          },
+        ],
       }),
     );
     expect(m.create).not.toHaveBeenCalled();
@@ -336,6 +346,79 @@ describe("InvoiceForm", () => {
     expect(m.update).toHaveBeenCalledWith(
       expect.objectContaining({ id: existing.id }),
     );
+  });
+
+  it("bills a manual total instead of the computed one", async () => {
+    const user = userEvent.setup();
+    const onOptimistic = vi.fn();
+    const existing = fullInvoice({ tax_rate: 5 });
+    await renderForm({ initialData: existing, onOptimistic });
+    const override = screen.getByLabelText("Manual Total (optional)");
+    expect(override).toHaveValue(null);
+    await user.type(override, "150");
+    expect(grandTotal()).toBe("$150.00");
+    await user.click(screen.getByRole("button", { name: "Update Invoice" }));
+    await waitFor(() =>
+      expect(m.update).toHaveBeenCalledWith(
+        expect.objectContaining({ total_override: 150 }),
+      ),
+    );
+    expect(onOptimistic).toHaveBeenCalledWith(
+      expect.objectContaining({ total: 150, total_override: 150 }),
+    );
+    await user.clear(override);
+    expect(grandTotal()).toBe("$210.00");
+  });
+
+  it("keeps an invoice's one-off items and manual total when editing", async () => {
+    const user = userEvent.setup();
+    const existing = fullInvoice({
+      total_override: 99,
+      items: [
+        {
+          ...fullInvoice().items[0],
+          product_id: null,
+          description: "Call-out fee",
+          product: null,
+        },
+      ],
+    });
+    await renderForm({ initialData: existing });
+    expect(screen.getByText("Call-out fee")).toBeInTheDocument();
+    expect(screen.getByText("(one-off)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Manual Total (optional)")).toHaveValue(99);
+    await user.click(screen.getByRole("button", { name: "Update Invoice" }));
+    await waitFor(() =>
+      expect(m.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          total_override: 99,
+          items: [
+            {
+              product_id: null,
+              description: "Call-out fee",
+              quantity: 2,
+              unit_price: 100,
+            },
+          ],
+        }),
+      ),
+    );
+  });
+
+  it("asks for a product on an item that has neither product nor description", async () => {
+    await renderForm({
+      initialData: fullInvoice({
+        items: [
+          {
+            ...fullInvoice().items[0],
+            product_id: null,
+            description: null,
+            product: null,
+          },
+        ],
+      }),
+    });
+    expect(screen.getByText("Select product")).toBeInTheDocument();
   });
 
   it("shows a disabled spinner button while saving", async () => {

@@ -1,8 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
 import { getStatsDb } from "@/db/stats";
+import { type AuthContext, resolveAuth } from "@/lib/auth-context";
 
-export async function getStatsDal() {
-  const { orgId, has } = await auth.protect();
+export async function getStatsDal(ctx?: AuthContext) {
+  const { orgId, has } = await resolveAuth(ctx);
 
   if (!orgId) {
     return { data: null, error: "Not authorized" };

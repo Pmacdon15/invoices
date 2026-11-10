@@ -58,7 +58,9 @@ import {
   deleteInvoiceDb,
   fetchingInvoiceByIdDb,
   fetchingInvoicesDb,
+  getInvoicePdfDb,
   getMonthlyInvoiceCount,
+  loadInvoiceByIdDb,
   searchInvoicesDb,
   sendInvoiceDb,
   updateInvoiceDb,
@@ -109,6 +111,8 @@ describe("config errors", () => {
     ["fetchingInvoicesDb", () => fetchingInvoicesDb(ORG)],
     ["searchInvoicesDb", () => searchInvoicesDb(ORG, "x")],
     ["fetchingInvoiceByIdDb", () => fetchingInvoiceByIdDb("inv-1", ORG)],
+    ["loadInvoiceByIdDb", () => loadInvoiceByIdDb("inv-1", ORG)],
+    ["getInvoicePdfDb", () => getInvoicePdfDb("inv-1", ORG, "Org")],
     [
       "createInvoiceDb",
       () => create({ customer_id: CUSTOMER_ID, status: "draft", items }, ORG),
@@ -167,8 +171,10 @@ describe("fetchingInvoicesDb", () => {
       `invoices-${ORG}-page-2`,
     );
     const where = sql.calls.find((c) => c.text.startsWith("WHERE"));
-    expect(where?.text).toBe("WHERE i.org_id = ?");
-    expect(where?.values).toEqual([ORG]);
+    expect(where?.text).toBe(
+      "WHERE i.org_id = ? AND (?::TEXT IS NULL OR i.status = ?)",
+    );
+    expect(where?.values).toEqual([ORG, null, null]);
     const pageQuery = sql.queries().find((c) => c.text.includes("LIMIT"));
     expect(pageQuery?.values.slice(1)).toEqual([10, 10]);
   });
@@ -188,12 +194,34 @@ describe("fetchingInvoicesDb", () => {
     expect(where?.text).toContain("c.name ILIKE ?");
     expect(where?.values).toEqual([
       ORG,
+      null,
+      null,
       "%acme%",
       "%acme%",
       "%acme%",
       "%acme%",
       "%acme%",
     ]);
+  });
+
+  it("filters by status, with or without a search", async () => {
+    sql.respond(({ text }) =>
+      text.startsWith("SELECT COUNT(*)") ? [{ total: "0" }] : [],
+    );
+    await fetchingInvoicesDb(ORG, 1, undefined, "sent");
+    expect(sql.calls.find((c) => c.text.startsWith("WHERE"))?.values).toEqual([
+      ORG,
+      "sent",
+      "sent",
+    ]);
+    sql.reset();
+    sql.respond(({ text }) =>
+      text.startsWith("SELECT COUNT(*)") ? [{ total: "0" }] : [],
+    );
+    await fetchingInvoicesDb(ORG, 1, "acme", "paid");
+    expect(
+      sql.calls.find((c) => c.text.startsWith("WHERE"))?.values.slice(0, 4),
+    ).toEqual([ORG, "paid", "paid", "%acme%"]);
   });
 });
 
@@ -229,7 +257,10 @@ describe("fetchingInvoiceByIdDb", () => {
     await expect(fetchingInvoiceByIdDb("inv-1", ORG)).resolves.toBeNull();
     expect(sql.queries()).toHaveLength(1);
     expect(sql.queries()[0].values).toEqual(["inv-1", ORG]);
-    expect(mocks.cacheTag).toHaveBeenCalledWith("invoice-inv-1");
+    expect(mocks.cacheTag).toHaveBeenCalledWith(
+      "invoice-inv-1",
+      `invoices-${ORG}`,
+    );
   });
 
   it("returns the invoice with its customer and items", async () => {
@@ -277,6 +308,87 @@ describe("fetchingInvoiceByIdDb", () => {
       }),
     ]);
     expect(sql.queries()[1].values).toEqual(["inv-1"]);
+    expect(sql.queries()[1].text).toContain("LEFT JOIN products");
+  });
+
+  it("returns contact details, and one-off items without a product", async () => {
+    sql.respond(({ text }) =>
+      text.includes("FROM invoice_items")
+        ? [
+            {
+              id: "it-2",
+              invoice_id: "inv-1",
+              product_id: null,
+              description: "Call-out",
+              quantity: 1,
+              unit_price: 75,
+              product_name: null,
+              product_status: null,
+            },
+            {
+              id: "it-3",
+              invoice_id: "inv-1",
+              product_id: P2,
+              description: null,
+              quantity: 1,
+              unit_price: 5,
+              product_name: null,
+              product_status: null,
+            },
+          ]
+        : [
+            {
+              ...row,
+              total_override: 70,
+              customer_name: "Acme",
+              customer_email: "a@acme.com",
+              customer_status: "active",
+              customer_phone: "555",
+              customer_address_line1: "1 Main St",
+              customer_address_line2: null,
+              customer_city: "Calgary",
+              customer_region: "AB",
+              customer_postal_code: "T2P",
+              customer_country: "Canada",
+            },
+          ],
+    );
+
+    const invoice = await loadInvoiceByIdDb("inv-1", ORG);
+    expect(mocks.cacheTag).not.toHaveBeenCalled();
+    expect(invoice).not.toHaveProperty("customer_phone");
+    expect(invoice?.total_override).toBe(70);
+    expect(invoice?.customer).toEqual({
+      id: CUSTOMER_ID,
+      name: "Acme",
+      email: "a@acme.com",
+      phone: "555",
+      address_line1: "1 Main St",
+      address_line2: null,
+      city: "Calgary",
+      region: "AB",
+      postal_code: "T2P",
+      country: "Canada",
+      org_id: ORG,
+      status: "active",
+    });
+    expect(invoice?.items[0]).toEqual({
+      id: "it-2",
+      invoice_id: "inv-1",
+      product_id: null,
+      description: "Call-out",
+      quantity: 1,
+      unit_price: 75,
+      product: null,
+    });
+    // A product row that's gone reads as a deleted, unnamed product.
+    expect(invoice?.items[1].product).toEqual({
+      id: P2,
+      name: "",
+      price: 5,
+      org_id: ORG,
+      status: "deleted",
+    });
   });
 });
 
@@ -302,10 +414,46 @@ describe("createInvoiceDb", () => {
       ORG,
       230,
       15,
+      null,
       2,
       [P1, P2],
+      [null, null],
       [2, 1],
       [50, 100],
+    ]);
+  });
+
+  it("saves one-off items and a manual total", async () => {
+    sql.respond(() => [{ ...row, customer_ok: "1", products_ok: "1" }]);
+    await create(
+      {
+        customer_id: CUSTOMER_ID,
+        status: "draft",
+        tax_rate: 0,
+        total_override: 99,
+        items: [
+          items[0],
+          {
+            product_id: null,
+            description: "Call-out",
+            quantity: 1,
+            unit_price: 75,
+          },
+        ],
+      },
+      ORG,
+    );
+    const values = sql.queries()[0].values;
+    expect(values[2]).toEqual([P1]);
+    expect(values.slice(6, 14)).toEqual([
+      99,
+      0,
+      99,
+      1,
+      [P1, null],
+      [null, "Call-out"],
+      [2, 1],
+      [50, 75],
     ]);
   });
 
@@ -320,7 +468,7 @@ describe("createInvoiceDb", () => {
       ORG,
     );
     const values = sql.queries()[0].values;
-    expect(values.slice(6, 9)).toEqual([200, 0, 1]);
+    expect(values.slice(6, 10)).toEqual([200, 0, null, 1]);
   });
 
   it("rejects a customer that isn't active in the org", async () => {
@@ -419,10 +567,12 @@ describe("updateInvoiceDb", () => {
       "sent",
       230,
       15,
+      null,
       "inv-1",
       ORG,
       2,
       [P1, P2],
+      [null, null],
       [2, 1],
       [50, 100],
     ]);
@@ -431,7 +581,23 @@ describe("updateInvoiceDb", () => {
   it("defaults tax to 0", async () => {
     sql.respond(() => [{ ...row, customer_ok: "1", products_ok: "2" }]);
     await update({ ...input, tax_rate: undefined }, ORG);
-    expect(sql.queries()[0].values.slice(5, 7)).toEqual([200, 0]);
+    expect(sql.queries()[0].values.slice(5, 8)).toEqual([200, 0, null]);
+  });
+
+  it("saves a manual total and one-off items", async () => {
+    sql.respond(() => [{ ...row, customer_ok: "1", products_ok: "0" }]);
+    await update(
+      {
+        ...input,
+        total_override: 10,
+        items: [{ description: "Fee", quantity: 1, unit_price: 1 }],
+      },
+      ORG,
+    );
+    const values = sql.queries()[0].values;
+    expect(values[2]).toEqual([]);
+    expect(values.slice(5, 8)).toEqual([10, 15, 10]);
+    expect(values.slice(10)).toEqual([0, [null], ["Fee"], [1], [1]]);
   });
 
   it("rejects a customer from another org", async () => {
@@ -467,10 +633,22 @@ describe("sendInvoiceDb", () => {
     ...row,
     customer_name: "Ann <script>",
     customer_email: "ann@acme.com",
+    customer_phone: "403-555-0100",
+    customer_address_line1: "1 Main & 2nd",
+    customer_city: "Calgary",
+    customer_region: "AB",
+    customer_postal_code: "T2P 1J9",
+    customer_country: "Canada",
   };
   const itemRows = [
     { product_name: "Design & Build", quantity: 2, unit_price: 50 },
-    { product_name: "Support", quantity: 1, unit_price: 100 },
+    {
+      product_id: null,
+      product_name: null,
+      description: "Support",
+      quantity: 1,
+      unit_price: 100,
+    },
   ];
 
   function respondWith(
@@ -547,6 +725,10 @@ describe("sendInvoiceDb", () => {
     expect(raw).toContain("Ann &lt;script&gt;");
     expect(raw).not.toContain("Ann <script>");
     expect(raw).toContain("Design &amp; Build");
+    expect(raw).toContain(">Support</td>");
+    expect(raw).toContain(
+      "1 Main &amp; 2nd<br>Calgary, AB T2P 1J9<br>Canada<br>403-555-0100",
+    );
     expect(raw).toContain('src="https://img.test/logo.png"');
     expect(raw).toContain("admin@shop.test");
     expect(raw).toContain("Tax (15%)");
@@ -575,6 +757,11 @@ describe("sendInvoiceDb", () => {
         "Invoice ID: inv-1",
         "Ann <script>",
         "Design & Build",
+        "Support",
+        "403-555-0100",
+        "1 Main & 2nd",
+        "Calgary, AB T2P 1J9",
+        "Canada",
         "Tax (15%):",
         "$30.00",
         "TOTAL DUE:",
@@ -590,7 +777,15 @@ describe("sendInvoiceDb", () => {
   it("skips the logo, admin note and tax line when there are none", async () => {
     vi.stubEnv("SES_FROM_EMAIL", undefined as unknown as string);
     vi.stubEnv("AWS_REGION", undefined as unknown as string);
-    respondWith({ invoice: { ...invoiceRow, tax_rate: null, total: 200 } });
+    respondWith({
+      invoice: {
+        ...row,
+        customer_name: "Ann",
+        customer_email: "ann@acme.com",
+        tax_rate: null,
+        total: 200,
+      },
+    });
 
     await sendInvoiceDb("inv-1", ORG, "Org");
 
@@ -602,6 +797,7 @@ describe("sendInvoiceDb", () => {
     expect(raw).not.toContain("<img");
     expect(raw).not.toContain("organization administrator");
     expect(raw).not.toContain("Tax (");
+    expect(raw).not.toContain("<br>Canada");
     const [pdf] = mocks.pdf.instances;
     expect(pdf.addImage).not.toHaveBeenCalled();
     expect(pdf.text.mock.calls.map((c) => c[0])).not.toContain(
@@ -649,5 +845,26 @@ describe("sendInvoiceDb", () => {
       "Invoice not found or not authorized",
     );
     expect(mocks.send).toHaveBeenCalled();
+  });
+});
+
+describe("getInvoicePdfDb", () => {
+  it("builds the invoice's PDF without sending anything", async () => {
+    sql.respond(({ text }) =>
+      text.includes("FROM invoice_items")
+        ? [{ product_name: "Design", quantity: 1, unit_price: 10 }]
+        : [{ ...row, customer_name: "Ann", customer_email: "ann@acme.com" }],
+    );
+    const result = await getInvoicePdfDb("inv-1", ORG, "Org");
+    expect(result?.pdf).toEqual(Buffer.from(new ArrayBuffer(4)));
+    expect(result?.invoice).toMatchObject({ id: "inv-1" });
+    expect(mocks.send).not.toHaveBeenCalled();
+    expect(mocks.pdf.instances[0].text.mock.calls.map((c) => c[0])).toContain(
+      "From: Org",
+    );
+  });
+
+  it("returns null when the invoice isn't the org's", async () => {
+    await expect(getInvoicePdfDb("inv-1", ORG, "Org")).resolves.toBeNull();
   });
 });

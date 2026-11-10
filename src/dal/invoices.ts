@@ -1,4 +1,4 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { errAsync, okAsync } from "neverthrow";
 import z from "zod";
 import { isOverMemberShipLimit } from "@/db/clerk";
@@ -7,12 +7,15 @@ import {
   deleteInvoiceDb,
   fetchingInvoiceByIdDb,
   fetchingInvoicesDb,
+  getInvoicePdfDb,
   getMonthlyInvoiceCount,
+  loadInvoiceByIdDb,
   searchInvoicesDb,
   sendInvoiceDb,
   updateInvoiceDb,
   updateInvoiceStatusDb,
 } from "@/db/invoices";
+import { type AuthContext, resolveAuth } from "@/lib/auth-context";
 import {
   CreateInvoiceSchema,
   IdSchema,
@@ -31,14 +34,16 @@ import type {
 export async function getInvoices(
   page: number,
   query?: string,
+  ctx?: AuthContext,
+  status?: Invoice["status"],
 ): Promise<Result<PaginatedValue<Invoice>>> {
-  const { orgId } = await auth.protect();
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return { data: null, error: "No org" };
   }
 
   try {
-    const data = await fetchingInvoicesDb(orgId, page, query);
+    const data = await fetchingInvoicesDb(orgId, page, query, status);
     return { data, error: null };
   } catch (e: unknown) {
     console.error("Database Fetch Error:", e);
@@ -46,13 +51,20 @@ export async function getInvoices(
   }
 }
 
-export async function getInvoiceById(id: string): Promise<Result<FullInvoice>> {
-  const { orgId } = await auth.protect();
+export async function getInvoiceById(
+  id: string,
+  ctx?: AuthContext,
+  /** Skip the cache, to read a change made earlier in the same request. */
+  fresh = false,
+): Promise<Result<FullInvoice>> {
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return { data: null, error: "No org" };
   }
   try {
-    const data = await fetchingInvoiceByIdDb(id, orgId);
+    const data = fresh
+      ? await loadInvoiceByIdDb(id, orgId)
+      : await fetchingInvoiceByIdDb(id, orgId);
     if (!data) return { data: null, error: "Invoice not found" };
     return { data, error: null };
   } catch (e: unknown) {
@@ -61,8 +73,11 @@ export async function getInvoiceById(id: string): Promise<Result<FullInvoice>> {
   }
 }
 
-export async function createInvoiceDal(input: CreateInvoiceInput) {
-  const { orgId, has } = await auth.protect();
+export async function createInvoiceDal(
+  input: CreateInvoiceInput,
+  ctx?: AuthContext,
+) {
+  const { orgId, has } = await resolveAuth(ctx);
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
@@ -143,8 +158,8 @@ export async function createInvoiceDal(input: CreateInvoiceInput) {
     return errAsync({ reason: "Db failed to create invoice" } as const);
   }
 }
-export async function deleteInvoiceDal(id: string) {
-  const { orgId } = await auth.protect();
+export async function deleteInvoiceDal(id: string, ctx?: AuthContext) {
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
   }
@@ -170,8 +185,9 @@ export async function deleteInvoiceDal(id: string) {
 export async function updateInvoiceStatusDal(
   id: string,
   status: "draft" | "sent" | "paid",
+  ctx?: AuthContext,
 ) {
-  const { orgId } = await auth.protect();
+  const { orgId } = await resolveAuth(ctx);
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);
@@ -195,8 +211,76 @@ export async function updateInvoiceStatusDal(
   }
 }
 
-export async function sendInvoiceDal(id: string) {
-  const { orgId, has } = await auth.protect();
+/**
+ * The organization's name and logo as the invoice shows them, and the first
+ * admin's email, which the invoice email names as its sender.
+ */
+async function orgSenderDetails(orgId: string) {
+  const client = await clerkClient();
+
+  const [org, memberships] = await Promise.all([
+    client.organizations.getOrganization({ organizationId: orgId }),
+    client.organizations.getOrganizationMembershipList({
+      organizationId: orgId,
+    }),
+  ]);
+
+  // Find the first admin to get their email
+  const adminMembership = memberships.data.find((m) => m.role === "org:admin");
+
+  let adminEmail: string | undefined;
+  if (adminMembership?.publicUserData?.userId) {
+    const user = await client.users.getUser(
+      adminMembership.publicUserData.userId,
+    );
+    adminEmail = user.emailAddresses[0]?.emailAddress;
+  }
+
+  return {
+    orgName: org.name,
+    orgImageUrl: org.imageUrl,
+    adminEmail,
+  };
+}
+
+/** The invoice as the PDF its email attaches, with the invoice it shows. */
+export async function getInvoicePdfDal(id: string, ctx?: AuthContext) {
+  const { orgId } = await resolveAuth(ctx);
+  if (!orgId) {
+    return errAsync({ reason: "Not authorized" } as const);
+  }
+
+  const validation = IdSchema.safeParse({ id });
+  if (!validation.success) {
+    return errAsync({
+      reason: "Validation failed",
+      errors: z.treeifyError(validation.error),
+    } as const);
+  }
+
+  try {
+    const client = await clerkClient();
+    const org = await client.organizations.getOrganization({
+      organizationId: orgId,
+    });
+    const found = await getInvoicePdfDb(
+      id,
+      orgId,
+      org.name,
+      org.hasImage ? org.imageUrl : undefined,
+    );
+    if (!found) {
+      return errAsync({ reason: "Invoice not found" } as const);
+    }
+    return okAsync(found);
+  } catch (e: unknown) {
+    console.error("Invoice PDF Error:", e);
+    return errAsync({ reason: "Failed to build invoice PDF" } as const);
+  }
+}
+
+export async function sendInvoiceDal(id: string, ctx?: AuthContext) {
+  const { orgId, has } = await resolveAuth(ctx);
 
   const hasSendEmail = has({ feature: "send_email" });
   if (!orgId || !hasSendEmail) {
@@ -217,29 +301,7 @@ export async function sendInvoiceDal(id: string) {
   let adminEmail: string | undefined;
 
   try {
-    const client = await clerkClient();
-
-    const [org, memberships] = await Promise.all([
-      client.organizations.getOrganization({ organizationId: orgId }),
-      client.organizations.getOrganizationMembershipList({
-        organizationId: orgId,
-      }),
-    ]);
-
-    orgName = org.name;
-    orgImageUrl = org.imageUrl;
-
-    // Find the first admin to get their email
-    const adminMembership = memberships.data.find(
-      (m) => m.role === "org:admin",
-    );
-
-    if (adminMembership?.publicUserData?.userId) {
-      const user = await client.users.getUser(
-        adminMembership.publicUserData.userId,
-      );
-      adminEmail = user.emailAddresses[0]?.emailAddress;
-    }
+    ({ orgName, orgImageUrl, adminEmail } = await orgSenderDetails(orgId));
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     console.error("Send Invoice Error (Clerk lookup):", e);
@@ -264,8 +326,9 @@ export async function sendInvoiceDal(id: string) {
 
 export async function searchInvoicesDal(
   query: string,
+  ctx?: AuthContext,
 ): Promise<Result<Invoice[]>> {
-  const { orgId } = await auth.protect();
+  const { orgId } = await resolveAuth(ctx);
   if (!orgId) {
     return { data: null, error: "No org" };
   }
@@ -278,8 +341,11 @@ export async function searchInvoicesDal(
   }
 }
 
-export async function updateInvoiceDal(input: UpdateInvoiceInput) {
-  const { orgId } = await auth.protect();
+export async function updateInvoiceDal(
+  input: UpdateInvoiceInput,
+  ctx?: AuthContext,
+) {
+  const { orgId } = await resolveAuth(ctx);
 
   if (!orgId) {
     return errAsync({ reason: "Not authorized" } as const);

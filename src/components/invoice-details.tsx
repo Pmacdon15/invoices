@@ -11,6 +11,8 @@ import type {
   Product,
   Result,
 } from "@/dal/types";
+import { addressLines } from "@/lib/address";
+import { lineItemName } from "@/lib/invoice-totals";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
 import { SendInvoiceButton } from "./buttons/send-invoice-button";
 import { EditInvoiceDialog } from "./edit-invoice-dialog";
@@ -115,6 +117,16 @@ export function InvoiceDetails({
             <CardContent>
               <h3 className="text-xl font-bold">{invoice.customer.name}</h3>
               <p className="text-muted-foreground">{invoice.customer.email}</p>
+              {invoice.customer.phone && (
+                <p className="text-muted-foreground">
+                  {invoice.customer.phone}
+                </p>
+              )}
+              {addressLines(invoice.customer).map((line) => (
+                <p key={line} className="text-sm text-muted-foreground">
+                  {line}
+                </p>
+              ))}
             </CardContent>
           </Card>
 
@@ -131,6 +143,12 @@ export function InvoiceDetails({
               <div className="text-3xl font-black text-primary">
                 {currencyFormatter.format(invoice.total)}
               </div>
+              {invoice.total_override !== null &&
+                invoice.total_override !== undefined && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Manual total (line items and tax not used)
+                  </p>
+                )}
             </CardContent>
           </Card>
         </div>
@@ -146,7 +164,7 @@ export function InvoiceDetails({
               {invoice.items.map((item) => (
                 <div key={item.id} className="p-4 space-y-2">
                   <div className="flex justify-between items-start">
-                    <div className="font-bold pr-2">{item.product?.name}</div>
+                    <div className="font-bold pr-2">{lineItemName(item)}</div>
                     <div className="font-black text-primary">
                       {currencyFormatter.format(
                         item.quantity * item.unit_price,
@@ -159,7 +177,9 @@ export function InvoiceDetails({
                       {currencyFormatter.format(item.unit_price)}
                     </span>
                     <span className="font-mono uppercase">
-                      ID: {item.product_id.slice(0, 8)}
+                      {item.product_id
+                        ? `ID: ${item.product_id.slice(0, 8)}`
+                        : "One-off"}
                     </span>
                   </div>
                 </div>
@@ -231,9 +251,11 @@ export function InvoiceDetails({
                     className="hover:bg-muted/20 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <div className="font-bold">{item.product?.name}</div>
+                      <div className="font-bold">{lineItemName(item)}</div>
                       <div className="text-xs text-muted-foreground">
-                        Product ID: {item.product_id.slice(0, 8)}
+                        {item.product_id
+                          ? `Product ID: ${item.product_id.slice(0, 8)}`
+                          : "One-off item"}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">{item.quantity}</td>

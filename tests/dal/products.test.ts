@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   protect: vi.fn(),
+  getProductByIdDb: vi.fn(),
   has: vi.fn(),
   createProductDb: vi.fn(),
   deleteProductDb: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock("@clerk/nextjs/server", () => ({
   auth: { protect: mocks.protect },
 }));
 vi.mock("@/db/products", () => ({
+  getProductByIdDb: mocks.getProductByIdDb,
   createProductDb: mocks.createProductDb,
   deleteProductDb: mocks.deleteProductDb,
   fetchingProductsDb: mocks.fetchingProductsDb,
@@ -26,6 +28,7 @@ vi.mock("@/db/products", () => ({
 import {
   createProductDal,
   deleteProductDal,
+  getProductByIdDal,
   getProducts,
   searchProductsDal,
   updateProductDal,
@@ -303,5 +306,36 @@ describe("updateProductDal", () => {
     expect((await updateProductDal(update))._unsafeUnwrapErr()).toEqual({
       reason: "Db failed to update product",
     });
+  });
+});
+
+describe("getProductByIdDal", () => {
+  it("reads one of the org's products", async () => {
+    mocks.getProductByIdDb.mockResolvedValue({ id: ID });
+    await expect(getProductByIdDal(ID)).resolves.toEqual({
+      data: { id: ID },
+      error: null,
+    });
+    expect(mocks.getProductByIdDb).toHaveBeenCalledWith(ID, "org_1");
+  });
+
+  it("uses a given context instead of the session", async () => {
+    mocks.getProductByIdDb.mockResolvedValue({ id: ID });
+    mocks.protect.mockClear();
+    await getProductByIdDal(ID, { orgId: "org_mcp", has: () => false });
+    expect(mocks.getProductByIdDb).toHaveBeenCalledWith(ID, "org_mcp");
+    expect(mocks.protect).not.toHaveBeenCalled();
+  });
+
+  it("explains a missing org, a bad ID, a missing product or a failure", async () => {
+    mocks.protect.mockResolvedValueOnce({ orgId: null, has: () => false });
+    expect((await getProductByIdDal(ID)).error).toBe("No org");
+    expect((await getProductByIdDal("nope")).error).toBe("Invalid product ID");
+    mocks.getProductByIdDb.mockResolvedValue(null);
+    expect((await getProductByIdDal(ID)).error).toBe("Product not found");
+    mocks.getProductByIdDb.mockRejectedValue(new Error("boom"));
+    expect((await getProductByIdDal(ID)).error).toBe(
+      "Database error occurred.",
+    );
   });
 });

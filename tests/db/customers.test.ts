@@ -10,6 +10,7 @@ import {
   createCustomerDb,
   deleteCustomerDb,
   fetchingCustomersDb,
+  getCustomerByIdDb,
   getCustomerCount,
   searchCustomersDb,
   updateCustomerDb,
@@ -128,7 +129,49 @@ describe("createCustomerDb", () => {
       ),
     ).resolves.toEqual(customer);
     expect(sql.calls[0].text).toContain("INSERT INTO customers");
-    expect(sql.calls[0].values).toEqual(["Ann", "ann@x.com", "org_1"]);
+    expect(sql.calls[0].values).toEqual([
+      "Ann",
+      "ann@x.com",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "org_1",
+    ]);
+  });
+
+  it("saves phone and address, with blanks as NULL", async () => {
+    sql.respond(() => [customer]);
+    await createCustomerDb(
+      {
+        name: "Ann",
+        email: "ann@x.com",
+        phone: " 555-0100 ",
+        address_line1: "1 Main St",
+        address_line2: "  ",
+        city: "Calgary",
+        region: "AB",
+        postal_code: "T2P 1J9",
+        country: "Canada",
+        status: "active",
+      },
+      "org_1",
+    );
+    expect(sql.calls[0].values).toEqual([
+      "Ann",
+      "ann@x.com",
+      "555-0100",
+      "1 Main St",
+      null,
+      "Calgary",
+      "AB",
+      "T2P 1J9",
+      "Canada",
+      "org_1",
+    ]);
   });
 });
 
@@ -182,9 +225,23 @@ describe("updateCustomerDb", () => {
     });
     const [query] = sql.calls;
     // The client can't change status; plan limits and deletes own it.
-    expect(query.text).toContain("SET name = ?, email = ? WHERE");
+    expect(query.text).toContain(
+      "SET name = ?, email = ?, phone = ?, address_line1 = ?, address_line2 = ?, city = ?, region = ?, postal_code = ?, country = ? WHERE",
+    );
     expect(query.text).not.toMatch(/status = \?/);
-    expect(query.values).toEqual(["Ann B", "annb@x.com", "c1", "org_1"]);
+    expect(query.values).toEqual([
+      "Ann B",
+      "annb@x.com",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "c1",
+      "org_1",
+    ]);
     expect(query.text).toContain("status != 'deleted'");
   });
 
@@ -197,6 +254,26 @@ describe("updateCustomerDb", () => {
   it("fails without a database URL", async () => {
     vi.stubEnv("DATABASE_URL", "");
     await expect(updateCustomerDb(input, "org_1")).rejects.toThrow(
+      "Config Error",
+    );
+  });
+});
+
+describe("getCustomerByIdDb", () => {
+  it("reads one of the org's customers, uncached", async () => {
+    sql.respond(() => [customer]);
+    await expect(getCustomerByIdDb("c1", "org_1")).resolves.toEqual(customer);
+    expect(sql.calls[0].text).toContain("status != 'deleted'");
+    expect(sql.calls[0].values).toEqual(["c1", "org_1"]);
+  });
+
+  it("returns null when there's no such customer", async () => {
+    await expect(getCustomerByIdDb("c1", "org_1")).resolves.toBeNull();
+  });
+
+  it("fails without a database URL", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+    await expect(getCustomerByIdDb("c1", "org_1")).rejects.toThrow(
       "Config Error",
     );
   });

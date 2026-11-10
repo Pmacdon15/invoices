@@ -159,3 +159,19 @@ export async function updateProductDb(
   }
   return result[0] as Product;
 }
+
+/** One product of the org (not deleted), straight from the database. */
+export async function getProductByIdDb(
+  id: string,
+  orgId: string,
+): Promise<Product | null> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+  const sql = neon(process.env.DATABASE_URL);
+  const [product] = (await sql`
+    SELECT * FROM products
+    WHERE id = ${id} AND org_id = ${orgId} AND status != 'deleted'
+  `) as Product[];
+  return product ?? null;
+}

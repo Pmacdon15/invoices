@@ -225,3 +225,74 @@ describe("invoice schemas", () => {
     ).toBe(false);
   });
 });
+
+describe("one-off line items and manual totals", () => {
+  it("accepts an item with a description instead of a product", () => {
+    const result = CreateInvoiceSchema.safeParse({
+      ...validInvoice,
+      total_override: "250.5",
+      items: [
+        {
+          product_id: null,
+          description: " Call-out ",
+          quantity: 1,
+          unit_price: 75,
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.items[0].description).toBe("Call-out");
+    expect(result.data?.total_override).toBe(250.5);
+  });
+
+  it("needs a product or a description on every item", () => {
+    const result = CreateInvoiceSchema.safeParse({
+      ...validInvoice,
+      items: [{ quantity: 1, unit_price: 75 }],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      message: "Please select a product",
+      path: ["items", 0, "product_id"],
+    });
+  });
+
+  it("keeps a null manual total, and refuses a negative one", () => {
+    expect(
+      CreateInvoiceSchema.safeParse({ ...validInvoice, total_override: null })
+        .data?.total_override,
+    ).toBeNull();
+    expect(
+      CreateInvoiceSchema.safeParse({ ...validInvoice, total_override: -1 })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("customer contact details", () => {
+  it("accepts optional phone and address fields, trimmed", () => {
+    const result = CreateCustomerSchema.safeParse({
+      ...validCustomer,
+      phone: " 403-555-0100 ",
+      address_line1: "1 Main St",
+      city: "Calgary",
+      region: "AB",
+      postal_code: "T2P 1J9",
+      country: "Canada",
+      address_line2: null,
+    });
+    expect(result.data).toMatchObject({
+      phone: "403-555-0100",
+      address_line2: null,
+    });
+  });
+
+  it("limits their length", () => {
+    expect(
+      CreateCustomerSchema.safeParse({
+        ...validCustomer,
+        postal_code: "x".repeat(21),
+      }).error?.issues[0].message,
+    ).toBe("Must be at most 20 characters");
+  });
+});

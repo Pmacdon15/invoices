@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   fetchingInvoiceByIdDb: vi.fn(),
   fetchingInvoicesDb: vi.fn(),
   getMonthlyInvoiceCount: vi.fn(),
+  getInvoicePdfDb: vi.fn(),
+  loadInvoiceByIdDb: vi.fn(),
   searchInvoicesDb: vi.fn(),
   sendInvoiceDb: vi.fn(),
   updateInvoiceDb: vi.fn(),
@@ -31,6 +33,8 @@ vi.mock("@/db/invoices", () => ({
   fetchingInvoiceByIdDb: mocks.fetchingInvoiceByIdDb,
   fetchingInvoicesDb: mocks.fetchingInvoicesDb,
   getMonthlyInvoiceCount: mocks.getMonthlyInvoiceCount,
+  getInvoicePdfDb: mocks.getInvoicePdfDb,
+  loadInvoiceByIdDb: mocks.loadInvoiceByIdDb,
   searchInvoicesDb: mocks.searchInvoicesDb,
   sendInvoiceDb: mocks.sendInvoiceDb,
   updateInvoiceDb: mocks.updateInvoiceDb,
@@ -41,6 +45,7 @@ import {
   createInvoiceDal,
   deleteInvoiceDal,
   getInvoiceById,
+  getInvoicePdfDal,
   getInvoices,
   searchInvoicesDal,
   sendInvoiceDal,
@@ -87,7 +92,29 @@ describe("getInvoices", () => {
       data: { data: [] },
       error: null,
     });
-    expect(mocks.fetchingInvoicesDb).toHaveBeenCalledWith("org_1", 3, "acme");
+    expect(mocks.fetchingInvoicesDb).toHaveBeenCalledWith(
+      "org_1",
+      3,
+      "acme",
+      undefined,
+    );
+  });
+
+  it("runs for a given context instead of the session, with a status filter", async () => {
+    mocks.fetchingInvoicesDb.mockResolvedValue({ data: [] });
+    await getInvoices(
+      1,
+      undefined,
+      { orgId: "org_mcp", has: () => true },
+      "sent",
+    );
+    expect(mocks.protect).not.toHaveBeenCalled();
+    expect(mocks.fetchingInvoicesDb).toHaveBeenCalledWith(
+      "org_mcp",
+      1,
+      undefined,
+      "sent",
+    );
   });
 
   it("refuses a caller with no org", async () => {
@@ -495,6 +522,76 @@ describe("updateInvoiceDal", () => {
     mocks.updateInvoiceDb.mockRejectedValue(thrown);
     expect((await updateInvoiceDal(update))._unsafeUnwrapErr()).toEqual({
       reason: "Db failed to update invoice",
+    });
+  });
+});
+
+describe("getInvoiceById fresh reads", () => {
+  it("skips the cache when asked", async () => {
+    mocks.loadInvoiceByIdDb.mockResolvedValue({ id: ID });
+    await expect(getInvoiceById(ID, undefined, true)).resolves.toEqual({
+      data: { id: ID },
+      error: null,
+    });
+    expect(mocks.fetchingInvoiceByIdDb).not.toHaveBeenCalled();
+    expect(mocks.loadInvoiceByIdDb).toHaveBeenCalledWith(ID, "org_1");
+  });
+});
+
+describe("getInvoicePdfDal", () => {
+  beforeEach(() => {
+    mocks.getOrganization.mockResolvedValue({
+      name: "Acme",
+      hasImage: true,
+      imageUrl: "https://img/acme.png",
+    });
+  });
+
+  it("builds the PDF with the org's name and logo", async () => {
+    mocks.getInvoicePdfDb.mockResolvedValue({
+      pdf: "PDF",
+      invoice: { id: ID },
+    });
+    const result = await getInvoicePdfDal(ID);
+    expect(result._unsafeUnwrap()).toEqual({ pdf: "PDF", invoice: { id: ID } });
+    expect(mocks.getInvoicePdfDb).toHaveBeenCalledWith(
+      ID,
+      "org_1",
+      "Acme",
+      "https://img/acme.png",
+    );
+  });
+
+  it("leaves out Clerk's placeholder image", async () => {
+    mocks.getOrganization.mockResolvedValue({
+      name: "Acme",
+      hasImage: false,
+      imageUrl: "https://img/default.png",
+    });
+    mocks.getInvoicePdfDb.mockResolvedValue({ pdf: "PDF", invoice: {} });
+    await getInvoicePdfDal(ID);
+    expect(mocks.getInvoicePdfDb.mock.calls[0][3]).toBeUndefined();
+  });
+
+  it("refuses without an org or a valid ID", async () => {
+    signIn([], null);
+    expect((await getInvoicePdfDal(ID))._unsafeUnwrapErr()).toEqual({
+      reason: "Not authorized",
+    });
+    signIn();
+    expect((await getInvoicePdfDal("nope"))._unsafeUnwrapErr()).toMatchObject({
+      reason: "Validation failed",
+    });
+  });
+
+  it("reports a missing invoice or a failure", async () => {
+    mocks.getInvoicePdfDb.mockResolvedValue(null);
+    expect((await getInvoicePdfDal(ID))._unsafeUnwrapErr()).toEqual({
+      reason: "Invoice not found",
+    });
+    mocks.getInvoicePdfDb.mockRejectedValue(new Error("boom"));
+    expect((await getInvoicePdfDal(ID))._unsafeUnwrapErr()).toEqual({
+      reason: "Failed to build invoice PDF",
     });
   });
 });

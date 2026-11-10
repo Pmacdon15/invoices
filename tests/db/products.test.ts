@@ -10,6 +10,7 @@ import {
   createProductDb,
   deleteProductDb,
   fetchingProductsDb,
+  getProductByIdDb,
   getProductCount,
   searchProductsDb,
   updateProductDb,
@@ -177,6 +178,26 @@ describe("updateProductDb", () => {
   it("fails without a database URL", async () => {
     vi.stubEnv("DATABASE_URL", "");
     await expect(updateProductDb(input, "org_1")).rejects.toThrow(
+      "Config Error",
+    );
+  });
+});
+
+describe("getProductByIdDb", () => {
+  it("reads one of the org's products, uncached", async () => {
+    sql.respond(() => [product]);
+    await expect(getProductByIdDb("p1", "org_1")).resolves.toEqual(product);
+    expect(sql.calls[0].text).toContain("status != 'deleted'");
+    expect(sql.calls[0].values).toEqual(["p1", "org_1"]);
+  });
+
+  it("returns null when there's no such product", async () => {
+    await expect(getProductByIdDb("p1", "org_1")).resolves.toBeNull();
+  });
+
+  it("fails without a database URL", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+    await expect(getProductByIdDb("p1", "org_1")).rejects.toThrow(
       "Config Error",
     );
   });
