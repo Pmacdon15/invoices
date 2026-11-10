@@ -21,7 +21,7 @@ function ChartSkeleton() {
   return <Skeleton className="h-100 w-full mt-4" />;
 }
 
-export default async function StatsPage() {
+export default function StatsPage() {
   // Start the fetch but don't await it here
   const statsResponsePromise = getStatsDal();
 

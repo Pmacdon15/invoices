@@ -4,7 +4,7 @@ import { ProductsManagement } from "@/components/management/products-management"
 import { SearchSelector } from "@/components/ui/search-selector";
 import { getProducts } from "@/dal/products";
 
-export default async function ProductsPage(props: PageProps<"/products">) {
+export default function ProductsPage(props: PageProps<"/products">) {
   const dataPromise = props.searchParams.then((searchParams) => {
     const page =
       Number(

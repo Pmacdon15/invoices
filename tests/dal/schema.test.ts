@@ -8,7 +8,7 @@ import {
   UpdateInvoiceSchema,
   UpdateInvoiceStatusSchema,
   UpdateProductSchema,
-} from "./schema";
+} from "@/dal/schema";
 
 const customerId = "123e4567-e89b-42d3-a456-426614174000";
 const productId = "123e4567-e89b-42d3-a456-426614174001";

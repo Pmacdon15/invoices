@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInvoiceTotals } from "./invoice-totals";
+import { calculateInvoiceTotals } from "@/lib/invoice-totals";
 
 describe("calculateInvoiceTotals", () => {
   it("returns zero amounts for an empty invoice", () => {

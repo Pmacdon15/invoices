@@ -42,6 +42,8 @@ export function DataTable<TData, TValue>({
   });
 
   const rowModel = table.getRowModel();
+  // getRowModel always returns a model with a rows array.
+  /* v8 ignore next -- @preserve */
   const rows = rowModel?.rows || [];
 
   const handlePageChange = (newPage: number) => {
@@ -75,7 +77,11 @@ export function DataTable<TData, TValue>({
               rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  // Row selection isn't enabled, so rows are never selected.
+                  data-state={
+                    /* v8 ignore next -- @preserve */
+                    row.getIsSelected() && "selected"
+                  }
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

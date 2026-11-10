@@ -39,6 +39,8 @@ export function InvoicesManagement({
   const [optimisticState, setOptimistic] = useOptimistic(
     data,
     (state, action: OptimisticAction) => {
+      // State is only null when loading failed, and then nothing can dispatch.
+      /* v8 ignore next -- @preserve */
       if (!state) return state;
 
       if (action.type === "add") {
@@ -65,6 +67,8 @@ export function InvoicesManagement({
     return <div className="text-destructive">Error: {error}</div>;
   }
 
+  // optimisticState is never null past the error check above.
+  /* v8 ignore next -- @preserve */
   const filteredInvoices =
     optimisticState?.data.filter((invoice) => {
       if (statusFilter === "all") return true;

@@ -91,11 +91,14 @@ export function CustomerForm({
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="Acme Corp"
               />
+              {/* Only a form-level validator runs, so field errors stay empty. */}
+              {/* v8 ignore start -- @preserve */}
               {field.state.meta.errors.length > 0 && (
                 <em className="text-sm text-destructive">
                   {field.state.meta.errors.join(", ")}
                 </em>
               )}
+              {/* v8 ignore stop -- @preserve */}
             </div>
           )}
         </form.Field>
@@ -113,11 +116,14 @@ export function CustomerForm({
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="billing@acme.com"
               />
+              {/* Only a form-level validator runs, so field errors stay empty. */}
+              {/* v8 ignore start -- @preserve */}
               {field.state.meta.errors.length > 0 && (
                 <em className="text-sm text-destructive">
                   {field.state.meta.errors.join(", ")}
                 </em>
               )}
+              {/* v8 ignore stop -- @preserve */}
             </div>
           )}
         </form.Field>
