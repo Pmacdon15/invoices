@@ -523,7 +523,7 @@ export function InvoiceForm({
     <Card className="max-w-4xl mx-auto shadow-lg border-muted/50">
       <CardHeader>
         <CardTitle className="text-2xl font-bold">
-          {initialData ? "Edit Invoice" : "Create New Invoice"}
+          <h1>{initialData ? "Edit Invoice" : "Create New Invoice"}</h1>
         </CardTitle>
         <CardDescription>
           {initialData

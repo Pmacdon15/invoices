@@ -329,7 +329,7 @@ export default function NewInvoiceFallback({ isModal }: InvoiceFormProps) {
     <Card className="max-w-4xl mx-auto shadow-lg border-muted/50">
       <CardHeader>
         <CardTitle className="text-2xl font-bold">
-          "Create New Invoice
+          <h1>Create New Invoice</h1>
         </CardTitle>
         <CardDescription>
           Generate a new invoice by selecting a customer and adding products.

@@ -4,7 +4,7 @@ import { CustomersManagement } from "@/components/management/customers-managemen
 import { SearchSelector } from "@/components/ui/search-selector";
 import { getCustomers } from "@/dal/customers";
 
-export default async function CustomersPage(props: PageProps<"/customers">) {
+export default function CustomersPage(props: PageProps<"/customers">) {
   const dataPromise = props.searchParams.then((params) => {
     const page =
       Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1;

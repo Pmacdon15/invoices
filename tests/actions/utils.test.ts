@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { redirect } = vi.hoisted(() => ({ redirect: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect }));
 
-import { handleMutationError } from "./utils";
+import { handleMutationError } from "@/actions/utils";
 
 describe("handleMutationError", () => {
   beforeEach(() => redirect.mockReset());
