@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { Footer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
 import Providers from "@/components/providers/provider";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,6 +21,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "InvoicePro - Effortless Invoicing",
   description: "Manage customers, products, and invoices with ease.",
+  applicationName: "InvoicePro",
+  appleWebApp: {
+    capable: true,
+    title: "InvoicePro",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({
@@ -38,6 +52,7 @@ export default function RootLayout({
               <Navbar />
               <main className="flex-1">{children}</main>
               <Toaster />
+              <PwaInstallBanner />
               <Footer />
             </div>
           </Providers>
