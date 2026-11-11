@@ -16,6 +16,8 @@ export type ActionErrorReason =
   | "Db failed to delete invoice"
   | "Failed to send invoice"
   | "Failed to verify limits"
+  | "Admins only"
+  | "Db failed to update settings"
   | "Customer not found or is disabled"
   | "One or more products are not found or are disabled"
   | `Usage limit reached, limit: ${string}`
@@ -52,6 +54,8 @@ export function handleMutationError(error: ActionError) {
       };
 
     case "Failed to verify limits":
+    case "Admins only":
+    case "Db failed to update settings":
     case "Customer not found or is disabled":
     case "One or more products are not found or are disabled":
     case "Unknown Db error":

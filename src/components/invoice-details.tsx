@@ -12,8 +12,10 @@ import type {
   Result,
 } from "@/dal/types";
 import { addressLines } from "@/lib/address";
+import { invoiceLabel } from "@/lib/invoice-number";
 import { lineItemName } from "@/lib/invoice-totals";
 import { isOverdue } from "@/lib/overdue";
+import { formatDueDate } from "@/lib/payment-terms";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
 import { SendInvoiceButton } from "./buttons/send-invoice-button";
 import { EditInvoiceDialog } from "./edit-invoice-dialog";
@@ -47,15 +49,16 @@ export function InvoiceDetails({
     style: "currency",
     currency: "USD",
   });
+  const label = invoiceLabel(invoice);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="w-full md:w-auto">
           <h1 className="text-4xl font-black mb-2 uppercase tracking-tight">
-            Invoice
+            Invoice {label}
           </h1>
-          <p className="font-mono text-muted-foreground text-sm break-all">
+          <p className="font-mono text-muted-foreground text-xs break-all">
             ID: {invoice.id}
           </p>
         </div>
@@ -72,7 +75,7 @@ export function InvoiceDetails({
               currentStatus={invoice.status as "draft" | "sent" | "paid"}
             />
           )}
-          <DownloadPDFButton invoiceId={invoice.id} />
+          <DownloadPDFButton invoiceId={invoice.id} invoiceLabel={label} />
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-2">
               {isOverdue(invoice) && (
@@ -114,6 +117,28 @@ export function InvoiceDetails({
           <h1 className="text-xl md:text-2xl font-bold">
             {organization?.name}
           </h1>
+          <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
+            <p>
+              <span className="text-muted-foreground">Invoice </span>
+              <span className="font-bold">{label}</span>
+            </p>
+            <p>
+              <span className="text-muted-foreground">Date </span>
+              <span className="font-bold">
+                {new Date(invoice.created_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </p>
+            <p>
+              <span className="text-muted-foreground">Due </span>
+              <span className="font-bold">
+                {formatDueDate(invoice.due_date)}
+              </span>
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

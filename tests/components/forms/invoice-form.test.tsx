@@ -145,7 +145,7 @@ describe("InvoiceForm", () => {
   it("fills the price from the product, totals lines with tax, and creates", async () => {
     const user = userEvent.setup();
     await renderForm();
-    const [customerSelect, statusSelect, productSelect] =
+    const [customerSelect, statusSelect, , productSelect] =
       screen.getAllByRole("combobox");
 
     await choose(user, customerSelect, "Globex");
@@ -172,6 +172,7 @@ describe("InvoiceForm", () => {
         status: "sent",
         tax_rate: 10,
         total_override: null,
+        due_date: null,
         items: [{ product_id: consulting.id, quantity: 3, unit_price: 100 }],
       }),
     );
@@ -232,7 +233,7 @@ describe("InvoiceForm", () => {
         page([consulting], { totalCount: 1, data: [consulting] }),
       ),
     });
-    const productSelect = screen.getAllByRole("combobox")[2];
+    const productSelect = screen.getAllByRole("combobox")[3];
     await choose(user, productSelect, "Consulting");
     const price = within(screen.getAllByRole("row")[1]).getAllByRole(
       "spinbutton",
@@ -269,7 +270,7 @@ describe("InvoiceForm", () => {
     const user = userEvent.setup();
     const onOptimistic = vi.fn();
     await renderForm({ onOptimistic });
-    const [customerSelect, , productSelect] = screen.getAllByRole("combobox");
+    const [customerSelect, , , productSelect] = screen.getAllByRole("combobox");
     await choose(user, customerSelect, "Acme Corp");
     await choose(user, productSelect, "Design");
     await user.type(screen.getByPlaceholderText("0.00"), "50");
@@ -284,6 +285,9 @@ describe("InvoiceForm", () => {
       tax_rate: 50,
       total: 60,
       total_override: null,
+      due_date: null,
+      invoice_number: null,
+      invoice_prefix: null,
       created_at: "2026-03-01T00:00:00.000Z",
       customer: acme,
     });
@@ -311,6 +315,7 @@ describe("InvoiceForm", () => {
         status: "paid",
         tax_rate: 5,
         total_override: null,
+        due_date: null,
         items: [
           {
             product_id: consulting.id,
@@ -419,6 +424,87 @@ describe("InvoiceForm", () => {
       }),
     });
     expect(screen.getByText("Select product")).toBeInTheDocument();
+  });
+
+  it("sets the due date from the payment terms, counted from today", async () => {
+    vi.useFakeTimers({
+      toFake: ["Date"],
+      now: new Date("2026-11-11T12:00:00Z"),
+    });
+    const user = userEvent.setup();
+    const onOptimistic = vi.fn();
+    await renderForm({ onOptimistic });
+    const [customerSelect, , termsSelect, productSelect] =
+      screen.getAllByRole("combobox");
+    expect(termsSelect).toHaveTextContent("Due upon receipt");
+    expect(
+      screen.getByText("Due upon receipt", { selector: "p" }),
+    ).toBeVisible();
+
+    await choose(user, customerSelect, "Acme Corp");
+    await choose(user, productSelect, "Design");
+    await choose(user, termsSelect, "Net 30");
+    expect(screen.getByText("Due Dec 11, 2026")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
+
+    await choose(user, termsSelect, "Net 15");
+    expect(screen.getByText("Due Nov 26, 2026")).toBeInTheDocument();
+
+    // A custom date starts from the current one, and can be changed.
+    await choose(user, termsSelect, "Custom date");
+    const custom = screen.getByLabelText("Due date");
+    expect(custom).toHaveValue("2026-11-26");
+    await user.clear(custom);
+    expect(
+      screen.getByText("Due upon receipt", { selector: "p" }),
+    ).toBeVisible();
+    await user.type(custom, "2027-01-15");
+    expect(screen.getByText("Due Jan 15, 2027")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Create Invoice" }));
+    await waitFor(() =>
+      expect(m.create).toHaveBeenCalledWith(
+        expect.objectContaining({ due_date: "2027-01-15" }),
+      ),
+    );
+    expect(onOptimistic).toHaveBeenCalledWith(
+      expect.objectContaining({ due_date: "2027-01-15" }),
+    );
+    vi.useRealTimers();
+  });
+
+  it("starts a custom date on the invoice date when there's no due date", async () => {
+    const user = userEvent.setup();
+    await renderForm({ initialData: fullInvoice() });
+    await choose(user, screen.getAllByRole("combobox")[2], "Custom date");
+    // fullInvoice is dated Jan 15, 2026.
+    expect(screen.getByLabelText("Due date")).toHaveValue("2026-01-15");
+  });
+
+  it("reads an invoice's terms from its due date, and can clear them", async () => {
+    const user = userEvent.setup();
+    const existing = fullInvoice({
+      due_date: "2026-01-30",
+      invoice_number: 42,
+      invoice_prefix: "INV",
+    });
+    const onOptimistic = vi.fn();
+    await renderForm({ initialData: existing, onOptimistic });
+    const termsSelect = screen.getAllByRole("combobox")[2];
+    // fullInvoice is dated Jan 15, 2026, so Jan 30 is Net 15.
+    expect(termsSelect).toHaveTextContent("Net 15");
+    expect(screen.getByText("Due Jan 30, 2026")).toBeInTheDocument();
+
+    await choose(user, termsSelect, "Due upon receipt");
+    await user.click(screen.getByRole("button", { name: "Update Invoice" }));
+    await waitFor(() =>
+      expect(m.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: existing.id, due_date: null }),
+      ),
+    );
+    expect(onOptimistic).toHaveBeenCalledWith(
+      expect.objectContaining({ invoice_number: 42, invoice_prefix: "INV" }),
+    );
   });
 
   it("shows a disabled spinner button while saving", async () => {

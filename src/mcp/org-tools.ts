@@ -1,16 +1,25 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { z } from "zod";
+import { getOrgSettingsDal, updateInvoicePrefixDal } from "@/dal/org-settings";
 import { getOverdueStatsDal, getStatsDal } from "@/dal/stats";
+import { formatInvoiceNumber } from "@/lib/invoice-number";
 import type { CallerContext, McpCaller } from "@/mcp/caller";
 import { listCallerOrgs } from "@/mcp/caller";
 import { orgIdField } from "@/mcp/catalog-tools";
 import { SEND_EMAIL_FEATURE } from "@/mcp/invoice-tools";
-import { failure, invalidate, money, type ToolResult } from "@/mcp/results";
+import {
+  dalFailure,
+  failure,
+  invalidate,
+  money,
+  type ToolResult,
+} from "@/mcp/results";
 
 /*
  * Organization-level tools: which organizations the user can work in, the
- * Stats page's numbers, and the logo invoices are branded with (the Clerk
- * organization image, the same one the app and the email show).
+ * Stats page's numbers, the logo invoices are branded with (the Clerk
+ * organization image, the same one the app and the email show) and the
+ * prefix invoice numbers get.
  */
 
 export const listOrganizationsInputSchema = z.object({});
@@ -40,6 +49,17 @@ export async function getOrganizationTool(
     organizationId: ctx.orgId,
   });
   const canSend = ctx.has({ feature: SEND_EMAIL_FEATURE });
+  const settings = await getOrgSettingsDal(ctx);
+  const numbering =
+    settings.error === null
+      ? {
+          invoice_prefix: settings.data.invoice_prefix,
+          next_invoice_number: formatInvoiceNumber(
+            settings.data.last_invoice_number + 1,
+            settings.data.invoice_prefix,
+          ),
+        }
+      : { invoice_prefix: null, next_invoice_number: null };
   return {
     summary: `${org.name}: ${canSend ? "can" : "can't"} email invoices on its plan; ${org.hasImage ? "has a logo" : "no logo yet"}.`,
     data: {
@@ -50,6 +70,7 @@ export async function getOrganizationTool(
         your_role: ctx.org.role,
         logo_url: org.hasImage ? org.imageUrl : null,
         can_email_invoices: canSend,
+        ...numbering,
         plan_features: [...ctx.features].sort(),
       },
     },
@@ -183,5 +204,34 @@ export async function manageLogoTool(
   return {
     summary: `Updated ${org.name}'s logo. New invoices, PDFs and emails use it.`,
     data: { logo_url: org.imageUrl },
+  };
+}
+
+export const setInvoicePrefixInputSchema = z.object({
+  org_id: orgIdField,
+  prefix: z
+    .string()
+    .describe(
+      "The new prefix, e.g. 'INV' (invoices read INV-0042) or 'ACME'. Letters, digits, dashes and underscores, up to 12 characters.",
+    ),
+});
+
+export async function setInvoicePrefixTool(
+  ctx: CallerContext,
+  args: z.infer<typeof setInvoicePrefixInputSchema>,
+): Promise<ToolResult> {
+  const result = await updateInvoicePrefixDal(args.prefix, ctx);
+  if (result.isErr()) return dalFailure(result.error);
+  invalidate(ctx.orgId, ["org-settings"]);
+  const next = formatInvoiceNumber(
+    result.value.last_invoice_number + 1,
+    result.value.invoice_prefix,
+  );
+  return {
+    summary: `New invoices are numbered with ${result.value.invoice_prefix}; the next one is ${next}. Invoices already made keep their number.`,
+    data: {
+      invoice_prefix: result.value.invoice_prefix,
+      next_invoice_number: next,
+    },
   };
 }

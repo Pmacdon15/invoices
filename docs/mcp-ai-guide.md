@@ -1,6 +1,6 @@
 # Using InvoicePro from an AI assistant
 
-InvoicePro has an MCP server at **`https://www.invoicepro.patmac.ca/api/mcp`**. Connect it to Claude, ChatGPT, Gemini, Muse or any other app that supports MCP connectors, and the assistant can do everything the app does: add and edit customers (with phone and address), manage products and prices, create and edit invoices (catalog items, one-off items, tax, a manual total), mark them sent or paid, email them, download PDFs, read your stats and set your logo.
+InvoicePro has an MCP server at **`https://www.invoicepro.patmac.ca/api/mcp`**. Connect it to Claude, ChatGPT, Gemini, Muse or any other app that supports MCP connectors, and the assistant can do everything the app does: add and edit customers (with phone and address), manage products and prices, create and edit invoices (catalog items, one-off items, tax, a manual total, payment terms), mark them sent or paid, email them, download PDFs, read your stats, set your logo and set your invoice number prefix.
 
 The rules below are sent to every assistant automatically when it connects (the server's MCP `instructions`, in `src/mcp/instructions.ts`), so you don't need to paste anything. They're here so you know what to expect.
 
@@ -12,7 +12,7 @@ The rules below are sent to every assistant automatically when it connects (the 
 
 ### Claude and ChatGPT
 
-Both register themselves with InvoicePro's sign-in (Clerk) and need only the URL. In both, invoices show up as an **invoice card** to look at. For the PDF or a link to open it in InvoicePro, ask the assistant. To change an invoice (customer, line items, tax, status, a manual total) or email it, ask the assistant; it asks you to confirm before sending.
+Both register themselves with InvoicePro's sign-in (Clerk) and need only the URL. In both, invoices show up as an **invoice card** to look at. For the PDF or a link to open it in InvoicePro, ask the assistant. To change an invoice (customer, line items, tax, status, a manual total, when it's due) or email it, ask the assistant; it asks you to confirm before sending.
 
 ### Gemini
 
@@ -38,6 +38,8 @@ Some apps, such as Muse, don't register themselves and show a **Client ID** fiel
 - **New customers and products.** It looks people and items up first. If someone or something isn't there, it asks before adding them. You can give it a phone number and address for a new customer. An item can go into the catalog, or onto just this invoice as a one-off line item.
 - **Prices.** Changing a product's price affects invoices made from then on. Existing invoices keep their price unless you ask it to edit them.
 - **Manual totals.** Only when you name a total. Clearing it goes back to line items plus tax.
+- **Invoice numbers.** Every invoice gets the next number for your organization, e.g. `INV-0042`, and the assistant refers to invoices by it. An admin can ask it to change the prefix (`set_invoice_prefix`); invoices already made keep their number.
+- **Payment terms.** Say when an invoice is due: upon receipt (the default), Net 15, Net 30 (counted from the invoice date) or a specific date. The PDF and the email show the due date.
 - **Sending.** It always shows you who the invoice goes to and the amount, and sends only after you say yes. If the invoice was already sent or paid, it says the email will go out again. If your plan doesn't include emailing invoices, it offers the PDF instead.
 - **Deleting.** Invoices, customers and products are deleted only after you confirm. A deleted invoice is gone for good. A deleted customer or product leaves past invoices as they are.
 
@@ -45,7 +47,7 @@ Some apps, such as Muse, don't register themselves and show a **Client ID** fiel
 
 | Area | Tools |
 | --- | --- |
-| Organizations | `list_organizations`, `get_organization`, `get_stats`, `manage_logo` (admins) |
+| Organizations | `list_organizations`, `get_organization`, `get_stats`, `manage_logo` (admins), `set_invoice_prefix` (admins) |
 | Customers | `list_customers`, `get_customer`, `create_customer`, `update_customer`, `delete_customer` |
 | Products | `list_products`, `create_product`, `update_product`, `delete_product` |
 | Invoices | `list_invoices`, `get_invoice`, `create_invoice`, `update_invoice`, `update_invoice_status`, `send_invoice`, `delete_invoice`, `get_invoice_pdf` |

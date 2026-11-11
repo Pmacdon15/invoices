@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 import InvoicesFallback from "@/components/fallbacks/invoices-fallback";
+import { InvoicePrefixSetting } from "@/components/invoice-prefix-setting";
 import { InvoicesManagement } from "@/components/management/invoices-management";
 import { SearchSelector } from "@/components/ui/search-selector";
 import { getCustomers } from "@/dal/customers";
 import { getInvoices } from "@/dal/invoices";
+import { getOrgSettingsDal } from "@/dal/org-settings";
 import { getProducts } from "@/dal/products";
 
 export default function InvoicesPage(props: PageProps<"/invoices">) {
@@ -16,17 +18,23 @@ export default function InvoicesPage(props: PageProps<"/invoices">) {
 
   const customersPromise = getCustomers(1, true);
   const productsPromise = getProducts(1, true);
+  const settingsPromise = getOrgSettingsDal();
 
   return (
     <div className="container mx-auto py-10 px-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Invoices</h1>
-        <Suspense>
-          <SearchSelector
-            placeholder="Search invoices..."
-            apiEndpoint="/api/invoices/search"
-          />
-        </Suspense>
+        <div className="flex items-center gap-2">
+          <Suspense>
+            <InvoicePrefixSetting settingsPromise={settingsPromise} />
+          </Suspense>
+          <Suspense>
+            <SearchSelector
+              placeholder="Search invoices..."
+              apiEndpoint="/api/invoices/search"
+            />
+          </Suspense>
+        </div>
       </div>
       <Suspense fallback={<InvoicesFallback />}>
         <InvoicesManagement

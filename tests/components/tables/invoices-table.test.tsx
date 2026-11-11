@@ -78,8 +78,32 @@ describe("InvoicesTable", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("$1,234.50")).toBeInTheDocument();
     expect(screen.getByText("paid")).toBeInTheDocument();
+    expect(screen.getByText("Upon receipt")).toBeInTheDocument();
     expect(screen.getByText("Total Invoices: 31")).toBeInTheDocument();
     expect(screen.getAllByText("Page 2 of 4")).toHaveLength(2);
+  });
+
+  it("shows the invoice number and due date", () => {
+    render(
+      <InvoicesTable
+        data={[
+          invoice({
+            invoice_number: 42,
+            invoice_prefix: "INV",
+            due_date: "2026-02-14",
+          }),
+        ]}
+        totalPages={1}
+        currentPage={1}
+        totalCount={1}
+        setOptimistic={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "INV-0042" })).toHaveAttribute(
+      "href",
+      "/invoices/33333333-3333-4333-8333-333333333333",
+    );
+    expect(screen.getByText("Feb 14, 2026")).toBeInTheDocument();
   });
 
   it("shows an overdue sent invoice as overdue", () => {

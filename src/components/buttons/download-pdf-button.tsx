@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 
 interface DownloadPDFButtonProps {
   invoiceId: string;
+  /** The invoice's number (INV-0042), which names the file when given. */
+  invoiceLabel?: string;
 }
 
 // Regex to match any modern CSS color function that html2canvas can't parse
@@ -35,7 +37,10 @@ const CSS_VAR_HEX: Record<string, string> = {
   "--ring": "#71717a",
 };
 
-export function DownloadPDFButton({ invoiceId }: DownloadPDFButtonProps) {
+export function DownloadPDFButton({
+  invoiceId,
+  invoiceLabel,
+}: DownloadPDFButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const downloadPDF = async () => {
@@ -130,7 +135,11 @@ export function DownloadPDFButton({ invoiceId }: DownloadPDFButtonProps) {
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`invoice-${invoiceId.slice(0, 8)}.pdf`);
+      pdf.save(
+        invoiceLabel && !invoiceLabel.startsWith("#")
+          ? `${invoiceLabel}.pdf`
+          : `invoice-${invoiceId.slice(0, 8)}.pdf`,
+      );
     } catch (error) {
       console.error("PDF Generation Error:", error);
       alert("Failed to generate PDF. Please try again.");

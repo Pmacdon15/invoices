@@ -8,6 +8,7 @@ import type {
   CustomerSchema,
   InvoiceItemSchema,
   InvoiceSchema,
+  OrgSettingsSchema,
   ProductSchema,
 } from "./schema";
 
@@ -19,6 +20,7 @@ export type Invoice = z.infer<typeof InvoiceSchema> & {
   overdue?: boolean;
 };
 export type Branding = z.infer<typeof BrandingSchema>;
+export type OrgSettings = z.infer<typeof OrgSettingsSchema>;
 
 export type FullInvoiceItem = InvoiceItem & {
   /** The catalog product, or null for a one-off line item. */

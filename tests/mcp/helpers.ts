@@ -14,6 +14,7 @@ export function ctxWith(
   return {
     orgId: ORG,
     userId: "user_1",
+    orgRole: role,
     org: { org_id: ORG, name: "Pat's Plumbing", slug: "pats", role },
     features: set,
     has: ({ feature }) => set.has(feature),

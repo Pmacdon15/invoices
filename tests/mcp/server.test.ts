@@ -95,7 +95,7 @@ describe("server", () => {
 
   it("runs every tool for the signed-in caller, passing org_id on", async () => {
     const handlers = registered("claude-ai");
-    expect(handlers.size).toBe(21);
+    expect(handlers.size).toBe(22);
     for (const [name, handler] of handlers) {
       mocks.tool.mockClear();
       const result = await handler({ org_id: "pats" }, signedIn);

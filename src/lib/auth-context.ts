@@ -12,6 +12,8 @@ import { auth } from "@clerk/nextjs/server";
 export interface AuthContext {
   orgId?: string | null;
   userId?: string | null;
+  /** The user's role in the organization, e.g. "org:admin". */
+  orgRole?: string | null;
   has: (params: { feature: string }) => boolean;
 }
 

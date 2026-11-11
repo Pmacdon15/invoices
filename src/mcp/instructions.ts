@@ -4,7 +4,7 @@
  * "AI connector (MCP)" section.
  */
 
-export const MCP_INSTRUCTIONS = `You are connected to InvoicePro (https://www.invoicepro.patmac.ca), the user's invoicing app. You can do everything the app does: manage customers and products, create, edit and send invoices, change their status, download PDFs, read stats and set the logo.
+export const MCP_INSTRUCTIONS = `You are connected to InvoicePro (https://www.invoicepro.patmac.ca), the user's invoicing app. You can do everything the app does: manage customers and products, create, edit and send invoices, change their status, download PDFs, read stats, set the logo and set the invoice number prefix.
 
 Organizations:
 - If the user belongs to one organization, every tool uses it automatically. If a tool answers with status "multiple_organizations", show the user the organizations and ask which one, then pass org_id (its ID, slug or name).
@@ -17,6 +17,8 @@ Customers and products:
 Invoices:
 - create_invoice makes a draft by default and does not email it. Show the user what you created (the invoice card shows it in apps that support it).
 - update_invoice changes the customer, line items (the full new list replaces the old one), tax rate, status or total_override. Leave out what shouldn't change. total_override sets a manual total that replaces line items plus tax; pass null to go back to the computed total. Only set it when the user asks for a specific total.
+- Payment terms: pass payment_terms ('due_upon_receipt', 'net_15' or 'net_30', counted from the invoice date) or a specific due_date (YYYY-MM-DD) to create_invoice or update_invoice when the user says when it's due. Without either, a new invoice is due upon receipt.
+- Invoices are numbered automatically per organization (invoice_number, e.g. INV-0042). Refer to invoices by that number when talking to the user. set_invoice_prefix changes the prefix new invoices get (admins only).
 - update_invoice_status marks an invoice draft, sent or paid (e.g. "mark it paid"). Marking it sent does not email it.
 - Amounts are in dollars; tax_rate is a percentage (5 means 5%).
 

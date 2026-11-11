@@ -224,8 +224,9 @@ const SCRIPT = `
         h("div", null, [
           h("div", { class: "muted small" }, [data.organization ? data.organization.name : ""]),
           h("h1", null, ["Invoice ", h("span", { class: "pill " + (inv.overdue ? "overdue" : inv.status) }, [inv.overdue ? "overdue" : inv.status])]),
-          h("div", { class: "mono muted" }, [inv.invoice_id]),
-          h("div", { class: "muted small" }, [dateText(inv.created_at)])
+          h("div", { class: "mono muted" }, [inv.invoice_number || inv.invoice_id]),
+          h("div", { class: "muted small" }, [dateText(inv.created_at)]),
+          inv.payment_due ? h("div", { class: "muted small" }, ["Due: " + inv.payment_due]) : null
         ]),
         h("div", { style: "text-align:right" }, [h("div", { class: "muted small" }, ["Total due"]), h("div", { class: "total" }, [money(inv.total)])])
       ]),

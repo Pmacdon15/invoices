@@ -36,8 +36,16 @@ vi.mock("@/components/buttons/send-invoice-button", () => ({
   ),
 }));
 vi.mock("@/components/buttons/download-pdf-button", () => ({
-  DownloadPDFButton: ({ invoiceId }: { invoiceId: string }) => (
-    <span>PDF {invoiceId}</span>
+  DownloadPDFButton: ({
+    invoiceId,
+    invoiceLabel,
+  }: {
+    invoiceId: string;
+    invoiceLabel: string;
+  }) => (
+    <span>
+      PDF {invoiceId} as {invoiceLabel}
+    </span>
   ),
 }));
 vi.mock("@/components/edit-invoice-dialog", () => ({
@@ -89,9 +97,13 @@ describe("InvoiceDetails", () => {
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
     expect(screen.getByText("billing@acme.com")).toBeInTheDocument();
     expect(screen.getByText("Edit dialog")).toBeInTheDocument();
-    expect(screen.getByText(`PDF ${inv.id}`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`PDF ${inv.id} as #${inv.id.slice(0, 8)}`),
+    ).toBeInTheDocument();
     expect(screen.getByText("Status sent")).toBeInTheDocument();
-    expect(screen.getByText("Jan 15, 2026")).toBeInTheDocument();
+    // In the header and on the invoice itself.
+    expect(screen.getAllByText("Jan 15, 2026")).toHaveLength(2);
+    expect(screen.getByText("Upon receipt")).toBeInTheDocument();
     expect(screen.queryByText(/^Send/)).not.toBeInTheDocument();
     expect(screen.queryByText("Subtotal")).not.toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
@@ -99,6 +111,20 @@ describe("InvoiceDetails", () => {
     expect(screen.getAllByText("Consulting")).toHaveLength(2);
     expect(screen.getAllByText("$200.00").length).toBeGreaterThanOrEqual(4);
     expect(clerk.has).toHaveBeenCalledWith({ feature: "send_email" });
+  });
+
+  it("shows the invoice number and due date", async () => {
+    const inv = fullInvoice({
+      invoice_number: 42,
+      invoice_prefix: "INV",
+      due_date: "2026-02-14",
+    });
+    await renderDetails(ok(inv));
+    expect(
+      await screen.findByRole("heading", { name: "Invoice INV-0042" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(`PDF ${inv.id} as INV-0042`)).toBeInTheDocument();
+    expect(screen.getByText("Feb 14, 2026")).toBeInTheDocument();
   });
 
   it("flags an overdue invoice next to its status", async () => {

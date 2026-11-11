@@ -56,6 +56,8 @@ import {
   listOrganizationsTool,
   manageLogoInputSchema,
   manageLogoTool,
+  setInvoicePrefixInputSchema,
+  setInvoicePrefixTool,
 } from "@/mcp/org-tools";
 import { portable } from "@/mcp/portable-schema";
 import { failure, respond, type ToolResult } from "@/mcp/results";
@@ -194,7 +196,7 @@ export function registerInvoiceTools(server: McpServer) {
     {
       title: "Get organization and plan",
       description:
-        "The organization's name, logo, your role, whether its plan can email invoices, and its plan features.",
+        "The organization's name, logo, your role, whether its plan can email invoices, its invoice number prefix and next invoice number, and its plan features.",
       inputSchema: portable(getOrganizationInputSchema),
       annotations: READ,
     },
@@ -226,6 +228,21 @@ export function registerInvoiceTools(server: McpServer) {
     },
     (args, extra) =>
       runInOrg(server, extra, args.org_id, (ctx) => manageLogoTool(ctx, args)),
+  );
+
+  server.registerTool(
+    "set_invoice_prefix",
+    {
+      title: "Set the invoice number prefix",
+      description:
+        "Admins only: sets the prefix new invoice numbers get, e.g. 'INV' for INV-0042. Invoices already made keep their number.",
+      inputSchema: portable(setInvoicePrefixInputSchema),
+      annotations: IDEMPOTENT_WRITE,
+    },
+    (args, extra) =>
+      runInOrg(server, extra, args.org_id, (ctx) =>
+        setInvoicePrefixTool(ctx, args),
+      ),
   );
 
   // ---------- customers ----------
@@ -400,7 +417,7 @@ export function registerInvoiceTools(server: McpServer) {
     {
       title: "Create an invoice",
       description:
-        "Creates an invoice (a draft unless status says otherwise) for an existing customer (customer_id) or a new one (new_customer, only after the user agreed to add them). Items are catalog products (product_id, price defaults to the product's) or one-off items (description + unit_price). Optional tax_rate (%) and total_override (manual total). Doesn't email it. The plan's monthly invoice limit applies.",
+        "Creates an invoice (a draft unless status says otherwise) for an existing customer (customer_id) or a new one (new_customer, only after the user agreed to add them). Items are catalog products (product_id, price defaults to the product's) or one-off items (description + unit_price). Optional tax_rate (%), total_override (manual total) and payment_terms (due_upon_receipt, net_15, net_30) or due_date. Invoices are numbered automatically (INV-0042). Doesn't email it. The plan's monthly invoice limit applies.",
       inputSchema: portable(createInvoiceInputSchema),
       annotations: WRITE,
       _meta: cardToolMeta(),
@@ -416,7 +433,7 @@ export function registerInvoiceTools(server: McpServer) {
     {
       title: "Edit an invoice",
       description:
-        "Changes an invoice's customer, line items (the full new list), tax rate, status or manual total (total_override; null returns to the computed total). Pass only what changes. Doesn't email it.",
+        "Changes an invoice's customer, line items (the full new list), tax rate, status, manual total (total_override; null returns to the computed total) or when it's due (payment_terms, or due_date; null is due upon receipt). Pass only what changes. Doesn't email it.",
       inputSchema: portable(updateInvoiceInputSchema),
       annotations: IDEMPOTENT_WRITE,
       _meta: cardToolMeta(),

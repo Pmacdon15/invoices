@@ -14,11 +14,17 @@ import {
   escapeHtml,
   stripHeaderNewlines,
 } from "@/lib/email";
+import { formatInvoiceNumber, invoiceLabel } from "@/lib/invoice-number";
 import {
   calculateInvoiceTotals,
   invoiceTotal,
   lineItemName,
 } from "@/lib/invoice-totals";
+import {
+  formatDueDate,
+  paymentDueSentence,
+  toIsoDate,
+} from "@/lib/payment-terms";
 
 /** The customer columns an invoice view, PDF or email shows. */
 type CustomerColumns = {
@@ -48,6 +54,23 @@ type ItemRow = {
 
 type InvoiceRow = Invoice & CustomerColumns;
 
+/**
+ * The row with its due date as YYYY-MM-DD: Postgres DATE columns come back
+ * as Date objects, and the app passes the date around as a string.
+ */
+function withIsoDueDate<T extends { due_date?: unknown }>(row: T): T {
+  if (!(row.due_date instanceof Date)) return row;
+  return { ...row, due_date: toIsoDate(row.due_date) };
+}
+
+/** What an invoice is called on its PDF and in its email. */
+function invoiceTitle(invoice: Invoice): string {
+  return (
+    formatInvoiceNumber(invoice.invoice_number, invoice.invoice_prefix) ??
+    invoice.id
+  );
+}
+
 async function selectInvoiceWithItems(
   sql: NeonQueryFunction<false, false>,
   id: string,
@@ -73,6 +96,7 @@ async function selectInvoiceWithItems(
   `) as InvoiceRow[];
 
   if (!invoice) return null;
+  const normalized = withIsoDueDate(invoice);
 
   const items = (await sql`
     SELECT
@@ -84,7 +108,7 @@ async function selectInvoiceWithItems(
     WHERE ii.invoice_id = ${id}
   `) as ItemRow[];
 
-  return { invoice, items };
+  return { invoice: normalized, items };
 }
 
 /** The customer of a joined invoice row, contact details included. */
@@ -128,6 +152,7 @@ export async function fetchingInvoicesDb(
         c.name ILIKE ${`%${query}%`} OR 
         c.email ILIKE ${`%${query}%`} OR 
         i.id::TEXT ILIKE ${`%${query}%`} OR 
+        (i.invoice_prefix || '-' || LPAD(i.invoice_number::TEXT, 4, '0')) ILIKE ${`%${query}%`} OR 
         i.total::TEXT ILIKE ${`%${query}%`} OR 
         i.created_at::TEXT ILIKE ${`%${query}%`}
       )`
@@ -159,7 +184,7 @@ export async function fetchingInvoicesDb(
 
   // Map the flat SQL result into the nested Invoice object structure
   const formattedData = data.map((inv) => ({
-    ...inv,
+    ...withIsoDueDate(inv),
     customer: {
       id: inv.customer_id,
       name: inv.customer_name,
@@ -201,6 +226,7 @@ export async function searchInvoicesDb(
       c.name ILIKE ${`%${query}%`} OR 
       c.email ILIKE ${`%${query}%`} OR 
       i.id::TEXT ILIKE ${`%${query}%`} OR 
+      (i.invoice_prefix || '-' || LPAD(i.invoice_number::TEXT, 4, '0')) ILIKE ${`%${query}%`} OR 
       i.total::TEXT ILIKE ${`%${query}%`} OR 
       i.created_at::TEXT ILIKE ${`%${query}%`}
     )
@@ -213,7 +239,7 @@ export async function searchInvoicesDb(
   })[];
 
   return data.map((inv) => ({
-    ...inv,
+    ...withIsoDueDate(inv),
     customer: {
       id: inv.customer_id,
       name: inv.customer_name,
@@ -295,12 +321,19 @@ export async function createInvoiceDb(
 
   const taxRate = input.tax_rate ?? 0;
   const totalOverride = input.total_override ?? null;
+  const dueDate = input.due_date ?? null;
   const totalAmount = invoiceTotal(input.items, taxRate, totalOverride);
 
   // One-off line items have no product to check.
   const productIds = catalogProductIds(input.items);
   const uniqueProductIdsCount = new Set(productIds).size;
 
+  // The invoice number comes from the org's counter in org_settings, bumped in
+  // the same statement: the upsert locks the org's row, so concurrent creates
+  // take turns and never share a number (the unique (org_id, invoice_number)
+  // index backs that up). It only runs when the invoice will be inserted, so
+  // a rejected invoice doesn't use up a number. GREATEST keeps the counter
+  // past any number already in use.
   const results = (await sql`
     WITH valid_customer AS (
       SELECT id FROM customers 
@@ -314,18 +347,35 @@ export async function createInvoiceDb(
       AND status = 'active' 
       AND org_id = ${orgId}
     ),
+    next_number AS (
+      INSERT INTO org_settings (org_id, last_invoice_number)
+      SELECT
+        ${orgId},
+        COALESCE((SELECT MAX(invoice_number) FROM invoices WHERE org_id = ${orgId}), 0) + 1
+      FROM valid_customer
+      WHERE (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
+      ON CONFLICT (org_id) DO UPDATE
+      SET last_invoice_number = GREATEST(
+        org_settings.last_invoice_number,
+        EXCLUDED.last_invoice_number - 1
+      ) + 1
+      RETURNING last_invoice_number, invoice_prefix
+    ),
     new_invoice AS (
-      INSERT INTO invoices (customer_id, status, org_id, total, tax_rate, total_override)
+      INSERT INTO invoices (customer_id, status, org_id, total, tax_rate, total_override, due_date, invoice_number, invoice_prefix)
       SELECT 
         valid_customer.id, 
         ${input.status}, 
         ${orgId}, 
         ${totalAmount},
         ${taxRate},
-        ${totalOverride}
+        ${totalOverride},
+        ${dueDate}::date,
+        next_number.last_invoice_number,
+        next_number.invoice_prefix
       FROM valid_customer
-      WHERE (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
-      RETURNING id, customer_id, total, tax_rate, total_override, status, org_id, created_at
+      CROSS JOIN next_number
+      RETURNING id, customer_id, total, tax_rate, total_override, status, org_id, created_at, due_date, invoice_number, invoice_prefix
     ),
     inserted_items AS (
       INSERT INTO invoice_items (invoice_id, product_id, description, quantity, unit_price)
@@ -365,7 +415,7 @@ export async function createInvoiceDb(
 
   // Remove the extra properties before returning
   const { customer_ok, products_ok, ...invoice } = result;
-  return invoice as Invoice;
+  return withIsoDueDate(invoice) as Invoice;
 }
 
 export async function deleteInvoiceDb(
@@ -393,7 +443,7 @@ export async function deleteInvoiceDb(
     throw new Error(`Invoice not found or not authorized`);
   }
 
-  return result[0] as Invoice;
+  return withIsoDueDate(result[0]) as Invoice;
 }
 export async function updateInvoiceStatusDb(
   id: string,
@@ -413,7 +463,7 @@ export async function updateInvoiceStatusDb(
   if (!result[0]) {
     throw new Error("Invoice not found or not authorized");
   }
-  return result[0] as Invoice;
+  return withIsoDueDate(result[0]) as Invoice;
 }
 
 /** The catalog product IDs on an invoice; one-off items have none. */
@@ -460,13 +510,15 @@ async function generateInvoicePdf(
   doc.setFontSize(10);
   doc.text(`From: ${orgName}`, 20, yOffset);
   yOffset += 5;
-  doc.text(`Invoice ID: ${invoice.id}`, 20, yOffset);
+  doc.text(`Invoice #: ${invoiceTitle(invoice)}`, 20, yOffset);
   yOffset += 5;
   doc.text(
     `Date: ${new Date(invoice.created_at).toLocaleDateString()}`,
     20,
     yOffset,
   );
+  yOffset += 5;
+  doc.text(`Due: ${formatDueDate(invoice.due_date)}`, 20, yOffset);
   yOffset += 20;
 
   // Billed To
@@ -747,10 +799,10 @@ export async function sendInvoiceDb(
         <h1 style="color:#111827;font-size:28px;font-weight:800;margin:0;letter-spacing:-0.02em" class="text-main">${escapeHtml(orgName)}</h1>
       </div>
       <div style="padding:40px" class="card-body">
-        <p style="color:#6b7280;font-size:13px;margin:0 0 32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;" class="text-muted">ID: ${escapeHtml(invoice.id)}</p>
+        <p style="color:#6b7280;font-size:13px;margin:0 0 32px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;" class="text-muted">Invoice ${escapeHtml(invoiceTitle(invoice))}<br>Due: ${escapeHtml(formatDueDate(invoice.due_date, "long"))}</p>
         <p style="margin:0 0 8px 0;font-size:18px;color:#111827" class="text-main">Hi <strong>${escapeHtml(invoice.customer_name)}</strong>,</p>
         ${customerContactHtml(invoice)}
-        <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below and attached as a PDF. Payment is due upon receipt. Thank you for choosing <strong>${escapeHtml(orgName)}</strong>.</p>
+        <p style="margin:0 0 40px 0;color:#4b5563;line-height:1.6;font-size:16px;">Please find your invoice details below and attached as a PDF. ${escapeHtml(paymentDueSentence(invoice.due_date))} Thank you for choosing <strong>${escapeHtml(orgName)}</strong>.</p>
         
         ${adminEmailHtml}
 
@@ -809,7 +861,8 @@ export async function sendInvoiceDb(
   const pdfBase64 = pdfBuffer.toString("base64");
 
   const fromEmail = process.env.SES_FROM_EMAIL ?? "invoices@yourdomain.com";
-  const subject = `Invoice from ${orgName} \u2013 ${fmt.format(invoice.total as unknown as number)}`;
+  const subject = `Invoice ${invoiceTitle(invoice)} from ${orgName} \u2013 ${fmt.format(invoice.total as unknown as number)}`;
+  const filename = `${invoiceLabel(invoice).replace(/^#/, "invoice-")}.pdf`;
   const boundary = `NextPart_${Date.now().toString(16)}`;
 
   const rawMessage = [
@@ -826,9 +879,9 @@ export async function sendInvoiceDb(
     html,
     "",
     `--${boundary}`,
-    'Content-Type: application/pdf; name="invoice.pdf"',
-    "Content-Description: invoice.pdf",
-    `Content-Disposition: attachment; filename="invoice.pdf"; size=${pdfBuffer.length}`,
+    `Content-Type: application/pdf; name="${filename}"`,
+    `Content-Description: ${filename}`,
+    `Content-Disposition: attachment; filename="${filename}"; size=${pdfBuffer.length}`,
     "Content-Transfer-Encoding: base64",
     "",
     pdfBase64.match(/.{1,76}/g)?.join("\n"),
@@ -861,7 +914,7 @@ export async function sendInvoiceDb(
     throw new Error("Invoice not found or not authorized");
   }
 
-  return result[0] as Invoice;
+  return withIsoDueDate(result[0]) as Invoice;
 }
 
 export async function getMonthlyInvoiceCount(orgId: string): Promise<number> {
@@ -893,6 +946,7 @@ export async function updateInvoiceDb(
 
   const taxRate = input.tax_rate ?? 0;
   const totalOverride = input.total_override ?? null;
+  const dueDate = input.due_date ?? null;
   const totalAmount = invoiceTotal(input.items, taxRate, totalOverride);
 
   // One-off line items have no product to check.
@@ -921,11 +975,12 @@ export async function updateInvoiceDb(
           status = ${input.status},
           total = ${totalAmount},
           tax_rate = ${taxRate},
-          total_override = ${totalOverride}
+          total_override = ${totalOverride},
+          due_date = ${dueDate}::date
       WHERE id = ${input.id} AND org_id = ${orgId}
       AND EXISTS (SELECT 1 FROM valid_customer)
       AND (SELECT COUNT(*) FROM valid_products) = ${uniqueProductIdsCount}
-      RETURNING id, customer_id, total, tax_rate, total_override, status, org_id, created_at
+      RETURNING id, customer_id, total, tax_rate, total_override, status, org_id, created_at, due_date, invoice_number, invoice_prefix
     ),
     deleted_items AS (
       DELETE FROM invoice_items
@@ -968,5 +1023,5 @@ export async function updateInvoiceDb(
   }
 
   const { customer_ok, products_ok, ...invoice } = result;
-  return invoice as Invoice;
+  return withIsoDueDate(invoice) as Invoice;
 }

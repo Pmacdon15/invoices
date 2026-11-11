@@ -62,6 +62,8 @@ export function dalErrorMessage(error: DalError): string {
       return "The organization has more members than its plan allows. Remove members or upgrade first.";
     case "Failed to verify limits":
       return "Couldn't check the plan's limits right now. Try again shortly.";
+    case "Admins only":
+      return "Only an organization admin can do that.";
     default:
       return error.message
         ? `${error.reason}: ${error.message}`
@@ -84,7 +86,7 @@ export function dalFailure(error: DalError): ToolResult {
  */
 export function invalidate(
   orgId: string,
-  kinds: ("invoices" | "customers" | "products" | "stats")[],
+  kinds: ("invoices" | "customers" | "products" | "stats" | "org-settings")[],
   invoiceId?: string,
 ) {
   for (const kind of kinds) revalidateTag(`${kind}-${orgId}`, { expire: 0 });

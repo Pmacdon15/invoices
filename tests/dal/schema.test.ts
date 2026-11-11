@@ -3,6 +3,7 @@ import {
   CreateCustomerSchema,
   CreateInvoiceSchema,
   CreateProductSchema,
+  InvoicePrefixSchema,
   InvoiceStatusSchema,
   UpdateCustomerSchema,
   UpdateInvoiceSchema,
@@ -294,5 +295,48 @@ describe("customer contact details", () => {
         postal_code: "x".repeat(21),
       }).error?.issues[0].message,
     ).toBe("Must be at most 20 characters");
+  });
+});
+
+describe("due dates", () => {
+  it("accepts a YYYY-MM-DD date or none", () => {
+    for (const due_date of ["2026-12-11", null, undefined]) {
+      expect(
+        CreateInvoiceSchema.safeParse({ ...validInvoice, due_date }).success,
+      ).toBe(true);
+    }
+  });
+
+  it("rejects anything else", () => {
+    expect(
+      CreateInvoiceSchema.safeParse({ ...validInvoice, due_date: "Dec 11" })
+        .error?.issues[0].message,
+    ).toBe("Due date must be a date (YYYY-MM-DD)");
+  });
+
+  it("doesn't take an invoice number from the caller", () => {
+    const result = CreateInvoiceSchema.safeParse({
+      ...validInvoice,
+      invoice_number: 1,
+      invoice_prefix: "X",
+    });
+    expect(result.data).not.toHaveProperty("invoice_number");
+    expect(result.data).not.toHaveProperty("invoice_prefix");
+  });
+});
+
+describe("InvoicePrefixSchema", () => {
+  it("trims a valid prefix", () => {
+    expect(InvoicePrefixSchema.parse(" INV_2026-A ")).toBe("INV_2026-A");
+  });
+
+  it.each([
+    ["", "Prefix can't be empty"],
+    ["ABCDEFGHIJKLM", "Prefix must be at most 12 characters"],
+    ["IN V", "Prefix can only have letters, digits, dashes and underscores"],
+  ])("rejects %j", (prefix, message) => {
+    expect(InvoicePrefixSchema.safeParse(prefix).error?.issues[0].message).toBe(
+      message,
+    );
   });
 });

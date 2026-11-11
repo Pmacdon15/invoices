@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  INVOICE_PREFIX_PATTERN,
+  MAX_INVOICE_PREFIX_LENGTH,
+} from "@/lib/invoice-number";
+import { ISO_DATE_PATTERN } from "@/lib/payment-terms";
 
 /** An optional piece of contact detail; blank or missing is stored as NULL. */
 const contactField = (max: number) =>
@@ -111,6 +116,9 @@ export const InvoiceSchema = z.object({
   created_at: z.string(),
   // The date payment is due (YYYY-MM-DD); NULL means due upon receipt.
   due_date: z.string().nullish(),
+  // Sequential per org; shown with the prefix it was numbered with (INV-0042).
+  invoice_number: z.coerce.number().int().positive().nullish(),
+  invoice_prefix: z.string().nullish(),
   customer: CustomerSchema.optional(),
   items: z.array(InvoiceItemSchema).optional(),
 });
@@ -122,8 +130,14 @@ export const CreateInvoiceSchema = InvoiceSchema.omit({
   total: true,
   customer: true,
   items: true,
+  invoice_number: true,
+  invoice_prefix: true,
 }).extend({
   customer_id: z.uuid("Please select a customer"),
+  due_date: z
+    .string()
+    .regex(ISO_DATE_PATTERN, "Due date must be a date (YYYY-MM-DD)")
+    .nullish(),
   items: z
     .array(CreateInvoiceItemSchema)
     .min(1, "Invoice must have at least one item"),
@@ -131,4 +145,24 @@ export const CreateInvoiceSchema = InvoiceSchema.omit({
 
 export const UpdateInvoiceSchema = CreateInvoiceSchema.extend({
   id: z.string().uuid(),
+});
+
+// --- Organization settings ---
+export const InvoicePrefixSchema = z
+  .string()
+  .trim()
+  .min(1, "Prefix can't be empty")
+  .max(
+    MAX_INVOICE_PREFIX_LENGTH,
+    `Prefix must be at most ${MAX_INVOICE_PREFIX_LENGTH} characters`,
+  )
+  .regex(
+    INVOICE_PREFIX_PATTERN,
+    "Prefix can only have letters, digits, dashes and underscores",
+  );
+
+export const OrgSettingsSchema = z.object({
+  org_id: z.string(),
+  invoice_prefix: z.string(),
+  last_invoice_number: z.coerce.number().int().nonnegative(),
 });

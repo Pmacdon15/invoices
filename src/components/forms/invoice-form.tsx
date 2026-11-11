@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { startTransition, use } from "react";
+import { startTransition, use, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,6 +31,15 @@ import type {
   Product,
   Result,
 } from "@/dal/types";
+import {
+  dueDateForTerms,
+  formatDueDate,
+  PAYMENT_TERMS,
+  PAYMENT_TERMS_LABELS,
+  type PaymentTerms,
+  termsForDueDate,
+  toIsoDate,
+} from "@/lib/payment-terms";
 import { cn } from "@/lib/utils";
 import { useCreateInvoice, useUpdateInvoice } from "@/mutations/invoices";
 import { CreateCustomerDialog } from "../create-customer-dialog";
@@ -60,6 +69,14 @@ export function InvoiceForm({
   const { data: customers, error: customerError } = use(customersPromise);
   const { data: products, error: productsError } = use(productsPromise);
 
+  // Net terms count from the invoice date: the day it was made, or today.
+  const invoiceDate = toIsoDate(
+    initialData ? new Date(initialData.created_at) : new Date(),
+  ) as string;
+  const [terms, setTerms] = useState<PaymentTerms>(() =>
+    termsForDueDate(initialData?.due_date, invoiceDate),
+  );
+
   const form = useForm({
     defaultValues: initialData
       ? ({
@@ -67,6 +84,7 @@ export function InvoiceForm({
           status: initialData.status,
           tax_rate: initialData.tax_rate ?? 0,
           total_override: initialData.total_override ?? null,
+          due_date: initialData.due_date ?? null,
           items: initialData.items.map((item) => ({
             product_id: item.product_id ?? null,
             description: item.description ?? null,
@@ -79,6 +97,7 @@ export function InvoiceForm({
           status: "draft" as const,
           tax_rate: 0,
           total_override: null,
+          due_date: null,
           items: [{ product_id: "", quantity: 1, unit_price: 0 }],
         } as CreateInvoiceInput),
     validators: {
@@ -117,6 +136,9 @@ export function InvoiceForm({
             tax_rate: taxRate,
             total: totalAmount,
             total_override: value.total_override ?? null,
+            due_date: value.due_date ?? null,
+            invoice_number: initialData?.invoice_number ?? null,
+            invoice_prefix: initialData?.invoice_prefix ?? null,
             created_at: initialData
               ? initialData.created_at
               : new Date().toISOString(),
@@ -296,6 +318,64 @@ export function InvoiceForm({
                   </div>
                 )}
               </form.Field>
+
+              <div className="space-y-1 sm:col-span-2">
+                <Label
+                  htmlFor="payment_terms"
+                  className="text-xs uppercase text-muted-foreground font-bold tracking-wider"
+                >
+                  Payment Terms
+                </Label>
+                <Select
+                  value={terms}
+                  onValueChange={(value) => {
+                    const next = value as PaymentTerms;
+                    setTerms(next);
+                    form.setFieldValue(
+                      "due_date",
+                      dueDateForTerms(
+                        next,
+                        invoiceDate,
+                        form.getFieldValue("due_date") || invoiceDate,
+                      ),
+                    );
+                  }}
+                >
+                  <SelectTrigger id="payment_terms">
+                    <SelectValue placeholder="Select terms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_TERMS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {PAYMENT_TERMS_LABELS[option]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {terms === "custom" && (
+                  <form.Field name="due_date">
+                    {(field) => (
+                      <Input
+                        type="date"
+                        aria-label="Due date"
+                        value={field.state.value ?? ""}
+                        onChange={(e) =>
+                          field.handleChange(e.target.value || null)
+                        }
+                      />
+                    )}
+                  </form.Field>
+                )}
+                <form.Subscribe selector={(state) => state.values.due_date}>
+                  {(dueDate) => (
+                    <p className="text-xs text-muted-foreground">
+                      {dueDate
+                        ? `Due ${formatDueDate(dueDate)}`
+                        : "Due upon receipt"}
+                    </p>
+                  )}
+                </form.Subscribe>
+              </div>
             </div>
           </div>
         </div>

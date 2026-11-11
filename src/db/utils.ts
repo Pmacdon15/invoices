@@ -220,6 +220,7 @@ export async function deleteOrgData(orgId: string) {
     // Delete products and customers
     await sql`DELETE FROM products WHERE org_id = ${orgId}`;
     await sql`DELETE FROM customers WHERE org_id = ${orgId}`;
+    await sql`DELETE FROM org_settings WHERE org_id = ${orgId}`;
 
     console.log(`✅ Successfully deleted all data for Org: ${orgId}`);
   } catch (error) {

@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { formatInvoiceNumber } from "@/lib/invoice-number";
 
 interface SearchSelectorItem {
   id: string;
@@ -23,6 +24,8 @@ interface SearchSelectorItem {
   };
   total?: number | string;
   status?: string;
+  invoice_number?: number | null;
+  invoice_prefix?: string | null;
 }
 
 interface SearchSelectorProps {
@@ -126,9 +129,15 @@ export function SearchSelector({
       );
     }
     if (item.customer) {
+      const number = formatInvoiceNumber(
+        item.invoice_number,
+        item.invoice_prefix,
+      );
       return (
         <div className="flex flex-col">
-          <div className="font-medium">Invoice for {item.customer.name}</div>
+          <div className="font-medium">
+            Invoice {number ? `${number} ` : ""}for {item.customer.name}
+          </div>
           <div className="text-xs text-muted-foreground">
             ${Number(item.total).toFixed(2)} - {item.status}
           </div>
