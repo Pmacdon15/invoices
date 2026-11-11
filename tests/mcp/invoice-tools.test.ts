@@ -86,6 +86,7 @@ describe("invoiceView", () => {
       computed_total: 175,
       total_override: 200,
       total: 200,
+      overdue: false,
       app_url: `https://www.invoicepro.patmac.ca/invoices/${INVOICE}`,
     });
     expect(view.items[1]).toEqual({
@@ -125,6 +126,7 @@ describe("list_invoices", () => {
             invoice_number: 42,
             invoice_prefix: "INV",
             due_date: "2026-12-01",
+            overdue: true,
             customer,
           },
           {
@@ -155,6 +157,7 @@ describe("list_invoices", () => {
         customer_email: "billing@acme.test",
         status: "sent",
         total: 105,
+        overdue: true,
         created_at: "2026-11-01T12:00:00.000Z",
         due_date: "2026-12-01",
       },
@@ -165,6 +168,7 @@ describe("list_invoices", () => {
         customer_email: null,
         status: "draft",
         total: 1,
+        overdue: false,
         created_at: "2026-11-02T00:00:00.000Z",
         due_date: null,
       },
@@ -206,6 +210,24 @@ describe("get_invoice", () => {
       invoice_id: INVOICE,
     });
     expect(noEmail.data).toMatchObject({ can_send: false });
+  });
+
+  it("flags an overdue invoice", async () => {
+    mocks.getInvoiceById.mockResolvedValue({
+      data: fullInvoice({
+        status: "sent",
+        due_date: "2026-10-01",
+        overdue: true,
+      }),
+      error: null,
+    });
+    const result = await getInvoiceTool(ctx, { invoice_id: INVOICE });
+    expect(result.summary).toBe(
+      `Invoice ${INVOICE}: $105.00 to Acme Corp (overdue).`,
+    );
+    expect(result.data).toMatchObject({
+      invoice: { status: "sent", overdue: true },
+    });
   });
 
   it("passes a missing invoice on", async () => {

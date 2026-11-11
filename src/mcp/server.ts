@@ -209,7 +209,7 @@ export function registerInvoiceTools(server: McpServer) {
     {
       title: "Get stats",
       description:
-        "The Stats page's numbers for the last 12 months, month by month: revenue (sent and paid invoices), amount still owing on sent invoices, invoice counts by status and customers invoiced, plus 12-month totals.",
+        "The Stats page's numbers for the last 12 months, month by month: revenue (sent and paid invoices), amount still owing on sent invoices, invoice counts by status and customers invoiced, plus 12-month totals and what's overdue now (count and amount of sent invoices past their due date).",
       inputSchema: portable(getStatsInputSchema),
       annotations: READ,
     },
@@ -388,7 +388,7 @@ export function registerInvoiceTools(server: McpServer) {
     {
       title: "List invoices",
       description:
-        "Lists invoices newest first, 10 per page, with invoice_id, customer, status, total and date. Filter by status ('draft', 'sent' = unpaid, 'paid') and/or search by customer name or email, ID, total or date.",
+        "Lists invoices newest first, 10 per page, with invoice_id, customer, status, total, overdue (sent and past its due date) and date. Filter by status ('draft', 'sent' = unpaid, 'paid') and/or search by customer name or email, ID, total or date.",
       inputSchema: portable(listInvoicesInputSchema),
       annotations: READ,
     },

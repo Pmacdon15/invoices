@@ -1,16 +1,18 @@
 import {
+  CalendarX,
   CheckCircle,
   DollarSign,
   FileText,
   Receipt,
   Send,
+  TriangleAlert,
   Users,
 } from "lucide-react";
 import { Suspense } from "react";
 import { KPICard } from "@/components/stats/kpi-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getStatsDal } from "@/dal/stats";
+import { getOverdueStatsDal, getStatsDal } from "@/dal/stats";
 import { StatsChart } from "./stats-chart";
 
 function KPISkeleton() {
@@ -53,6 +55,14 @@ export default function StatsPage() {
     data.reduce((acc, curr) => acc + curr.paidInvoices, 0),
   );
 
+  // Overdue is a point-in-time figure across all months, not a monthly one.
+  const overduePromise = getOverdueStatsDal().then((res) => {
+    if (res.error) throw new Error(res.error);
+    return res.data ?? { count: 0, total: 0 };
+  });
+  const overdueTotalPromise = overduePromise.then((overdue) => overdue.total);
+  const overdueCountPromise = overduePromise.then((overdue) => overdue.count);
+
   return (
     <div className="container mx-auto p-4 space-y-8">
       <div>
@@ -83,6 +93,25 @@ export default function StatsPage() {
             icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
             subtext="From unpaid sent invoices"
             prefix="$"
+          />
+        </Suspense>
+
+        <Suspense fallback={<KPISkeleton />}>
+          <KPICard
+            title="Overdue Amount"
+            valuePromise={overdueTotalPromise}
+            icon={<TriangleAlert className="h-4 w-4 text-destructive" />}
+            subtext="Sent invoices past their due date"
+            prefix="$"
+          />
+        </Suspense>
+
+        <Suspense fallback={<KPISkeleton />}>
+          <KPICard
+            title="Overdue Invoices"
+            valuePromise={overdueCountPromise}
+            icon={<CalendarX className="h-4 w-4 text-destructive" />}
+            subtext="Sent and past due, as of today"
           />
         </Suspense>
 

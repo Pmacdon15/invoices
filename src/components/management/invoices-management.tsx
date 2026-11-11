@@ -17,6 +17,7 @@ import type {
   Product,
   Result,
 } from "@/dal/types";
+import { isOverdue } from "@/lib/overdue";
 
 interface InvoicesManagementProps {
   invoicesPromise: Promise<Result<PaginatedValue<Invoice>>>;
@@ -72,6 +73,8 @@ export function InvoicesManagement({
   const filteredInvoices =
     optimisticState?.data.filter((invoice) => {
       if (statusFilter === "all") return true;
+      // Overdue invoices are still sent, so they show under "Sent" too.
+      if (statusFilter === "overdue") return isOverdue(invoice);
       return invoice.status === statusFilter;
     }) ?? [];
 
@@ -92,6 +95,7 @@ export function InvoicesManagement({
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="sent">Sent</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
           </div>

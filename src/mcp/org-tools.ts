@@ -1,7 +1,7 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { getOrgSettingsDal, updateInvoicePrefixDal } from "@/dal/org-settings";
-import { getStatsDal } from "@/dal/stats";
+import { getOverdueStatsDal, getStatsDal } from "@/dal/stats";
 import { formatInvoiceNumber } from "@/lib/invoice-number";
 import type { CallerContext, McpCaller } from "@/mcp/caller";
 import { listCallerOrgs } from "@/mcp/caller";
@@ -80,10 +80,17 @@ export async function getOrganizationTool(
 export const getStatsInputSchema = z.object({ org_id: orgIdField });
 
 export async function getStatsTool(ctx: CallerContext): Promise<ToolResult> {
-  const result = await getStatsDal(ctx);
+  const [result, overdueResult] = await Promise.all([
+    getStatsDal(ctx),
+    getOverdueStatsDal(ctx),
+  ]);
   if (result.error !== null || !result.data) {
     return failure(result.error ?? "Couldn't load the stats.");
   }
+  if (overdueResult.error !== null || !overdueResult.data) {
+    return failure(overdueResult.error ?? "Couldn't load the stats.");
+  }
+  const overdue = overdueResult.data;
   const months = result.data;
   const sum = (key: "revenue" | "owing" | "invoices") =>
     months.reduce((total, month) => total + month[key], 0);
@@ -93,8 +100,8 @@ export async function getStatsTool(ctx: CallerContext): Promise<ToolResult> {
     invoices: sum("invoices"),
   };
   return {
-    summary: `Last 12 months: ${money.format(totals.revenue)} invoiced (sent or paid), ${money.format(totals.owing)} still owing on sent invoices, ${totals.invoices} invoice(s).`,
-    data: { months, totals },
+    summary: `Last 12 months: ${money.format(totals.revenue)} invoiced (sent or paid), ${money.format(totals.owing)} still owing on sent invoices, ${totals.invoices} invoice(s). Overdue now: ${overdue.count} invoice(s), ${money.format(overdue.total)}.`,
+    data: { months, totals, overdue },
   };
 }
 

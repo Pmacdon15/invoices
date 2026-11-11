@@ -10,6 +10,7 @@ const dal = vi.hoisted(() => ({
   getInvoiceById: vi.fn(),
   getStatsDal: vi.fn(),
   getOrgSettingsDal: vi.fn(),
+  getOverdueStatsDal: vi.fn(),
 }));
 
 vi.mock("@/dal/customers", () => ({ getCustomers: dal.getCustomers }));
@@ -18,7 +19,10 @@ vi.mock("@/dal/invoices", () => ({
   getInvoices: dal.getInvoices,
   getInvoiceById: dal.getInvoiceById,
 }));
-vi.mock("@/dal/stats", () => ({ getStatsDal: dal.getStatsDal }));
+vi.mock("@/dal/stats", () => ({
+  getStatsDal: dal.getStatsDal,
+  getOverdueStatsDal: dal.getOverdueStatsDal,
+}));
 vi.mock("@/dal/org-settings", () => ({
   getOrgSettingsDal: dal.getOrgSettingsDal,
 }));
@@ -275,6 +279,9 @@ describe("stats page", () => {
 
   it("sums each KPI across the months", async () => {
     dal.getStatsDal.mockResolvedValue({ data: [month(1), month(2)] });
+    dal.getOverdueStatsDal.mockResolvedValue({
+      data: { count: 2, total: 45.5 },
+    });
     await renderAsync(<StatsPage />);
     expect(
       screen.getByRole("heading", {
@@ -289,22 +296,30 @@ describe("stats page", () => {
     expect(screen.getByTestId("Draft Invoices")).toHaveTextContent("3");
     expect(screen.getByTestId("Sent Invoices")).toHaveTextContent("3");
     expect(screen.getByTestId("Paid Invoices")).toHaveTextContent("3");
+    // Overdue is today's figure, not a sum over the months.
+    expect(dal.getOverdueStatsDal).toHaveBeenCalledWith();
+    expect(screen.getByTestId("Overdue Amount")).toHaveTextContent("45.5");
+    expect(screen.getByTestId("Overdue Invoices")).toHaveTextContent("2");
     expect(screen.getByTestId("chart")).toHaveTextContent('"name":"M2"');
   });
 
   it("treats missing data as no months", async () => {
     dal.getStatsDal.mockResolvedValue({});
+    dal.getOverdueStatsDal.mockResolvedValue({});
     await renderAsync(<StatsPage />);
     expect(await screen.findByTestId("Total Revenue")).toHaveTextContent("0");
+    expect(screen.getByTestId("Overdue Amount")).toHaveTextContent("0");
+    expect(screen.getByTestId("Overdue Invoices")).toHaveTextContent("0");
     expect(screen.getByTestId("chart")).toHaveTextContent("[]");
   });
 
   it("throws the DAL error to the nearest error boundary", async () => {
     dal.getStatsDal.mockResolvedValue({ error: "boom" });
+    dal.getOverdueStatsDal.mockResolvedValue({ error: "boom" });
     const page = StatsPage() as unknown as {
       props: { children: unknown };
     };
-    // Every KPI promise derives from the same failed data promise.
+    // Every KPI promise derives from a failed DAL promise.
     const errors: unknown[] = [];
     const walk = (node: unknown) => {
       if (!node || typeof node !== "object") return;
@@ -317,7 +332,7 @@ describe("stats page", () => {
       }
     };
     walk(page);
-    expect(errors.length).toBe(8);
+    expect(errors.length).toBe(10);
     for (const promise of errors) {
       await expect(promise).rejects.toThrow("boom");
     }
