@@ -73,6 +73,8 @@ type Rpc = {
   id?: number;
   method?: string;
   params?: Record<string, unknown>;
+  result?: unknown;
+  error?: { code: number; message: string };
 };
 
 /** Loads the card in a fake host frame; returns helpers to drive it. */
@@ -94,9 +96,17 @@ function mountCard(answer: (msg: Rpc) => unknown = () => ({})): {
     postMessage(msg: Rpc) {
       sent.push(msg);
       if (msg.id !== undefined) {
-        const result = answer(msg);
+        const result = answer(msg) as { rpcError?: string } | undefined;
         setTimeout(() =>
-          deliver({ jsonrpc: "2.0", id: msg.id, ...{ result } }),
+          deliver(
+            result?.rpcError
+              ? {
+                  jsonrpc: "2.0",
+                  id: msg.id,
+                  error: { code: -32000, message: result.rpcError },
+                }
+              : { jsonrpc: "2.0", id: msg.id, result },
+          ),
         );
       }
     },
@@ -330,6 +340,83 @@ describe("invoice card in an MCP Apps host", () => {
     expect(card.text()).toContain("Saved.");
   });
 
+  it("adds products when the host returns only text content, across pages", async () => {
+    const card = mountCard((msg) => {
+      const params = msg.params as
+        | { name?: string; arguments?: { page?: number } }
+        | undefined;
+      const page = params?.arguments?.page ?? 1;
+      const json = (data: unknown) => ({
+        content: [
+          { type: "text", text: "Listed." },
+          { type: "text", text: JSON.stringify(data) },
+        ],
+      });
+      if (params?.name === "list_products") {
+        return json({
+          products: [
+            page === 1
+              ? { product_id: "p1", name: "Consulting", price: 50 }
+              : { product_id: "p2", name: "Sand", price: 69 },
+          ],
+          page,
+          total_pages: 2,
+        });
+      }
+      return json({ customers: [], page: 1, total_pages: 1 });
+    });
+    card.deliver({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: { structuredContent: cardData({ mode: "edit" }) },
+    });
+    for (let i = 0; i < 5; i++) await card.flush();
+    const doc = card.window.document;
+    const select = doc.querySelector(
+      '[aria-label="Product for line 1"]',
+    ) as HTMLSelectElement;
+    expect([...select.options].map((o) => o.textContent)).toContain(
+      "Sand — $69.00",
+    );
+    card.click("+ Product");
+    expect(
+      doc.querySelector('[aria-label="Product for line 3"]'),
+    ).not.toBeNull();
+  });
+
+  it("explains a failed product load and retries it", async () => {
+    let fail = true;
+    const card = mountCard((msg) => {
+      const name = (msg.params as { name?: string })?.name;
+      if (name === "list_products" && fail) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "Choose an organization." }],
+        };
+      }
+      return name === "list_products"
+        ? {
+            structuredContent: {
+              products: [{ product_id: "p1", name: "Consulting", price: 50 }],
+              total_pages: 1,
+            },
+          }
+        : { structuredContent: { customers: [], total_pages: 1 } };
+    });
+    card.deliver({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: { structuredContent: cardData({ mode: "edit" }) },
+    });
+    for (let i = 0; i < 3; i++) await card.flush();
+    expect(card.text()).toContain("Products: Choose an organization.");
+    fail = false;
+    card.click("Retry");
+    for (let i = 0; i < 3; i++) await card.flush();
+    expect(card.text()).not.toContain("Products:");
+    expect(card.text()).toContain("+ Product");
+  });
+
   it("won't save a one-off line with no description", async () => {
     const card = mountCard((msg) =>
       (msg.params as { name?: string })?.name === "list_products"
@@ -418,6 +505,23 @@ describe("invoice card in an MCP Apps host", () => {
     await card.flush();
     expect(toolCalls(card.sent)[0].name).toBe("get_invoice_pdf");
     expect(card.text()).toContain("Downloading invoice-33333333.pdf");
+  });
+
+  it("opens the invoice in the app when the host refuses the PDF call", async () => {
+    const card = mountCard((msg) =>
+      msg.method === "tools/call"
+        ? { rpcError: "Editing from this preview is not connected" }
+        : {},
+    );
+    card.deliver({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: { structuredContent: cardData() },
+    });
+    card.click("PDF");
+    await card.flush();
+    expect(card.sent.some((m) => m.method === "ui/open-link")).toBe(true);
+    expect(card.text()).toContain("use Download PDF there");
   });
 
   it("opens the invoice in the app through the host", async () => {
