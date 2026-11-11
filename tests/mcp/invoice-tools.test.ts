@@ -184,7 +184,7 @@ describe("list_invoices", () => {
 });
 
 describe("get_invoice", () => {
-  it("returns the card data, fresh, in view or edit mode", async () => {
+  it("returns the card data, fresh", async () => {
     const result = await getInvoiceTool(ctx, { invoice_id: INVOICE });
     expect(mocks.getInvoiceById).toHaveBeenCalledWith(INVOICE, ctx, true);
     expect(result.summary).toBe(
@@ -193,13 +193,12 @@ describe("get_invoice", () => {
     expect(result.data).toMatchObject({
       organization: { org_id: ORG, name: "Pat's Plumbing" },
       can_send: true,
-      mode: "view",
     });
-    const edit = await getInvoiceTool(ctxWith(["stats"]), {
+    expect(result.data).not.toHaveProperty("mode");
+    const noEmail = await getInvoiceTool(ctxWith(["stats"]), {
       invoice_id: INVOICE,
-      mode: "edit",
     });
-    expect(edit.data).toMatchObject({ mode: "edit", can_send: false });
+    expect(noEmail.data).toMatchObject({ can_send: false });
   });
 
   it("passes a missing invoice on", async () => {

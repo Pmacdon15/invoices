@@ -344,7 +344,6 @@ describe("/api/mcp over HTTP", () => {
       },
       organization: { org_id: ORG, name: "Pat's Plumbing" },
       can_send: true,
-      mode: "view",
     });
     expect(mocks.db.loadInvoiceByIdDb).toHaveBeenCalledWith(INVOICE, ORG);
   });
@@ -426,11 +425,17 @@ describe("/api/mcp over HTTP", () => {
     );
   });
 
-  it("refuses tools when the plan has no app access", async () => {
+  it("doesn't refuse tools for the org's plan", async () => {
     mocks.subscription.mockResolvedValue({ subscriptionItems: [] });
+    mocks.db.fetchingCustomersDb.mockResolvedValue({
+      data: [],
+      currentPage: 1,
+      totalPages: 0,
+      totalCount: 0,
+    });
     const result = await call("list_customers");
-    expect(result.isError).toBe(true);
-    expect(result.structuredContent.status).toBe("no_app_access");
+    expect(result.isError).toBeUndefined();
+    expect(result.content[0].text).toBe("There are no customers yet.");
   });
 
   it("turns invalid arguments into a tool error", async () => {

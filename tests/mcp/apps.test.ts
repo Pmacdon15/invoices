@@ -64,7 +64,6 @@ const cardData = (overrides: Record<string, unknown> = {}) => ({
   },
   organization: { org_id: "org_1", name: "Pat's Plumbing" },
   can_send: true,
-  mode: "view",
   ...overrides,
 });
 
@@ -199,245 +198,30 @@ describe("invoice card in an MCP Apps host", () => {
     expect(text).toContain("Calgary, AB T2P 1J9");
     expect(text).toContain("Call-out fee (one-off)");
     expect(text).toContain("$183.75");
-    expect(text).toContain("Send invoice");
+    expect(text).toContain("To change this invoice, ask in the chat.");
+    for (const gone of ["Edit", "Send invoice", "Save"]) {
+      expect(
+        [...card.window.document.querySelectorAll("button")].some(
+          (b) => b.textContent?.trim() === gone,
+        ),
+      ).toBe(false);
+    }
+    expect(card.window.document.querySelector("select, input")).toBeNull();
   });
 
-  it("confirms in the card before sending, then sends with confirm: true", async () => {
-    const card = mountCard((msg) =>
-      msg.method === "tools/call"
-        ? {
-            content: [{ type: "text", text: "Emailed invoice." }],
-            structuredContent: cardData({
-              invoice: { ...cardData().invoice, status: "sent" },
-            }),
-          }
-        : {},
-    );
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData() },
-    });
-    card.click("Send invoice");
-    expect(toolCalls(card.sent)).toHaveLength(0);
-    expect(card.text()).toContain(
-      "Email this invoice for $183.75 to Acme Corp <billing@acme.test>",
-    );
-
-    card.click("Yes, send it");
-    await card.flush();
-    expect(toolCalls(card.sent)).toEqual([
-      {
-        name: "send_invoice",
-        arguments: { org_id: "org_1", invoice_id: INVOICE, confirm: true },
-      },
-    ]);
-    expect(card.text()).toContain("Emailed invoice.");
-  });
-
-  it("opens the send confirmation when the model asked for a preview", () => {
+  it("asks for confirmation in the chat, not the card", () => {
     const card = mountCard();
     card.deliver({
       jsonrpc: "2.0",
       method: "ui/notifications/tool-result",
       params: { structuredContent: cardData({ status: "needs_confirmation" }) },
     });
-    expect(card.text()).toContain("Yes, send it");
-  });
-
-  it("edits line items, tax and a manual total, then saves the full invoice", async () => {
-    const card = mountCard((msg) => {
-      const params = msg.params as { name?: string } | undefined;
-      if (params?.name === "list_customers") {
-        return {
-          structuredContent: {
-            customers: [
-              {
-                customer_id: "c1",
-                name: "Acme Corp",
-                email: "billing@acme.test",
-              },
-              { customer_id: "c2", name: "Beta LLC", email: "ap@beta.test" },
-            ],
-          },
-        };
-      }
-      if (params?.name === "list_products") {
-        return {
-          structuredContent: {
-            products: [{ product_id: "p1", name: "Consulting", price: 50 }],
-          },
-        };
-      }
-      return {
-        content: [{ type: "text", text: "Updated." }],
-        structuredContent: cardData(),
-      };
-    });
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData() },
-    });
-    card.click("Edit");
-    await card.flush();
-    const doc = card.window.document;
-
-    const customerSelect = doc.getElementById(
-      "ip-customer",
-    ) as HTMLSelectElement;
-    expect([...customerSelect.options].map((o) => o.textContent)).toContain(
-      "Beta LLC <ap@beta.test>",
-    );
-    customerSelect.value = "c2";
-    customerSelect.dispatchEvent(new card.window.Event("change"));
-
-    const qty = doc.querySelector(
-      '[aria-label="Quantity for line 1"]',
-    ) as HTMLInputElement;
-    qty.value = "3";
-    qty.dispatchEvent(new card.window.Event("input"));
-    expect(doc.getElementById("ip-totals")?.textContent).toContain("$225.00");
-
-    const tax = doc.getElementById("ip-tax") as HTMLInputElement;
-    tax.value = "0";
-    tax.dispatchEvent(new card.window.Event("input"));
-    const override = doc.getElementById("ip-override") as HTMLInputElement;
-    override.value = "200";
-    override.dispatchEvent(new card.window.Event("input"));
-    expect(doc.getElementById("ip-totals")?.textContent).toContain(
-      "Total due (manual)$200.00",
-    );
-
-    card.click("+ One-off item");
-    const desc = doc.querySelector(
-      '[aria-label="Description for line 3"]',
-    ) as HTMLInputElement;
-    desc.value = "Parts";
-    desc.dispatchEvent(new card.window.Event("input"));
-    const price = doc.querySelector(
-      '[aria-label="Unit price for line 3"]',
-    ) as HTMLInputElement;
-    price.value = "12.5";
-    price.dispatchEvent(new card.window.Event("input"));
-
-    card.click("Save");
-    await card.flush();
-    const save = toolCalls(card.sent).find((c) => c.name === "update_invoice");
-    expect(save?.arguments).toEqual({
-      org_id: "org_1",
-      invoice_id: INVOICE,
-      customer_id: "c2",
-      status: "draft",
-      tax_rate: 0,
-      total_override: 200,
-      items: [
-        { product_id: "p1", quantity: 3, unit_price: 50 },
-        { description: "Call-out fee", quantity: 1, unit_price: 75 },
-        { description: "Parts", quantity: 1, unit_price: 12.5 },
-      ],
-    });
-    expect(card.text()).toContain("Saved.");
-  });
-
-  it("adds products when the host returns only text content, across pages", async () => {
-    const card = mountCard((msg) => {
-      const params = msg.params as
-        | { name?: string; arguments?: { page?: number } }
-        | undefined;
-      const page = params?.arguments?.page ?? 1;
-      const json = (data: unknown) => ({
-        content: [
-          { type: "text", text: "Listed." },
-          { type: "text", text: JSON.stringify(data) },
-        ],
-      });
-      if (params?.name === "list_products") {
-        return json({
-          products: [
-            page === 1
-              ? { product_id: "p1", name: "Consulting", price: 50 }
-              : { product_id: "p2", name: "Sand", price: 69 },
-          ],
-          page,
-          total_pages: 2,
-        });
-      }
-      return json({ customers: [], page: 1, total_pages: 1 });
-    });
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData({ mode: "edit" }) },
-    });
-    for (let i = 0; i < 5; i++) await card.flush();
-    const doc = card.window.document;
-    const select = doc.querySelector(
-      '[aria-label="Product for line 1"]',
-    ) as HTMLSelectElement;
-    expect([...select.options].map((o) => o.textContent)).toContain(
-      "Sand — $69.00",
-    );
-    card.click("+ Product");
-    expect(
-      doc.querySelector('[aria-label="Product for line 3"]'),
-    ).not.toBeNull();
-  });
-
-  it("explains a failed product load and retries it", async () => {
-    let fail = true;
-    const card = mountCard((msg) => {
-      const name = (msg.params as { name?: string })?.name;
-      if (name === "list_products" && fail) {
-        return {
-          isError: true,
-          content: [{ type: "text", text: "Choose an organization." }],
-        };
-      }
-      return name === "list_products"
-        ? {
-            structuredContent: {
-              products: [{ product_id: "p1", name: "Consulting", price: 50 }],
-              total_pages: 1,
-            },
-          }
-        : { structuredContent: { customers: [], total_pages: 1 } };
-    });
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData({ mode: "edit" }) },
-    });
-    for (let i = 0; i < 3; i++) await card.flush();
-    expect(card.text()).toContain("Products: Choose an organization.");
-    fail = false;
-    card.click("Retry");
-    for (let i = 0; i < 3; i++) await card.flush();
-    expect(card.text()).not.toContain("Products:");
-    expect(card.text()).toContain("+ Product");
-  });
-
-  it("won't save a one-off line with no description", async () => {
-    const card = mountCard((msg) =>
-      (msg.params as { name?: string })?.name === "list_products"
-        ? { structuredContent: { products: [] } }
-        : { structuredContent: { customers: [] } },
-    );
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData({ mode: "edit" }) },
-    });
-    await card.flush();
-    card.click("+ One-off item");
-    card.click("Save");
-    expect(card.text()).toContain("Line 3 needs a product or a description.");
-    expect(toolCalls(card.sent).some((c) => c.name === "update_invoice")).toBe(
-      false,
+    expect(card.text()).toContain(
+      "Confirm in the chat to email this invoice to billing@acme.test.",
     );
   });
 
-  it("shows a tool error from the host", async () => {
+  it("shows a PDF tool error", async () => {
     const card = mountCard((msg) =>
       msg.method === "tools/call"
         ? {
@@ -451,30 +235,11 @@ describe("invoice card in an MCP Apps host", () => {
       method: "ui/notifications/tool-result",
       params: { structuredContent: cardData() },
     });
-    const status = card.window.document.querySelector(
-      'select[aria-label="Status"]',
-    ) as HTMLSelectElement;
-    status.value = "paid";
-    status.dispatchEvent(new card.window.Event("change"));
+    card.click("PDF");
     await card.flush();
-    expect(toolCalls(card.sent)[0]).toEqual({
-      name: "update_invoice_status",
-      arguments: { org_id: "org_1", invoice_id: INVOICE, status: "paid" },
-    });
     expect(
       card.window.document.querySelector('[role="alert"]')?.textContent,
     ).toBe("Usage limit reached.");
-  });
-
-  it("hides Send when the plan can't email invoices", () => {
-    const card = mountCard();
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData({ can_send: false }) },
-    });
-    expect(card.text()).not.toContain("Send invoice");
-    expect(card.text()).toContain("isn't included in this organization's plan");
   });
 
   it("downloads the PDF from the attached resource", async () => {
@@ -542,10 +307,13 @@ describe("invoice card in ChatGPT (OpenAI Apps SDK)", () => {
   it("renders window.openai.toolOutput and calls tools through it", async () => {
     const dom = new JSDOM(invoiceCardHtml(), { runScripts: "outside-only" });
     const callTool = vi.fn(async () => ({
-      structuredContent: cardData({
-        invoice: { ...cardData().invoice, status: "paid" },
-      }),
-      content: [{ type: "text", text: "Invoice is now paid." }],
+      structuredContent: { filename: "invoice.pdf" },
+      content: [
+        {
+          type: "resource",
+          resource: { uri: "x", mimeType: "application/pdf", blob: "JVBERi0=" },
+        },
+      ],
     }));
     Object.assign(dom.window, {
       openai: { toolOutput: cardData(), theme: "dark", callTool },
@@ -559,20 +327,17 @@ describe("invoice card in ChatGPT (OpenAI Apps SDK)", () => {
     expect(dom.window.document.getElementById("app")?.textContent).toContain(
       "Acme Corp",
     );
-
-    const status = dom.window.document.querySelector(
-      'select[aria-label="Status"]',
-    ) as HTMLSelectElement;
-    status.value = "paid";
-    status.dispatchEvent(new dom.window.Event("change"));
+    const pdf = [...dom.window.document.querySelectorAll("button")].find(
+      (b) => b.textContent === "PDF",
+    ) as HTMLButtonElement;
+    pdf.click();
     await new Promise((r) => setTimeout(r, 5));
-    expect(callTool).toHaveBeenCalledWith("update_invoice_status", {
+    expect(callTool).toHaveBeenCalledWith("get_invoice_pdf", {
       org_id: "org_1",
       invoice_id: INVOICE,
-      status: "paid",
     });
     expect(dom.window.document.getElementById("app")?.textContent).toContain(
-      "Invoice is now paid.",
+      "Downloading invoice.pdf",
     );
   });
 });

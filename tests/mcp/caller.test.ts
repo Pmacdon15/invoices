@@ -146,15 +146,15 @@ describe("contextFor", () => {
     ).toBe(false);
   });
 
-  it("refuses an org whose plan has no app access", async () => {
+  it("lets an org in whatever its plan includes", async () => {
     mocks.memberships.mockResolvedValue({
       data: [membership("org_1", "Pat's Plumbing", "pats")],
     });
     mocks.subscription.mockResolvedValue({ subscriptionItems: [] });
-    await expect(contextFor(caller)).resolves.toMatchObject({
-      ok: false,
-      status: "no_app_access",
-    });
+    const result = await contextFor(caller);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.ctx.has({ feature: "stats" })).toBe(false);
   });
 
   it.each([

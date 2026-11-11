@@ -132,7 +132,6 @@ async function invoiceResult(
   ctx: CallerContext,
   invoiceId: string,
   summary: (invoice: ReturnType<typeof invoiceView>) => string,
-  mode: "view" | "edit" = "view",
   extra: Record<string, unknown> = {},
 ): Promise<ToolResult> {
   const result = await getInvoiceById(invoiceId, ctx, true);
@@ -145,7 +144,6 @@ async function invoiceResult(
       invoice,
       organization: { org_id: ctx.orgId, name: ctx.org.name },
       can_send: ctx.has({ feature: SEND_EMAIL_FEATURE }),
-      mode,
     },
   };
 }
@@ -269,12 +267,6 @@ export async function listInvoicesTool(
 export const getInvoiceInputSchema = z.object({
   org_id: orgIdField,
   invoice_id: invoiceIdField,
-  mode: z
-    .enum(["view", "edit"])
-    .optional()
-    .describe(
-      "'edit' opens the invoice card ready to edit; 'view' (default) shows it.",
-    ),
 });
 
 export async function getInvoiceTool(
@@ -285,7 +277,6 @@ export async function getInvoiceTool(
     ctx,
     args.invoice_id,
     (invoice) => `Invoice ${invoice.invoice_id}: ${oneLine(invoice)}.`,
-    args.mode ?? "view",
   );
 }
 
@@ -534,7 +525,6 @@ export async function sendInvoiceTool(
         invoice,
         organization: { org_id: ctx.orgId, name: ctx.org.name },
         can_send: true,
-        mode: "view",
       },
     };
   }
@@ -547,7 +537,6 @@ export async function sendInvoiceTool(
     args.invoice_id,
     (sent) =>
       `Emailed invoice ${sent.invoice_id} (${money.format(sent.total)}) to ${sent.customer.email}. It's now marked sent.`,
-    "view",
     { status: "sent" },
   );
 }

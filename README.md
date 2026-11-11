@@ -105,7 +105,7 @@ When an organization subscribes to a plan (e.g., "Basic" or "Pro"), Clerk assign
 
 ## AI connector (MCP)
 
-`/api/mcp` is an [MCP](https://modelcontextprotocol.io) server that Claude, ChatGPT, Gemini, Muse or any MCP client can connect to. Through it the assistant can do everything the app does: customers (with phone and address), products and prices, invoices (catalog or one-off line items, tax, a manual total, status), emailing invoices, PDFs, stats and the logo. In Claude and ChatGPT, invoices show as an interactive card with editing, a **Send invoice** button (confirmed in the card) and a PDF download. See [docs/mcp-ai-guide.md](docs/mcp-ai-guide.md) for how to connect each app and what the assistant asks before acting.
+`/api/mcp` is an [MCP](https://modelcontextprotocol.io) server that Claude, ChatGPT, Gemini, Muse or any MCP client can connect to. Through it the assistant can do everything the app does: customers (with phone and address), products and prices, invoices (catalog or one-off line items, tax, a manual total, status), emailing invoices, PDFs, stats and the logo. In Claude and ChatGPT, invoices show as a view-only card with a PDF download; you make changes by asking the assistant. See [docs/mcp-ai-guide.md](docs/mcp-ai-guide.md) for how to connect each app and what the assistant asks before acting.
 
 How it works:
 
@@ -113,7 +113,7 @@ How it works:
 - **Every client.** Bearer in any letter case, CORS on every response, plain JSON for clients that don't accept event streams, and no tool-list change notifications. Tool input schemas are advertised in the JSON Schema subset Gemini accepts (`src/mcp/portable-schema.ts`). The client code is in `src/mcp/http.ts`.
 - **Confirmations.** `send_invoice`, `delete_invoice`, `delete_customer` and `delete_product` return a preview unless called with `confirm: true`, and the server instructions tell the assistant to ask the user in between.
 - **Cache.** Writes from the MCP server expire the same cache tags as the server actions (`revalidateTag(tag, { expire: 0 })`). Reads right after a write in the same request skip the cache.
-- **The card.** `src/mcp/apps.ts` and `src/mcp/apps-ui.ts`: an MCP Apps (`ui://`) resource, also linked for the OpenAI Apps SDK. It's self-contained HTML that loads nothing from outside, and every button is an ordinary MCP tool call.
+- **The card.** `src/mcp/apps.ts` and `src/mcp/apps-ui.ts`: an MCP Apps (`ui://`) resource, also linked for the OpenAI Apps SDK. It's self-contained, view-only HTML that loads nothing from outside; its PDF button is an ordinary MCP tool call.
 
 Setup:
 
