@@ -105,7 +105,7 @@ When an organization subscribes to a plan (e.g., "Basic" or "Pro"), Clerk assign
 
 ## AI connector (MCP)
 
-`/api/mcp` is an [MCP](https://modelcontextprotocol.io) server that Claude, ChatGPT, Gemini, Muse or any MCP client can connect to. Through it the assistant can do everything the app does: customers (with phone and address), products and prices, invoices (catalog or one-off line items, tax, a manual total, status), emailing invoices, PDFs, stats and the logo. In Claude and ChatGPT, invoices show as a display-only card; you ask the assistant for changes, the PDF or a link to the invoice. See [docs/mcp-ai-guide.md](docs/mcp-ai-guide.md) for how to connect each app and what the assistant asks before acting.
+`/api/mcp` is an [MCP](https://modelcontextprotocol.io) server that Claude, ChatGPT, Gemini, Muse or any MCP client can connect to. Through it the assistant can do everything the app does: customers (with phone and address), products and prices, invoices (catalog or one-off line items, tax, a manual total, payment terms, status), emailing invoices, PDFs, stats, the logo and the invoice number prefix. In Claude and ChatGPT, invoices show as a display-only card; you ask the assistant for changes, the PDF or a link to the invoice. See [docs/mcp-ai-guide.md](docs/mcp-ai-guide.md) for how to connect each app and what the assistant asks before acting.
 
 How it works:
 
@@ -118,6 +118,7 @@ How it works:
 Setup:
 
 1. Run `migrations/2026-11-10-mcp-server.sql` once on an existing database. It adds the customer phone and address columns, one-off line item descriptions and the manual invoice total. `schema.sql` already includes them.
+   Also run `migrations/2026-11-11-invoice-due-date.sql` (payment due dates) and `migrations/2026-11-11-invoice-numbers.sql` (sequential invoice numbers per organization, with the `org_settings` table that holds each organization's prefix and counter; it numbers existing invoices oldest first).
 2. In the Clerk dashboard's OAuth settings, turn on **Publish CIMD support** and **Publish DCR support**, so apps can connect with just the URL.
 3. Set the environment variables below in production.
 

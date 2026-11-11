@@ -192,10 +192,14 @@ describe("fetchingInvoicesDb", () => {
     });
     const where = sql.calls.find((c) => c.text.startsWith("WHERE"));
     expect(where?.text).toContain("c.name ILIKE ?");
+    expect(where?.text).toContain(
+      "(i.invoice_prefix || '-' || LPAD(i.invoice_number::TEXT, 4, '0')) ILIKE ?",
+    );
     expect(where?.values).toEqual([
       ORG,
       null,
       null,
+      "%acme%",
       "%acme%",
       "%acme%",
       "%acme%",
@@ -248,7 +252,15 @@ describe("searchInvoicesDb", () => {
     expect(mocks.cacheTag).toHaveBeenCalledWith(`invoices-${ORG}`);
     const [query] = sql.queries();
     expect(query.text).toContain("LIMIT 10");
-    expect(query.values).toEqual([ORG, "%ac%", "%ac%", "%ac%", "%ac%", "%ac%"]);
+    expect(query.values).toEqual([
+      ORG,
+      "%ac%",
+      "%ac%",
+      "%ac%",
+      "%ac%",
+      "%ac%",
+      "%ac%",
+    ]);
   });
 });
 
@@ -410,12 +422,15 @@ describe("createInvoiceDb", () => {
       ORG,
       [P1, P2],
       ORG,
+      ORG,
+      ORG,
+      2,
       "draft",
       ORG,
       230,
       15,
       null,
-      2,
+      null,
       [P1, P2],
       [null, null],
       [2, 1],
@@ -445,11 +460,14 @@ describe("createInvoiceDb", () => {
     );
     const values = sql.queries()[0].values;
     expect(values[2]).toEqual([P1]);
-    expect(values.slice(6, 14)).toEqual([
+    expect(values.slice(6, 17)).toEqual([
+      1,
+      "draft",
+      ORG,
       99,
       0,
       99,
-      1,
+      null,
       [P1, null],
       [null, "Call-out"],
       [2, 1],
@@ -468,7 +486,49 @@ describe("createInvoiceDb", () => {
       ORG,
     );
     const values = sql.queries()[0].values;
-    expect(values.slice(6, 10)).toEqual([200, 0, null, 1]);
+    expect(values[6]).toBe(1);
+    expect(values.slice(9, 13)).toEqual([200, 0, null, null]);
+  });
+
+  it("numbers the invoice from the org's counter and saves its due date", async () => {
+    sql.respond(() => [
+      {
+        ...row,
+        due_date: new Date(2026, 1, 14),
+        invoice_number: 42,
+        invoice_prefix: "INV",
+        customer_ok: "1",
+        products_ok: "2",
+      },
+    ]);
+    await expect(
+      create(
+        {
+          customer_id: CUSTOMER_ID,
+          status: "draft",
+          due_date: "2026-02-14",
+          items,
+        },
+        ORG,
+      ),
+    ).resolves.toEqual({
+      ...row,
+      due_date: "2026-02-14",
+      invoice_number: 42,
+      invoice_prefix: "INV",
+    });
+    const [query] = sql.queries();
+    // The counter is bumped only when the invoice is inserted, under the
+    // row lock the upsert takes.
+    expect(query.text).toContain(
+      "INSERT INTO org_settings (org_id, last_invoice_number)",
+    );
+    expect(query.text).toContain(
+      "ON CONFLICT (org_id) DO UPDATE SET last_invoice_number = GREATEST( org_settings.last_invoice_number, EXCLUDED.last_invoice_number - 1 ) + 1",
+    );
+    expect(query.text).toContain("CROSS JOIN next_number");
+    expect(query.text).toContain("?::date");
+    expect(query.values[12]).toBe("2026-02-14");
   });
 
   it("rejects a customer that isn't active in the org", async () => {
@@ -568,6 +628,7 @@ describe("updateInvoiceDb", () => {
       230,
       15,
       null,
+      null,
       "inv-1",
       ORG,
       2,
@@ -597,7 +658,24 @@ describe("updateInvoiceDb", () => {
     const values = sql.queries()[0].values;
     expect(values[2]).toEqual([]);
     expect(values.slice(5, 8)).toEqual([10, 15, 10]);
-    expect(values.slice(10)).toEqual([0, [null], ["Fee"], [1], [1]]);
+    expect(values.slice(11)).toEqual([0, [null], ["Fee"], [1], [1]]);
+  });
+
+  it("saves the due date", async () => {
+    sql.respond(() => [
+      {
+        ...row,
+        due_date: "2026-03-01",
+        customer_ok: "1",
+        products_ok: "2",
+      },
+    ]);
+    await expect(
+      update({ ...input, due_date: "2026-03-01" }, ORG),
+    ).resolves.toMatchObject({ due_date: "2026-03-01" });
+    const [query] = sql.queries();
+    expect(query.text).toContain("due_date = ?::date");
+    expect(query.values[8]).toBe("2026-03-01");
   });
 
   it("rejects a customer from another org", async () => {
@@ -631,6 +709,9 @@ describe("updateInvoiceDb", () => {
 describe("sendInvoiceDb", () => {
   const invoiceRow = {
     ...row,
+    invoice_number: 42,
+    invoice_prefix: "INV",
+    due_date: new Date(2026, 1, 14),
     customer_name: "Ann <script>",
     customer_email: "ann@acme.com",
     customer_phone: "403-555-0100",
@@ -735,7 +816,16 @@ describe("sendInvoiceDb", () => {
     expect(raw).toContain("$200.00"); // subtotal
     expect(raw).toContain("$30.00"); // tax
     expect(raw).toContain("$230.00"); // total
-    expect(raw).toContain('Content-Type: application/pdf; name="invoice.pdf"');
+    expect(raw).toContain('Content-Type: application/pdf; name="INV-0042.pdf"');
+    expect(raw).toContain('filename="INV-0042.pdf"');
+    const subject = (raw.match(/^Subject: (.*)$/m)?.[1] ?? "")
+      .split(" ")
+      .map((word) => Buffer.from(word.slice(10, -2), "base64").toString("utf8"))
+      .join("");
+    expect(subject).toBe('Invoice INV-0042 from Bob\'s "Shop" \u2013 $230.00');
+    expect(raw).toContain("Invoice INV-0042<br>Due: February 14, 2026");
+    expect(raw).toContain("Payment is due by February 14, 2026.");
+    expect(raw).not.toContain("upon receipt");
     expect(raw).toContain(Buffer.from(new ArrayBuffer(4)).toString("base64"));
 
     // The logo is fetched and placed in the PDF.
@@ -754,7 +844,8 @@ describe("sendInvoiceDb", () => {
       expect.arrayContaining([
         "INVOICE",
         'From: Bob\'s "Shop"',
-        "Invoice ID: inv-1",
+        "Invoice #: INV-0042",
+        "Due: Feb 14, 2026",
         "Ann <script>",
         "Design & Build",
         "Support",
@@ -798,10 +889,17 @@ describe("sendInvoiceDb", () => {
     expect(raw).not.toContain("organization administrator");
     expect(raw).not.toContain("Tax (");
     expect(raw).not.toContain("<br>Canada");
+    // No number or due date: the ID names it, and it's due upon receipt.
+    expect(raw).toContain("Invoice inv-1<br>Due: Upon receipt");
+    expect(raw).toContain("Payment is due upon receipt.");
+    expect(raw).toContain('name="invoice-inv-1.pdf"');
     const [pdf] = mocks.pdf.instances;
     expect(pdf.addImage).not.toHaveBeenCalled();
     expect(pdf.text.mock.calls.map((c) => c[0])).not.toContain(
       expect.stringMatching(/^Tax/),
+    );
+    expect(pdf.text.mock.calls.map((c) => c[0])).toEqual(
+      expect.arrayContaining(["Invoice #: inv-1", "Due: Upon receipt"]),
     );
   });
 

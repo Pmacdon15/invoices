@@ -7,6 +7,8 @@ import { ViewTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Invoice } from "@/dal/types";
+import { invoiceLabel } from "@/lib/invoice-number";
+import { formatDueDate } from "@/lib/payment-terms";
 import { cn } from "@/lib/utils";
 import DeleteInvoiceButton from "../buttons/delete-invoice-button";
 
@@ -29,11 +31,11 @@ export const getInvoicesColumns = ({
           <Link
             href={isOptimistic ? "#" : `/invoices/${id}`}
             className={cn(
-              "font-mono uppercase text-xs text-primary hover:underline",
+              "font-mono text-xs text-primary hover:underline",
               isOptimistic && "opacity-50 pointer-events-none",
             )}
           >
-            #{id.slice(0, 8)}
+            {invoiceLabel(row.original)}
           </Link>
           {isOptimistic && (
             <Badge variant="outline" className="text-[10px] h-4 px-1">
@@ -68,6 +70,11 @@ export const getInvoicesColumns = ({
       const date = row.original.created_at;
       return date ? new Date(date).toLocaleDateString() : "Pending";
     },
+  },
+  {
+    accessorKey: "due_date",
+    header: "Due",
+    cell: ({ row }) => formatDueDate(row.original.due_date),
   },
   {
     accessorKey: "total",

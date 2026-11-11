@@ -283,6 +283,7 @@ describe("/api/mcp over HTTP", () => {
         "list_products",
         "manage_logo",
         "send_invoice",
+        "set_invoice_prefix",
         "update_customer",
         "update_invoice",
         "update_invoice_status",
@@ -392,6 +393,7 @@ describe("/api/mcp over HTTP", () => {
         tax_rate: 5,
         status: "draft",
         total_override: null,
+        due_date: null,
       },
       ORG,
     );

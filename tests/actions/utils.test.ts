@@ -42,6 +42,8 @@ describe("handleMutationError", () => {
     "Db failed to create invoice",
     "Db failed to update customer",
     "Failed to send invoice",
+    "Admins only",
+    "Db failed to update settings",
   ] as const)("returns a message for %s", (reason) => {
     expect(handleMutationError({ reason })).toEqual({ message: reason });
   });

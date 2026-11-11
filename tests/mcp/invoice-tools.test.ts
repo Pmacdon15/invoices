@@ -122,6 +122,9 @@ describe("list_invoices", () => {
             status: "sent",
             total: "105.00",
             created_at: "2026-11-01T12:00:00Z",
+            invoice_number: 42,
+            invoice_prefix: "INV",
+            due_date: "2026-12-01",
             customer,
           },
           {
@@ -147,19 +150,23 @@ describe("list_invoices", () => {
     expect(result.data.invoices).toEqual([
       {
         invoice_id: INVOICE,
+        invoice_number: "INV-0042",
         customer_name: "Acme Corp",
         customer_email: "billing@acme.test",
         status: "sent",
         total: 105,
         created_at: "2026-11-01T12:00:00.000Z",
+        due_date: "2026-12-01",
       },
       {
         invoice_id: "x",
+        invoice_number: null,
         customer_name: null,
         customer_email: null,
         status: "draft",
         total: 1,
         created_at: "2026-11-02T00:00:00.000Z",
+        due_date: null,
       },
     ]);
   });
@@ -260,15 +267,65 @@ describe("create_invoice", () => {
         tax_rate: 0,
         status: "draft",
         total_override: null,
+        due_date: null,
       },
       ctx,
     );
     expect(result.summary).toMatch(
-      /^Created invoice .* It hasn't been emailed/,
+      /^Created invoice .*, due upon receipt\. It hasn't been emailed/,
     );
     expect(mocks.revalidateTag).toHaveBeenCalledWith(`invoice-${INVOICE}`, {
       expire: 0,
     });
+  });
+
+  it("sets the due date from payment terms or a date, counted from today", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-11T15:00:00.000Z"));
+    mocks.createInvoiceDal.mockResolvedValue(ok({ id: INVOICE, org_id: ORG }));
+    mocks.getInvoiceById.mockResolvedValue(
+      found({ due_date: "2026-12-11", invoice_number: 42 }),
+    );
+    const items = [{ description: "Flat fee", unit_price: 300 }];
+
+    const result = await createInvoiceTool(ctx, {
+      customer_id: CUSTOMER,
+      items,
+      payment_terms: "net_30",
+    });
+    expect(mocks.createInvoiceDal.mock.calls[0][0].due_date).toBe("2026-12-11");
+    expect(result.summary).toMatch(
+      /^Created invoice INV-0042: .*, due Dec 11, 2026\./,
+    );
+    expect(result.data.invoice).toMatchObject({
+      invoice_number: "INV-0042",
+      due_date: "2026-12-11",
+      payment_due: "Dec 11, 2026",
+    });
+
+    await createInvoiceTool(ctx, {
+      customer_id: CUSTOMER,
+      items,
+      payment_terms: "due_upon_receipt",
+    });
+    expect(mocks.createInvoiceDal.mock.calls[1][0].due_date).toBeNull();
+
+    await createInvoiceTool(ctx, {
+      customer_id: CUSTOMER,
+      items,
+      due_date: "2027-02-01",
+    });
+    expect(mocks.createInvoiceDal.mock.calls[2][0].due_date).toBe("2027-02-01");
+
+    const both = await createInvoiceTool(ctx, {
+      customer_id: CUSTOMER,
+      items,
+      payment_terms: "net_15",
+      due_date: null,
+    });
+    expect(both.summary).toBe("Pass payment_terms or due_date, not both.");
+    expect(mocks.createInvoiceDal).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
   });
 
   it("passes status, tax and a manual total through", async () => {
@@ -394,6 +451,7 @@ describe("update_invoice", () => {
         tax_rate: 5,
         status: "paid",
         total_override: 90,
+        due_date: null,
       },
       ctx,
     );
@@ -422,9 +480,51 @@ describe("update_invoice", () => {
         tax_rate: 13,
         status: "draft",
         total_override: null,
+        due_date: null,
       },
       ctx,
     );
+  });
+
+  it("keeps the due date, or sets it from terms counted from the invoice date", async () => {
+    mocks.getInvoiceById.mockResolvedValue(
+      found({
+        due_date: "2026-11-20",
+        invoice_number: 7,
+        invoice_prefix: "ACME",
+      }),
+    );
+    mocks.updateInvoiceDal.mockResolvedValue(ok({ id: INVOICE }));
+
+    const kept = await updateInvoiceTool(ctx, { invoice_id: INVOICE });
+    expect(mocks.updateInvoiceDal.mock.calls[0][0].due_date).toBe("2026-11-20");
+    expect(kept.summary).toBe(
+      "Updated invoice ACME-0007: $105.00 to Acme Corp (draft), due Nov 20, 2026.",
+    );
+
+    await updateInvoiceTool(ctx, {
+      invoice_id: INVOICE,
+      payment_terms: "net_15",
+    });
+    // The invoice is dated Nov 1, 2026.
+    expect(mocks.updateInvoiceDal.mock.calls[1][0].due_date).toBe("2026-11-16");
+
+    await updateInvoiceTool(ctx, { invoice_id: INVOICE, due_date: null });
+    expect(mocks.updateInvoiceDal.mock.calls[2][0].due_date).toBeNull();
+
+    await updateInvoiceTool(ctx, {
+      invoice_id: INVOICE,
+      due_date: "2027-01-05",
+    });
+    expect(mocks.updateInvoiceDal.mock.calls[3][0].due_date).toBe("2027-01-05");
+
+    const both = await updateInvoiceTool(ctx, {
+      invoice_id: INVOICE,
+      payment_terms: "net_30",
+      due_date: "2027-01-05",
+    });
+    expect(both.summary).toBe("Pass payment_terms or due_date, not both.");
+    expect(mocks.updateInvoiceDal).toHaveBeenCalledTimes(4);
   });
 
   it("defaults a missing tax rate and manual total", async () => {
@@ -580,6 +680,7 @@ describe("get_invoice_pdf", () => {
     );
     expect(result.data).toEqual({
       invoice_id: INVOICE,
+      invoice_number: null,
       filename: "invoice-33333333.pdf",
       mime_type: "application/pdf",
       size_bytes: 4,
@@ -591,6 +692,20 @@ describe("get_invoice_pdf", () => {
         blob: Buffer.from("%PDF").toString("base64"),
       },
     ]);
+    mocks.getInvoicePdfDal.mockResolvedValue(
+      ok({
+        pdf: Buffer.from("%PDF"),
+        invoice: { total: "105.00", invoice_number: 42, invoice_prefix: "INV" },
+      }),
+    );
+    const numbered = await getInvoicePdfTool(ctx, { invoice_id: INVOICE });
+    expect(numbered.summary).toBe(
+      `The PDF of invoice INV-0042 ($105.00) is attached as INV-0042.pdf. It's also at https://www.invoicepro.patmac.ca/invoices/${INVOICE}.`,
+    );
+    expect(numbered.data).toMatchObject({
+      invoice_number: "INV-0042",
+      filename: "INV-0042.pdf",
+    });
     mocks.getInvoicePdfDal.mockResolvedValue(
       err({ reason: "Invoice not found" }),
     );

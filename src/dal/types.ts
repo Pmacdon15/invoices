@@ -8,6 +8,7 @@ import type {
   CustomerSchema,
   InvoiceItemSchema,
   InvoiceSchema,
+  OrgSettingsSchema,
   ProductSchema,
 } from "./schema";
 
@@ -16,6 +17,7 @@ export type Product = z.infer<typeof ProductSchema>;
 export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
 export type Invoice = z.infer<typeof InvoiceSchema>;
 export type Branding = z.infer<typeof BrandingSchema>;
+export type OrgSettings = z.infer<typeof OrgSettingsSchema>;
 
 export type FullInvoiceItem = InvoiceItem & {
   /** The catalog product, or null for a one-off line item. */

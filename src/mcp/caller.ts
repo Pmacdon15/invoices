@@ -150,6 +150,7 @@ export async function contextFor(
     ctx: {
       orgId: picked.org.org_id,
       userId: caller.userId,
+      orgRole: picked.org.role,
       org: picked.org,
       features,
       has: ({ feature }) => features.has(feature),

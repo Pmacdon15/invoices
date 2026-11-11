@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   updateLogo: vi.fn(),
   deleteLogo: vi.fn(),
   getStatsDal: vi.fn(),
+  getOrgSettingsDal: vi.fn(),
+  updateInvoicePrefixDal: vi.fn(),
   revalidateTag: vi.fn(),
 }));
 
@@ -21,6 +23,10 @@ vi.mock("@clerk/nextjs/server", () => ({
   }),
 }));
 vi.mock("@/dal/stats", () => ({ getStatsDal: mocks.getStatsDal }));
+vi.mock("@/dal/org-settings", () => ({
+  getOrgSettingsDal: mocks.getOrgSettingsDal,
+  updateInvoicePrefixDal: mocks.updateInvoicePrefixDal,
+}));
 vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 
 import {
@@ -28,7 +34,9 @@ import {
   getStatsTool,
   listOrganizationsTool,
   manageLogoTool,
+  setInvoicePrefixTool,
 } from "@/mcp/org-tools";
+import { err, ok } from "./helpers";
 
 const ctx = ctxWith();
 const caller = { userId: "user_1", client: null };
@@ -54,6 +62,34 @@ describe("list_organizations", () => {
 });
 
 describe("get_organization", () => {
+  beforeEach(() => {
+    mocks.getOrgSettingsDal.mockResolvedValue({
+      data: { org_id: ORG, invoice_prefix: "PAT", last_invoice_number: 41 },
+      error: null,
+    });
+  });
+
+  it("shows the invoice prefix and next number, or nothing when they can't load", async () => {
+    mocks.getOrganization.mockResolvedValue({
+      id: ORG,
+      name: "Pat's Plumbing",
+      hasImage: false,
+    });
+    const result = await getOrganizationTool(ctx);
+    expect(mocks.getOrgSettingsDal).toHaveBeenCalledWith(ctx);
+    expect(result.data.organization).toMatchObject({
+      invoice_prefix: "PAT",
+      next_invoice_number: "PAT-0042",
+    });
+
+    mocks.getOrgSettingsDal.mockResolvedValue({ data: null, error: "No org" });
+    const failed = await getOrganizationTool(ctx);
+    expect(failed.data.organization).toMatchObject({
+      invoice_prefix: null,
+      next_invoice_number: null,
+    });
+  });
+
   it("shows the plan and logo", async () => {
     mocks.getOrganization.mockResolvedValue({
       id: ORG,
@@ -227,5 +263,39 @@ describe("manage_logo", () => {
     const result = await manageLogoTool(ctx, { action: "set", image_url: url });
     expect(result.summary).toContain(text);
     expect(mocks.updateLogo).not.toHaveBeenCalled();
+  });
+});
+
+describe("set_invoice_prefix", () => {
+  it("saves the prefix and says what the next number is", async () => {
+    mocks.updateInvoicePrefixDal.mockResolvedValue(
+      ok({ org_id: ORG, invoice_prefix: "ACME", last_invoice_number: 9 }),
+    );
+    const result = await setInvoicePrefixTool(ctx, { prefix: "ACME" });
+    expect(mocks.updateInvoicePrefixDal).toHaveBeenCalledWith("ACME", ctx);
+    expect(result.summary).toBe(
+      "New invoices are numbered with ACME; the next one is ACME-0010. Invoices already made keep their number.",
+    );
+    expect(result.data).toEqual({
+      invoice_prefix: "ACME",
+      next_invoice_number: "ACME-0010",
+    });
+    expect(mocks.revalidateTag).toHaveBeenCalledWith(`org-settings-${ORG}`, {
+      expire: 0,
+    });
+  });
+
+  it("passes on a refusal", async () => {
+    mocks.updateInvoicePrefixDal.mockResolvedValue(
+      err({ reason: "Admins only" }),
+    );
+    const result = await setInvoicePrefixTool(
+      ctxWith(undefined, "org:member"),
+      {
+        prefix: "X",
+      },
+    );
+    expect(result.isError).toBe(true);
+    expect(result.summary).toBe("Only an organization admin can do that.");
   });
 });

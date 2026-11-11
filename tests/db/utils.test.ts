@@ -203,12 +203,13 @@ describe("rebalanceOrgItems", () => {
 });
 
 describe("deleteOrgData", () => {
-  it("deletes the org's invoices, products and customers", async () => {
+  it("deletes the org's invoices, products, customers and settings", async () => {
     await deleteOrgData("org_1");
     expect(sql.calls.map((c) => [c.text, c.values])).toEqual([
       ["DELETE FROM invoices WHERE org_id = ?", ["org_1"]],
       ["DELETE FROM products WHERE org_id = ?", ["org_1"]],
       ["DELETE FROM customers WHERE org_id = ?", ["org_1"]],
+      ["DELETE FROM org_settings WHERE org_id = ?", ["org_1"]],
     ]);
   });
 

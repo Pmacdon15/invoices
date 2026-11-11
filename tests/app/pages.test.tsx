@@ -9,6 +9,7 @@ const dal = vi.hoisted(() => ({
   getInvoices: vi.fn(),
   getInvoiceById: vi.fn(),
   getStatsDal: vi.fn(),
+  getOrgSettingsDal: vi.fn(),
 }));
 
 vi.mock("@/dal/customers", () => ({ getCustomers: dal.getCustomers }));
@@ -18,6 +19,9 @@ vi.mock("@/dal/invoices", () => ({
   getInvoiceById: dal.getInvoiceById,
 }));
 vi.mock("@/dal/stats", () => ({ getStatsDal: dal.getStatsDal }));
+vi.mock("@/dal/org-settings", () => ({
+  getOrgSettingsDal: dal.getOrgSettingsDal,
+}));
 
 // Children that consume a promise: render what it resolved to.
 const Show = ({ label, value }: { label: string; value: Promise<unknown> }) => (
@@ -43,6 +47,11 @@ vi.mock("@/components/management/invoices-management", () => ({
       <Show label="customers" value={props.customersPromise} />
       <Show label="products" value={props.productsPromise} />
     </>
+  ),
+}));
+vi.mock("@/components/invoice-prefix-setting", () => ({
+  InvoicePrefixSetting: (props: { settingsPromise: Promise<unknown> }) => (
+    <Show label="settings" value={props.settingsPromise} />
   ),
 }));
 vi.mock("@/components/forms/invoice-form", () => ({
@@ -122,6 +131,10 @@ beforeEach(() => {
   dal.getCustomers.mockResolvedValue({ data: ["c"] });
   dal.getProducts.mockResolvedValue({ data: ["p"] });
   dal.getInvoices.mockResolvedValue({ data: ["i"] });
+  dal.getOrgSettingsDal.mockResolvedValue({
+    data: { invoice_prefix: "INV" },
+    error: null,
+  });
   dal.getInvoiceById.mockResolvedValue({ data: { id: 7 } });
 });
 
@@ -208,6 +221,14 @@ describe("invoices page", () => {
     expect(screen.getByTestId("products")).toHaveTextContent('["p"]');
     expect(dal.getCustomers).toHaveBeenCalledWith(1, true);
     expect(dal.getProducts).toHaveBeenCalledWith(1, true);
+  });
+
+  it("loads the org's invoice numbering settings", async () => {
+    await renderAsync(<InvoicesPage {...props({})} />);
+    expect(await screen.findByTestId("settings")).toHaveTextContent(
+      '"invoice_prefix":"INV"',
+    );
+    expect(dal.getOrgSettingsDal).toHaveBeenCalledWith();
   });
 });
 

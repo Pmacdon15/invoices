@@ -107,6 +107,26 @@ describe("SearchSelector", () => {
     expect(push).toHaveBeenCalledWith("?query=Acme");
   });
 
+  it("names an invoice by its number when it has one", async () => {
+    respond({
+      data: [
+        {
+          id: "i2",
+          customer: { name: "Acme" },
+          total: 12,
+          status: "sent",
+          invoice_number: 42,
+          invoice_prefix: "INV",
+        },
+      ],
+    });
+    renderSelector({ apiEndpoint: "/api/invoices/search" });
+    await userEvent.type(screen.getByRole("textbox"), "inv-");
+    expect(
+      await screen.findByText("Invoice INV-0042 for Acme"),
+    ).toBeInTheDocument();
+  });
+
   it("falls back to JSON for unknown items and selects an empty query", async () => {
     respond({ data: [{ id: "z" }] });
     renderSelector({});

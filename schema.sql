@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS invoice_items;
 DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS org_settings;
 
 -- Status can be 'active', 'disabled', 'deleted'
 CREATE TABLE customers (
@@ -39,7 +40,19 @@ CREATE TABLE invoices (
     org_id TEXT NOT NULL DEFAULT 'org001a',
     -- The date payment is due; NULL means due upon receipt.
     due_date DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    -- Sequential per org (shown as INV-0042); the prefix it was numbered with.
+    invoice_number INTEGER NOT NULL,
+    invoice_prefix TEXT NOT NULL DEFAULT 'INV',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (org_id, invoice_number)
+);
+
+-- Per-organization settings: the invoice number prefix and the last invoice
+-- number handed out (bumped atomically when an invoice is created).
+CREATE TABLE org_settings (
+    org_id TEXT PRIMARY KEY,
+    invoice_prefix TEXT NOT NULL DEFAULT 'INV',
+    last_invoice_number INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE invoice_items (

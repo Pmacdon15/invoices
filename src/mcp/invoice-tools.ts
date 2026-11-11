@@ -11,7 +11,15 @@ import {
 } from "@/dal/invoices";
 import { getProductByIdDal } from "@/dal/products";
 import type { CreateInvoiceInput, FullInvoice, Invoice } from "@/dal/types";
+import { formatInvoiceNumber } from "@/lib/invoice-number";
 import { calculateInvoiceTotals, lineItemName } from "@/lib/invoice-totals";
+import {
+  dueDateForTerms,
+  formatDueDate,
+  ISO_DATE_PATTERN,
+  type PaymentTerms,
+  toIsoDate,
+} from "@/lib/payment-terms";
 import type { CallerContext } from "@/mcp/caller";
 import {
   createCustomer,
@@ -81,6 +89,49 @@ const lineItemInput = z.object({
 
 type LineItemInput = z.infer<typeof lineItemInput>;
 
+/** The payment terms tools take, and the app's name for each. */
+const TERMS = {
+  due_upon_receipt: "receipt",
+  net_15: "net15",
+  net_30: "net30",
+} as const satisfies Record<string, PaymentTerms>;
+
+const paymentTermsField = z
+  .enum(["due_upon_receipt", "net_15", "net_30"])
+  .optional()
+  .describe(
+    "When payment is due: 'due_upon_receipt', or 'net_15' / 'net_30' (that many days after the invoice date). Or pass due_date instead.",
+  );
+
+const dueDateField = z
+  .string()
+  .regex(ISO_DATE_PATTERN, "Use YYYY-MM-DD")
+  .nullable()
+  .optional()
+  .describe(
+    "A specific due date (YYYY-MM-DD), instead of payment_terms. null means due upon receipt.",
+  );
+
+/**
+ * The due date the tool's terms or date set, counted from the invoice date;
+ * undefined when neither was given.
+ */
+function resolveDueDate(
+  args: { payment_terms?: keyof typeof TERMS; due_date?: string | null },
+  invoiceDate: string,
+): { ok: true; dueDate: string | null | undefined } | { ok: false } {
+  if (args.payment_terms && args.due_date !== undefined) return { ok: false };
+  if (args.payment_terms) {
+    return {
+      ok: true,
+      dueDate: dueDateForTerms(TERMS[args.payment_terms], invoiceDate),
+    };
+  }
+  return { ok: true, dueDate: args.due_date };
+}
+
+const BOTH_TERMS_AND_DATE = "Pass payment_terms or due_date, not both.";
+
 const totalOverrideField = z
   .number()
   .min(0)
@@ -109,8 +160,14 @@ export function invoiceView(invoice: FullInvoice) {
       : Number(invoice.total_override);
   return {
     invoice_id: invoice.id,
+    invoice_number: formatInvoiceNumber(
+      invoice.invoice_number,
+      invoice.invoice_prefix,
+    ),
     status: invoice.status,
     created_at: new Date(invoice.created_at).toISOString(),
+    due_date: invoice.due_date ?? null,
+    payment_due: formatDueDate(invoice.due_date),
     customer: customerView(invoice.customer),
     items,
     tax_rate: taxRate,
@@ -121,6 +178,19 @@ export function invoiceView(invoice: FullInvoice) {
     total: Number(invoice.total),
     app_url: `${APP_ORIGIN}/invoices/${invoice.id}`,
   };
+}
+
+/** What a summary calls the invoice: its number, or its ID without one. */
+function nameOf(invoice: {
+  invoice_id: string;
+  invoice_number: string | null;
+}) {
+  return invoice.invoice_number ?? invoice.invoice_id;
+}
+
+/** "due upon receipt" or "due Dec 11, 2026". */
+function dueText(invoice: ReturnType<typeof invoiceView>) {
+  return invoice.due_date ? `due ${invoice.payment_due}` : "due upon receipt";
 }
 
 function oneLine(invoice: ReturnType<typeof invoiceView>) {
@@ -216,7 +286,7 @@ export const listInvoicesInputSchema = z.object({
     .max(200)
     .optional()
     .describe(
-      "Search by customer name or email, invoice ID, total or date (YYYY-MM-DD).",
+      "Search by customer name or email, invoice number (e.g. INV-0042), invoice ID, total or date (YYYY-MM-DD).",
     ),
   status: z
     .enum(STATUSES)
@@ -244,11 +314,16 @@ export async function listInvoicesTool(
   if (result.error !== null) return failure(result.error);
   const invoices = result.data.data.map((invoice: Invoice) => ({
     invoice_id: invoice.id,
+    invoice_number: formatInvoiceNumber(
+      invoice.invoice_number,
+      invoice.invoice_prefix,
+    ),
     customer_name: invoice.customer?.name ?? null,
     customer_email: invoice.customer?.email ?? null,
     status: invoice.status,
     total: Number(invoice.total),
     created_at: new Date(invoice.created_at).toISOString(),
+    due_date: invoice.due_date ?? null,
   }));
   return {
     summary:
@@ -276,7 +351,7 @@ export async function getInvoiceTool(
   return invoiceResult(
     ctx,
     args.invoice_id,
-    (invoice) => `Invoice ${invoice.invoice_id}: ${oneLine(invoice)}.`,
+    (invoice) => `Invoice ${nameOf(invoice)}: ${oneLine(invoice)}.`,
   );
 }
 
@@ -316,6 +391,8 @@ export const createInvoiceInputSchema = z.object({
       "Defaults to 'draft'. Setting 'sent' doesn't email it; use send_invoice for that.",
     ),
   total_override: totalOverrideField,
+  payment_terms: paymentTermsField,
+  due_date: dueDateField,
 });
 
 export async function createInvoiceTool(
@@ -330,6 +407,9 @@ export async function createInvoiceTool(
   if (args.customer_id && args.new_customer) {
     return failure("Pass customer_id or new_customer, not both.");
   }
+  // A new invoice is dated today.
+  const due = resolveDueDate(args, toIsoDate(new Date()) as string);
+  if (!due.ok) return failure(BOTH_TERMS_AND_DATE);
 
   const items = await resolveItems(ctx, args.items);
   if (!items.ok) return failure(items.error);
@@ -350,6 +430,7 @@ export async function createInvoiceTool(
       tax_rate: args.tax_rate ?? 0,
       status: args.status ?? "draft",
       total_override: args.total_override ?? null,
+      due_date: due.dueDate ?? null,
     },
     ctx,
   );
@@ -360,7 +441,7 @@ export async function createInvoiceTool(
     ctx,
     result.value.id,
     (invoice) =>
-      `${createdCustomer ? `Added customer ${createdCustomer} and created` : "Created"} invoice ${invoice.invoice_id}: ${oneLine(invoice)}. It hasn't been emailed; use send_invoice when the user wants it sent.`,
+      `${createdCustomer ? `Added customer ${createdCustomer} and created` : "Created"} invoice ${nameOf(invoice)}: ${oneLine(invoice)}, ${dueText(invoice)}. It hasn't been emailed; use send_invoice when the user wants it sent.`,
   );
 }
 
@@ -389,6 +470,8 @@ export const updateInvoiceInputSchema = z.object({
     .optional()
     .describe("New status. Setting 'sent' doesn't email it."),
   total_override: totalOverrideField,
+  payment_terms: paymentTermsField,
+  due_date: dueDateField,
 });
 
 export async function updateInvoiceTool(
@@ -398,6 +481,12 @@ export async function updateInvoiceTool(
   const current = await getInvoiceById(args.invoice_id, ctx, true);
   if (current.error !== null) return failure(current.error);
   const invoice = current.data;
+  // Net terms count from the day the invoice was made.
+  const due = resolveDueDate(
+    args,
+    toIsoDate(new Date(invoice.created_at)) as string,
+  );
+  if (!due.ok) return failure(BOTH_TERMS_AND_DATE);
 
   let items: CreateInvoiceInput["items"] = invoice.items.map((item) => ({
     product_id: item.product_id ?? null,
@@ -422,6 +511,8 @@ export async function updateInvoiceTool(
         args.total_override === undefined
           ? (invoice.total_override ?? null)
           : args.total_override,
+      due_date:
+        due.dueDate === undefined ? (invoice.due_date ?? null) : due.dueDate,
     },
     ctx,
   );
@@ -431,7 +522,8 @@ export async function updateInvoiceTool(
   return invoiceResult(
     ctx,
     invoice.id,
-    (updated) => `Updated invoice ${updated.invoice_id}: ${oneLine(updated)}.`,
+    (updated) =>
+      `Updated invoice ${nameOf(updated)}: ${oneLine(updated)}, ${dueText(updated)}.`,
   );
 }
 
@@ -459,7 +551,7 @@ export async function updateInvoiceStatusTool(
   return invoiceResult(
     ctx,
     args.invoice_id,
-    (invoice) => `Invoice ${invoice.invoice_id} is now ${invoice.status}.`,
+    (invoice) => `Invoice ${nameOf(invoice)} is now ${invoice.status}.`,
   );
 }
 
@@ -480,7 +572,7 @@ export async function deleteInvoiceTool(
   const invoice = invoiceView(current.data);
   if (!args.confirm) {
     return {
-      summary: `Permanently delete invoice ${invoice.invoice_id} (${oneLine(invoice)})? This can't be undone. Ask the user, then call delete_invoice again with confirm: true.`,
+      summary: `Permanently delete invoice ${nameOf(invoice)} (${oneLine(invoice)})? This can't be undone. Ask the user, then call delete_invoice again with confirm: true.`,
       data: { status: "needs_confirmation", invoice },
     };
   }
@@ -488,7 +580,7 @@ export async function deleteInvoiceTool(
   if (result.isErr()) return dalFailure(result.error);
   invalidate(ctx.orgId, ["invoices", "stats"], args.invoice_id);
   return {
-    summary: `Deleted invoice ${invoice.invoice_id}.`,
+    summary: `Deleted invoice ${nameOf(invoice)}.`,
     data: { status: "deleted", invoice_id: invoice.invoice_id },
   };
 }
@@ -519,7 +611,7 @@ export async function sendInvoiceTool(
         ? ""
         : ` It's already marked ${invoice.status}, so this emails it again.`;
     return {
-      summary: `Email invoice ${invoice.invoice_id} for ${money.format(invoice.total)} to ${invoice.customer.name} <${invoice.customer.email}>, with the PDF attached? It will be marked sent.${again} Ask the user, then call send_invoice again with confirm: true.`,
+      summary: `Email invoice ${nameOf(invoice)} for ${money.format(invoice.total)} to ${invoice.customer.name} <${invoice.customer.email}>, with the PDF attached? It will be marked sent.${again} Ask the user, then call send_invoice again with confirm: true.`,
       data: {
         status: "needs_confirmation",
         invoice,
@@ -536,7 +628,7 @@ export async function sendInvoiceTool(
     ctx,
     args.invoice_id,
     (sent) =>
-      `Emailed invoice ${sent.invoice_id} (${money.format(sent.total)}) to ${sent.customer.email}. It's now marked sent.`,
+      `Emailed invoice ${nameOf(sent)} (${money.format(sent.total)}) to ${sent.customer.email}. It's now marked sent.`,
     { status: "sent" },
   );
 }
@@ -552,12 +644,19 @@ export async function getInvoicePdfTool(
 ): Promise<ToolResult> {
   const result = await getInvoicePdfDal(args.invoice_id, ctx);
   if (result.isErr()) return dalFailure(result.error);
-  const filename = `invoice-${args.invoice_id.slice(0, 8)}.pdf`;
+  const number = formatInvoiceNumber(
+    result.value.invoice.invoice_number,
+    result.value.invoice.invoice_prefix,
+  );
+  const filename = number
+    ? `${number}.pdf`
+    : `invoice-${args.invoice_id.slice(0, 8)}.pdf`;
   const base64 = result.value.pdf.toString("base64");
   return {
-    summary: `The PDF of invoice ${args.invoice_id} (${money.format(Number(result.value.invoice.total))}) is attached as ${filename}. It's also at ${APP_ORIGIN}/invoices/${args.invoice_id}.`,
+    summary: `The PDF of invoice ${number ?? args.invoice_id} (${money.format(Number(result.value.invoice.total))}) is attached as ${filename}. It's also at ${APP_ORIGIN}/invoices/${args.invoice_id}.`,
     data: {
       invoice_id: args.invoice_id,
+      invoice_number: number,
       filename,
       mime_type: "application/pdf",
       size_bytes: result.value.pdf.length,

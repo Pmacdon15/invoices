@@ -108,6 +108,19 @@ describe("DownloadPDFButton", () => {
     );
   });
 
+  it.each([
+    ["INV-0042", "INV-0042.pdf"],
+    ["#12345678", "invoice-12345678.pdf"],
+  ])("names the PDF after the invoice label %s", async (label, filename) => {
+    invoiceContent();
+    html2canvas.mockResolvedValue(canvas);
+    render(
+      <DownloadPDFButton invoiceId="1234567890abcdef" invoiceLabel={label} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Download PDF" }));
+    await waitFor(() => expect(pdf.save).toHaveBeenCalledWith(filename));
+  });
+
   it("leaves a clone without invoice content alone after fixing styles", async () => {
     invoiceContent();
     let onclone: ((doc: Document) => void) | undefined;

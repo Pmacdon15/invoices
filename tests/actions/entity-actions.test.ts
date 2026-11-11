@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   sendInvoiceDal: vi.fn(),
   updateInvoiceDal: vi.fn(),
   updateInvoiceStatusDal: vi.fn(),
+  updateInvoicePrefixDal: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ updateTag: mocks.updateTag }));
@@ -37,6 +38,10 @@ vi.mock("@/dal/invoices", () => ({
   updateInvoiceStatusDal: mocks.updateInvoiceStatusDal,
 }));
 
+vi.mock("@/dal/org-settings", () => ({
+  updateInvoicePrefixDal: mocks.updateInvoicePrefixDal,
+}));
+
 import {
   createCustomerAction,
   deleteCustomerAction,
@@ -49,6 +54,7 @@ import {
   updateInvoiceAction,
   updateInvoiceStatusAction,
 } from "@/actions/invoices";
+import { updateInvoicePrefixAction } from "@/actions/org-settings";
 import {
   createProductAction,
   deleteProductAction,
@@ -146,6 +152,13 @@ const cases: Case[] = [
     dal: "updateInvoiceDal",
     dalArgs: [{ ...invoiceInput, id: "inv-1" }],
     tags: ["invoices-org_1", "invoice-inv-1", "stats-org_1"],
+  },
+  {
+    name: "updateInvoicePrefixAction",
+    run: () => updateInvoicePrefixAction("ACME"),
+    dal: "updateInvoicePrefixDal",
+    dalArgs: ["ACME"],
+    tags: ["org-settings-org_1"],
   },
 ];
 
