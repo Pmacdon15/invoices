@@ -37,6 +37,8 @@ CREATE TABLE invoices (
     total_override DECIMAL(10, 2),
     status TEXT NOT NULL DEFAULT 'draft',
     org_id TEXT NOT NULL DEFAULT 'org001a',
+    -- The date payment is due; NULL means due upon receipt.
+    due_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
