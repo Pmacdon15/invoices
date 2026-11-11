@@ -73,6 +73,8 @@ type Rpc = {
   id?: number;
   method?: string;
   params?: Record<string, unknown>;
+  result?: unknown;
+  error?: { code: number; message: string };
 };
 
 /** Loads the card in a fake host frame; returns helpers to drive it. */
