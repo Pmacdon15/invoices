@@ -5,7 +5,7 @@ import { invoiceCardHtml } from "@/mcp/apps-ui";
  * InvoicePro's in-chat app: the invoice card. get_invoice, create_invoice,
  * update_invoice, update_invoice_status and send_invoice return the whole
  * invoice, and hosts that support apps show it as a card instead of JSON:
- * the invoice as the customer sees it, with a PDF download. It's view-only;
+ * the invoice as the customer sees it. It only displays it;
  * the assistant makes changes with the tools.
  *
  * Follows the MCP Apps extension (SEP-1865, `io.modelcontextprotocol/ui`):
@@ -23,7 +23,7 @@ export const INVOICE_CARD = {
   uri: "ui://invoicepro/invoice-card.html",
   title: "Invoice",
   description:
-    "Invoice card: the invoice as the customer sees it, with a PDF download. View-only; changes are made with the tools.",
+    "Invoice card: the invoice as the customer sees it. Display only; changes, the PDF and the app link come from the tools.",
   invoking: "Loading invoice…",
   invoked: "Invoice ready",
 } as const;
@@ -35,8 +35,6 @@ export function cardToolMeta() {
     // Earlier drafts of SEP-1865 used a flat key; some hosts still read it.
     "ui/resourceUri": INVOICE_CARD.uri,
     "openai/outputTemplate": INVOICE_CARD.uri,
-    // Lets the ChatGPT widget call get_invoice_pdf itself.
-    "openai/widgetAccessible": true,
     "openai/toolInvocation/invoking": INVOICE_CARD.invoking,
     "openai/toolInvocation/invoked": INVOICE_CARD.invoked,
   };

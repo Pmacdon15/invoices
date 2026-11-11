@@ -386,7 +386,7 @@ export function registerInvoiceTools(server: McpServer) {
     {
       title: "Show an invoice",
       description:
-        "One invoice in full: customer with contact details, line items, subtotal, tax, manual total if set, total and status. In apps that support it, it's shown as an invoice card the user can view and download as a PDF. Make changes with update_invoice, update_invoice_status and send_invoice.",
+        "One invoice in full: customer with contact details, line items, subtotal, tax, manual total if set, total and status. In apps that support it, it's shown as a display-only invoice card; give the user invoice.app_url to open it in InvoicePro and use get_invoice_pdf for the PDF. Make changes with update_invoice, update_invoice_status and send_invoice.",
       inputSchema: portable(getInvoiceInputSchema),
       annotations: READ,
       _meta: cardToolMeta(),

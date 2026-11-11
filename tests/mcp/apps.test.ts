@@ -137,20 +137,12 @@ function mountCard(answer: (msg: Rpc) => unknown = () => ({})): {
   };
 }
 
-const toolCalls = (sent: Rpc[]) =>
-  sent
-    .filter((m) => m.method === "tools/call")
-    .map(
-      (m) => m.params as { name: string; arguments: Record<string, unknown> },
-    );
-
 describe("invoice card metadata", () => {
   it("links tools to the card for MCP Apps and ChatGPT", () => {
     expect(cardToolMeta()).toMatchObject({
       ui: { resourceUri: INVOICE_CARD.uri },
       "ui/resourceUri": INVOICE_CARD.uri,
       "openai/outputTemplate": INVOICE_CARD.uri,
-      "openai/widgetAccessible": true,
     });
     expect(cardResourceMeta().ui.csp).toEqual({
       connectDomains: [],
@@ -198,15 +190,12 @@ describe("invoice card in an MCP Apps host", () => {
     expect(text).toContain("Calgary, AB T2P 1J9");
     expect(text).toContain("Call-out fee (one-off)");
     expect(text).toContain("$183.75");
-    expect(text).toContain("To change this invoice, ask in the chat.");
-    for (const gone of ["Edit", "Send invoice", "Save"]) {
-      expect(
-        [...card.window.document.querySelectorAll("button")].some(
-          (b) => b.textContent?.trim() === gone,
-        ),
-      ).toBe(false);
-    }
-    expect(card.window.document.querySelector("select, input")).toBeNull();
+    expect(text).toContain(
+      "To change this invoice, get its PDF or a link to it, ask in the chat.",
+    );
+    expect(
+      card.window.document.querySelector("button, select, input, a"),
+    ).toBeNull();
   });
 
   it("asks for confirmation in the chat, not the card", () => {
@@ -221,102 +210,37 @@ describe("invoice card in an MCP Apps host", () => {
     );
   });
 
-  it("shows a PDF tool error", async () => {
-    const card = mountCard((msg) =>
-      msg.method === "tools/call"
-        ? {
-            isError: true,
-            content: [{ type: "text", text: "Usage limit reached." }],
-          }
-        : {},
-    );
+  it("shows an error the host relays from the tool", () => {
+    const card = mountCard();
     card.deliver({
       jsonrpc: "2.0",
       method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData() },
+      params: {
+        isError: true,
+        content: [{ type: "text", text: "Invoice not found" }],
+      },
     });
-    card.click("PDF");
-    await card.flush();
     expect(
       card.window.document.querySelector('[role="alert"]')?.textContent,
-    ).toBe("Usage limit reached.");
+    ).toBe("Invoice not found");
   });
 
-  it("downloads the PDF from the attached resource", async () => {
-    const card = mountCard((msg) =>
-      msg.method === "tools/call"
-        ? {
-            structuredContent: { filename: "invoice-33333333.pdf" },
-            content: [
-              { type: "text", text: "PDF attached." },
-              {
-                type: "resource",
-                resource: {
-                  uri: "x",
-                  mimeType: "application/pdf",
-                  blob: "JVBERi0=",
-                },
-              },
-            ],
-          }
-        : {},
-    );
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData() },
-    });
-    card.click("PDF");
-    await card.flush();
-    expect(toolCalls(card.sent)[0].name).toBe("get_invoice_pdf");
-    expect(card.text()).toContain("Downloading invoice-33333333.pdf");
-  });
-
-  it("opens the invoice in the app when the host refuses the PDF call", async () => {
-    const card = mountCard((msg) =>
-      msg.method === "tools/call"
-        ? { rpcError: "Editing from this preview is not connected" }
-        : {},
-    );
-    card.deliver({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: cardData() },
-    });
-    card.click("PDF");
-    await card.flush();
-    expect(card.sent.some((m) => m.method === "ui/open-link")).toBe(true);
-    expect(card.text()).toContain("use Download PDF there");
-  });
-
-  it("opens the invoice in the app through the host", async () => {
+  it("never calls tools itself", () => {
     const card = mountCard();
     card.deliver({
       jsonrpc: "2.0",
       method: "ui/notifications/tool-result",
       params: { structuredContent: cardData() },
     });
-    card.click("Open in InvoicePro");
-    expect(card.sent.find((m) => m.method === "ui/open-link")?.params).toEqual({
-      url: `https://www.invoicepro.patmac.ca/invoices/${INVOICE}`,
-    });
+    expect(card.sent.some((m) => m.method === "tools/call")).toBe(false);
   });
 });
 
 describe("invoice card in ChatGPT (OpenAI Apps SDK)", () => {
-  it("renders window.openai.toolOutput and calls tools through it", async () => {
+  it("renders window.openai.toolOutput in the host's theme", () => {
     const dom = new JSDOM(invoiceCardHtml(), { runScripts: "outside-only" });
-    const callTool = vi.fn(async () => ({
-      structuredContent: { filename: "invoice.pdf" },
-      content: [
-        {
-          type: "resource",
-          resource: { uri: "x", mimeType: "application/pdf", blob: "JVBERi0=" },
-        },
-      ],
-    }));
     Object.assign(dom.window, {
-      openai: { toolOutput: cardData(), theme: "dark", callTool },
+      openai: { toolOutput: cardData(), theme: "dark" },
     });
     dom.window.eval(
       dom.window.document.querySelector("script")?.textContent ?? "",
@@ -326,18 +250,6 @@ describe("invoice card in ChatGPT (OpenAI Apps SDK)", () => {
     );
     expect(dom.window.document.getElementById("app")?.textContent).toContain(
       "Acme Corp",
-    );
-    const pdf = [...dom.window.document.querySelectorAll("button")].find(
-      (b) => b.textContent === "PDF",
-    ) as HTMLButtonElement;
-    pdf.click();
-    await new Promise((r) => setTimeout(r, 5));
-    expect(callTool).toHaveBeenCalledWith("get_invoice_pdf", {
-      org_id: "org_1",
-      invoice_id: INVOICE,
-    });
-    expect(dom.window.document.getElementById("app")?.textContent).toContain(
-      "Downloading invoice.pdf",
     );
   });
 });
