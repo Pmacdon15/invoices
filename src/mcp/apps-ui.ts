@@ -94,7 +94,8 @@ const SCRIPT = `
   var root = document.getElementById("app");
   var state = {
     data: null, editing: false, draft: null, busy: false, msg: null,
-    confirmingSend: false, customers: null, products: null
+    confirmingSend: false, customers: null, products: null,
+    customersError: null, productsError: null
   };
 
   /* ---------- host bridge: MCP Apps (postMessage JSON-RPC) or OpenAI Apps SDK ---------- */
@@ -126,7 +127,19 @@ const SCRIPT = `
     if (c && c.length && c[0] && typeof c[0].text === "string") return c[0].text;
     return "";
   }
-  function structured(res) { return res && (res.structuredContent || res.structured_content); }
+  function structured(res) {
+    if (!res) return null;
+    var sc = res.structuredContent || res.structured_content;
+    if (sc) return sc;
+    /* Some hosts drop structuredContent on app-initiated calls; the same data is the JSON text block. */
+    var c = res.content || [];
+    for (var i = 0; i < c.length; i++) {
+      if (c[i] && c[i].type === "text" && typeof c[i].text === "string" && c[i].text.charAt(0) === "{") {
+        try { return JSON.parse(c[i].text); } catch (e) { /* not JSON */ }
+      }
+    }
+    return null;
+  }
   function applyTheme(theme) {
     if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
   }
@@ -260,17 +273,30 @@ const SCRIPT = `
     loadLists();
   }
 
+  /* Loads every page of a list tool (10 per page) into state[key]; on failure records the reason. */
+  function loadAll(tool, key) {
+    var all = [];
+    state[key + "Error"] = null;
+    function page(n) {
+      return callTool(tool, withOrg({ page: n })).then(function (res) {
+        var sc = structured(res);
+        if ((res && res.isError) || !sc || !Array.isArray(sc[key])) {
+          throw new Error(resultText(res) || "Couldn't load " + key + ".");
+        }
+        all = all.concat(sc[key]);
+        if (n < (sc.total_pages || 1) && n < 20) return page(n + 1);
+        state[key] = all; render();
+      });
+    }
+    page(1).catch(function (err) {
+      state[key] = all; state[key + "Error"] = (err && err.message) || "Couldn't load " + key + ".";
+      render();
+    });
+  }
+
   function loadLists() {
-    if (!state.customers) {
-      callTool("list_customers", withOrg({})).then(function (res) {
-        var sc = structured(res); state.customers = (sc && sc.customers) || []; render();
-      }, function () { state.customers = []; render(); });
-    }
-    if (!state.products) {
-      callTool("list_products", withOrg({})).then(function (res) {
-        var sc = structured(res); state.products = (sc && sc.products) || []; render();
-      }, function () { state.products = []; render(); });
-    }
+    if (!state.customers) loadAll("list_customers", "customers");
+    if (!state.products) loadAll("list_products", "products");
   }
 
   function save() {
@@ -464,9 +490,18 @@ const SCRIPT = `
       h("div", { class: "actions" }, [
         h("button", { disabled: !products.length, onclick: function () {
           var p = products[0]; d.items.push({ product_id: p.product_id, description: null, name: p.name, quantity: 1, unit_price: p.price }); render();
-        } }, [state.products === null ? "Loading products…" : "+ Product"]),
+        } }, [state.products === null ? "Loading products…" : products.length ? "+ Product" : "No products yet"]),
         h("button", { onclick: function () { d.items.push({ product_id: null, description: "", name: "", quantity: 1, unit_price: 0 }); render(); } }, ["+ One-off item"])
       ]),
+      state.productsError || state.customersError ? h("div", { class: "msg error" }, [
+        (state.productsError ? "Products: " + state.productsError + " " : "") +
+        (state.customersError ? "Customers: " + state.customersError + " " : ""),
+        h("button", { onclick: function () {
+          if (state.productsError) { state.products = null; }
+          if (state.customersError) { state.customers = null; }
+          loadLists(); render();
+        } }, ["Retry"])
+      ]) : null,
       h("table", { id: "ip-totals", style: "margin-top:10px" }, [h("tbody", null, totalsRows(t, 1))]),
       h("div", { class: "actions" }, [
         h("button", { class: "primary", disabled: state.busy, onclick: save }, [state.busy ? "Saving…" : "Save"]),
