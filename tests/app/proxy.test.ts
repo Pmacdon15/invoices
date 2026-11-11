@@ -9,14 +9,21 @@ vi.mock("@clerk/nextjs/server", () => ({
 
 import proxy, { config } from "@/proxy";
 
-type Auth = () => Promise<{ has: (check: { feature: string }) => boolean }>;
+type Auth = () => Promise<{
+  userId: string | null;
+  has: (check: { feature: string }) => boolean;
+}>;
 type Handler = (auth: Auth, req: NextRequest) => Promise<Response | undefined>;
 
-const run = async (path: string, features: string[] = []) => {
+const run = async (
+  path: string,
+  features: string[] = [],
+  userId: string | null = "user_1",
+) => {
   const has = vi.fn(({ feature }: { feature: string }) =>
     features.includes(feature),
   );
-  const auth = vi.fn(async () => ({ has }));
+  const auth = vi.fn(async () => ({ userId, has }));
   const response = await (proxy as unknown as Handler)(
     auth,
     new NextRequest(`https://example.test${path}`),
@@ -24,8 +31,7 @@ const run = async (path: string, features: string[] = []) => {
   return { auth, has, response };
 };
 
-const gated = [
-  "/stats",
+const signedInPages = [
   "/invoices",
   "/invoices/new",
   "/invoices/12",
@@ -35,16 +41,32 @@ const gated = [
 ];
 
 describe("proxy", () => {
-  it.each(gated)("sends %s home without the stats feature", async (path) => {
-    const { response, has } = await run(path);
+  it("sends /stats home without the stats feature", async () => {
+    const { response, has } = await run("/stats");
     expect(has).toHaveBeenCalledWith({ feature: "stats" });
     expect(response?.status).toBe(307);
     expect(response?.headers.get("location")).toBe("https://example.test/");
   });
 
-  it.each(gated)("lets %s through with the stats feature", async (path) => {
-    const { response } = await run(path, ["stats"]);
+  it("lets /stats through with the stats feature", async () => {
+    const { response } = await run("/stats", ["stats"]);
     expect(response).toBeUndefined();
+  });
+
+  it.each(
+    signedInPages,
+  )("lets a signed-in user open %s without the stats feature", async (path) => {
+    const { response } = await run(path);
+    expect(response).toBeUndefined();
+  });
+
+  it.each([
+    ...signedInPages,
+    "/stats",
+  ])("sends a signed-out visitor from %s home", async (path) => {
+    const { response } = await run(path, ["stats"], null);
+    expect(response?.status).toBe(307);
+    expect(response?.headers.get("location")).toBe("https://example.test/");
   });
 
   it.each([
