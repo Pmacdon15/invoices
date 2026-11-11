@@ -349,9 +349,11 @@ const SCRIPT = `
       } catch (e) {
         openLink(state.data.invoice.app_url);
       }
-    }, function (err) {
+    }, function () {
+      /* The host refused the call (e.g. a preview that can't reach the server): use the app's own download. */
       state.busy = false;
-      showMessage((err && err.message) || "Couldn't make the PDF.", true);
+      openLink(state.data.invoice.app_url);
+      showMessage("This chat can't fetch the PDF from the card, so the invoice opened in InvoicePro — use Download PDF there, or ask in the chat.", false);
     });
   }
 

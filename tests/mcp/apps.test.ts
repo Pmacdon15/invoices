@@ -94,9 +94,17 @@ function mountCard(answer: (msg: Rpc) => unknown = () => ({})): {
     postMessage(msg: Rpc) {
       sent.push(msg);
       if (msg.id !== undefined) {
-        const result = answer(msg);
+        const result = answer(msg) as { rpcError?: string } | undefined;
         setTimeout(() =>
-          deliver({ jsonrpc: "2.0", id: msg.id, ...{ result } }),
+          deliver(
+            result?.rpcError
+              ? {
+                  jsonrpc: "2.0",
+                  id: msg.id,
+                  error: { code: -32000, message: result.rpcError },
+                }
+              : { jsonrpc: "2.0", id: msg.id, result },
+          ),
         );
       }
     },
@@ -495,6 +503,23 @@ describe("invoice card in an MCP Apps host", () => {
     await card.flush();
     expect(toolCalls(card.sent)[0].name).toBe("get_invoice_pdf");
     expect(card.text()).toContain("Downloading invoice-33333333.pdf");
+  });
+
+  it("opens the invoice in the app when the host refuses the PDF call", async () => {
+    const card = mountCard((msg) =>
+      msg.method === "tools/call"
+        ? { rpcError: "Editing from this preview is not connected" }
+        : {},
+    );
+    card.deliver({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: { structuredContent: cardData() },
+    });
+    card.click("PDF");
+    await card.flush();
+    expect(card.sent.some((m) => m.method === "ui/open-link")).toBe(true);
+    expect(card.text()).toContain("use Download PDF there");
   });
 
   it("opens the invoice in the app through the host", async () => {
