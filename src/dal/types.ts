@@ -14,7 +14,10 @@ import type {
 export type Customer = z.infer<typeof CustomerSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
-export type Invoice = z.infer<typeof InvoiceSchema>;
+export type Invoice = z.infer<typeof InvoiceSchema> & {
+  /** Derived on read: sent and past its due date (see src/lib/overdue.ts). */
+  overdue?: boolean;
+};
 export type Branding = z.infer<typeof BrandingSchema>;
 
 export type FullInvoiceItem = InvoiceItem & {

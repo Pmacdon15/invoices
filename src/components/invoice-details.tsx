@@ -13,10 +13,12 @@ import type {
 } from "@/dal/types";
 import { addressLines } from "@/lib/address";
 import { lineItemName } from "@/lib/invoice-totals";
+import { isOverdue } from "@/lib/overdue";
 import { DownloadPDFButton } from "./buttons/download-pdf-button";
 import { SendInvoiceButton } from "./buttons/send-invoice-button";
 import { EditInvoiceDialog } from "./edit-invoice-dialog";
 import { InvoiceStatusUpdater } from "./invoice-status-updater";
+import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 export function InvoiceDetails({
@@ -72,10 +74,17 @@ export function InvoiceDetails({
           )}
           <DownloadPDFButton invoiceId={invoice.id} />
           <div className="flex flex-col items-end gap-2">
-            <InvoiceStatusUpdater
-              invoiceId={invoice.id}
-              currentStatus={invoice.status as "draft" | "sent" | "paid"}
-            />
+            <div className="flex items-center gap-2">
+              {isOverdue(invoice) && (
+                <Badge variant="destructive" data-testid="overdue-badge">
+                  Overdue
+                </Badge>
+              )}
+              <InvoiceStatusUpdater
+                invoiceId={invoice.id}
+                currentStatus={invoice.status as "draft" | "sent" | "paid"}
+              />
+            </div>
             <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               {new Date(invoice.created_at).toLocaleDateString("en-US", {

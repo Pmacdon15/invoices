@@ -20,7 +20,7 @@ export const PROMPTS = {
     ),
   unpaid_invoices: () =>
     userMessage(
-      "Which of my InvoicePro invoices are still unpaid? List the sent invoices (list_invoices with status 'sent', every page), with customer, amount and date, oldest first, and the total owing.",
+      "Which of my InvoicePro invoices are still unpaid? List the sent invoices (list_invoices with status 'sent', every page), with customer, amount and date, oldest first, flag the overdue ones, and the total owing.",
     ),
   send_invoice: (args: { invoice?: string }) =>
     userMessage(

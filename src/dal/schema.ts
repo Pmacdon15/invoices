@@ -109,6 +109,8 @@ export const InvoiceSchema = z.object({
   status: InvoiceStatusSchema,
   org_id: z.string(),
   created_at: z.string(),
+  // The date payment is due (YYYY-MM-DD); NULL means due upon receipt.
+  due_date: z.string().nullish(),
   customer: CustomerSchema.optional(),
   items: z.array(InvoiceItemSchema).optional(),
 });

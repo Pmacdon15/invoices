@@ -56,6 +56,7 @@ async function selectInvoiceWithItems(
   const [invoice] = (await sql`
     SELECT
       i.*,
+      (i.status = 'sent' AND i.due_date IS NOT NULL AND i.due_date < CURRENT_DATE) AS overdue,
       c.name as customer_name,
       c.email as customer_email,
       c.status as customer_status,
@@ -136,6 +137,7 @@ export async function fetchingInvoicesDb(
     sql`
       SELECT 
         i.*,
+        (i.status = 'sent' AND i.due_date IS NOT NULL AND i.due_date < CURRENT_DATE) AS overdue,
         c.name as customer_name,
         c.email as customer_email
       FROM invoices i 
@@ -189,6 +191,7 @@ export async function searchInvoicesDb(
   const data = (await sql`
     SELECT 
       i.*,
+      (i.status = 'sent' AND i.due_date IS NOT NULL AND i.due_date < CURRENT_DATE) AS overdue,
       c.name as customer_name,
       c.email as customer_email,
       c.status as customer_status

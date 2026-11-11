@@ -101,6 +101,24 @@ describe("InvoiceDetails", () => {
     expect(clerk.has).toHaveBeenCalledWith({ feature: "send_email" });
   });
 
+  it("flags an overdue invoice next to its status", async () => {
+    await renderDetails(
+      ok(
+        fullInvoice({ status: "sent", due_date: "2026-01-30", overdue: true }),
+      ),
+    );
+    expect(await screen.findByTestId("overdue-badge")).toHaveTextContent(
+      "Overdue",
+    );
+    expect(screen.getByText("Status sent")).toBeInTheDocument();
+  });
+
+  it("shows no overdue badge for an invoice that isn't overdue", async () => {
+    await renderDetails(ok(fullInvoice({ status: "paid", overdue: true })));
+    expect(await screen.findByText("Status paid")).toBeInTheDocument();
+    expect(screen.queryByTestId("overdue-badge")).not.toBeInTheDocument();
+  });
+
   it("adds tax lines, the send button and the org logo when available", async () => {
     clerk.has.mockReturnValue(true);
     clerk.organization = {

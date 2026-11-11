@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   updateLogo: vi.fn(),
   deleteLogo: vi.fn(),
   getStatsDal: vi.fn(),
+  getOverdueStatsDal: vi.fn(),
   revalidateTag: vi.fn(),
 }));
 
@@ -20,7 +21,10 @@ vi.mock("@clerk/nextjs/server", () => ({
     },
   }),
 }));
-vi.mock("@/dal/stats", () => ({ getStatsDal: mocks.getStatsDal }));
+vi.mock("@/dal/stats", () => ({
+  getStatsDal: mocks.getStatsDal,
+  getOverdueStatsDal: mocks.getOverdueStatsDal,
+}));
 vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 
 import {
@@ -90,6 +94,13 @@ describe("get_organization", () => {
 });
 
 describe("get_stats", () => {
+  beforeEach(() => {
+    mocks.getOverdueStatsDal.mockResolvedValue({
+      data: { count: 2, total: 75 },
+      error: null,
+    });
+  });
+
   it("adds up the last 12 months", async () => {
     mocks.getStatsDal.mockResolvedValue({
       data: [
@@ -106,6 +117,9 @@ describe("get_stats", () => {
       invoices: 3,
     });
     expect(result.summary).toContain("$150.50 invoiced");
+    expect(mocks.getOverdueStatsDal).toHaveBeenCalledWith(ctx);
+    expect(result.data.overdue).toEqual({ count: 2, total: 75 });
+    expect(result.summary).toContain("Overdue now: 2 invoice(s), $75.00.");
   });
 
   it("passes errors on", async () => {
@@ -115,6 +129,19 @@ describe("get_stats", () => {
     });
     expect((await getStatsTool(ctx)).summary).toBe("Missing feature: stats");
     mocks.getStatsDal.mockResolvedValue({ data: null, error: null });
+    expect((await getStatsTool(ctx)).summary).toBe("Couldn't load the stats.");
+  });
+
+  it("passes overdue errors on", async () => {
+    mocks.getStatsDal.mockResolvedValue({ data: [], error: null });
+    mocks.getOverdueStatsDal.mockResolvedValue({
+      data: null,
+      error: "Failed to fetch overdue stats.",
+    });
+    expect((await getStatsTool(ctx)).summary).toBe(
+      "Failed to fetch overdue stats.",
+    );
+    mocks.getOverdueStatsDal.mockResolvedValue({ data: null, error: null });
     expect((await getStatsTool(ctx)).summary).toBe("Couldn't load the stats.");
   });
 });

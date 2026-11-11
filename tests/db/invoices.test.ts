@@ -868,3 +868,44 @@ describe("getInvoicePdfDb", () => {
     await expect(getInvoicePdfDb("inv-1", ORG, "Org")).resolves.toBeNull();
   });
 });
+
+describe("overdue", () => {
+  // Derived on read: sent, with a due date, and that date before today.
+  const OVERDUE =
+    "(i.status = 'sent' AND i.due_date IS NOT NULL AND i.due_date < CURRENT_DATE) AS overdue";
+
+  it.each([
+    ["fetchingInvoicesDb", () => fetchingInvoicesDb(ORG)],
+    ["searchInvoicesDb", () => searchInvoicesDb(ORG, "x")],
+    ["loadInvoiceByIdDb", () => loadInvoiceByIdDb("inv-1", ORG)],
+  ])("%s selects the overdue flag", async (_name, run) => {
+    sql.respond(({ text }) =>
+      text.startsWith("SELECT COUNT(*)") ? [{ total: "0" }] : [],
+    );
+    await run();
+    const select = sql
+      .queries()
+      .find((c) => c.text.includes("FROM invoices i"));
+    expect(select?.text).toContain(OVERDUE);
+  });
+
+  it("passes the flag through to the invoice", async () => {
+    sql.respond(({ text }) =>
+      text.includes("FROM invoice_items")
+        ? []
+        : [
+            {
+              ...row,
+              status: "sent",
+              due_date: "2026-01-30",
+              overdue: true,
+              customer_name: "Acme",
+              customer_email: "a@acme.com",
+              customer_status: "active",
+            },
+          ],
+    );
+    const invoice = await loadInvoiceByIdDb("inv-1", ORG);
+    expect(invoice).toMatchObject({ due_date: "2026-01-30", overdue: true });
+  });
+});

@@ -210,6 +210,42 @@ describe("invoice card in an MCP Apps host", () => {
     );
   });
 
+  it("shows an overdue invoice's status as overdue", () => {
+    const card = mountCard();
+    const data = cardData();
+    card.deliver({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: {
+        structuredContent: {
+          ...data,
+          invoice: { ...data.invoice, status: "sent", overdue: true },
+        },
+      },
+    });
+    const pill = card.window.document.querySelector("h1 .pill");
+    expect(pill?.textContent).toBe("overdue");
+    expect(pill?.className).toBe("pill overdue");
+  });
+
+  it("shows a sent invoice that isn't overdue as sent", () => {
+    const card = mountCard();
+    const data = cardData();
+    card.deliver({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: {
+        structuredContent: {
+          ...data,
+          invoice: { ...data.invoice, status: "sent", overdue: false },
+        },
+      },
+    });
+    const pill = card.window.document.querySelector("h1 .pill");
+    expect(pill?.textContent).toBe("sent");
+    expect(pill?.className).toBe("pill sent");
+  });
+
   it("shows an error the host relays from the tool", () => {
     const card = mountCard();
     card.deliver({
