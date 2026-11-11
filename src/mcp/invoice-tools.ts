@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getCustomers } from "@/dal/customers";
 import {
   createInvoiceDal,
   deleteInvoiceDal,
@@ -9,7 +10,7 @@ import {
   updateInvoiceDal,
   updateInvoiceStatusDal,
 } from "@/dal/invoices";
-import { getProductByIdDal } from "@/dal/products";
+import { getProductByIdDal, getProducts } from "@/dal/products";
 import type { CreateInvoiceInput, FullInvoice, Invoice } from "@/dal/types";
 import { calculateInvoiceTotals, lineItemName } from "@/lib/invoice-totals";
 import type { CallerContext } from "@/mcp/caller";
@@ -146,7 +147,39 @@ async function invoiceResult(
       organization: { org_id: ctx.orgId, name: ctx.org.name },
       can_send: ctx.has({ feature: SEND_EMAIL_FEATURE }),
       mode,
+      ...(mode === "edit" ? await editChoices(ctx) : {}),
     },
+  };
+}
+
+/**
+ * The products and customers the edit card offers. Sent with the invoice so
+ * the card works in hosts that don't let it call tools itself.
+ */
+async function editChoices(ctx: CallerContext) {
+  const [products, customers] = await Promise.all([
+    getProducts(1, true, undefined, ctx),
+    getCustomers(1, true, undefined, ctx),
+  ]);
+  return {
+    ...(products.error === null
+      ? {
+          products: products.data.data
+            .filter((p) => p.status === "active")
+            .map((p) => ({
+              product_id: p.id,
+              name: p.name,
+              price: Number(p.price),
+            })),
+        }
+      : {}),
+    ...(customers.error === null
+      ? {
+          customers: customers.data.data
+            .filter((c) => c.status === "active")
+            .map((c) => ({ customer_id: c.id, name: c.name, email: c.email })),
+        }
+      : {}),
   };
 }
 

@@ -230,19 +230,34 @@ const SCRIPT = `
   }
   function orgArg() { return state.data && state.data.organization ? { org_id: state.data.organization.org_id } : {}; }
   function withOrg(args) { var o = orgArg(); Object.keys(args).forEach(function (k) { o[k] = args[k]; }); return o; }
+  /* Hands a request to the assistant as a chat message, for hosts that refuse the card's own tool calls. */
+  function askInChat(text) {
+    if (openai && typeof openai.sendFollowUpMessage === "function") return Promise.resolve(openai.sendFollowUpMessage({ prompt: text }));
+    return request("ui/message", { role: "user", content: [{ type: "text", text: text }] });
+  }
+  function handOff(prompt, doneText, failText) {
+    return askInChat(prompt).then(function () {
+      showMessage(doneText, false);
+    }, function () {
+      showMessage(failText + " Ask in the chat: \u201c" + prompt + "\u201d", true);
+    });
+  }
   function showMessage(text, isError) { state.msg = { text: text, error: !!isError }; render(); }
 
   function setData(data) {
     state.data = data;
+    if (Array.isArray(data.products)) { state.products = data.products; state.productsError = null; }
+    if (Array.isArray(data.customers)) { state.customers = data.customers; state.customersError = null; }
     state.confirmingSend = data.status === "needs_confirmation";
     if (data.mode === "edit" && !state.editing) beginEdit(); else { state.editing = false; state.draft = null; }
     render();
   }
 
   /* ---------- actions (all through the host -> MCP tools/call) ---------- */
-  function run(name, args, okText) {
+  function run(name, args, okText, prompt) {
     state.busy = true; state.msg = null; render();
-    return callTool(name, withOrg(args)).then(function (res) {
+    var full = withOrg(args);
+    return callTool(name, full).then(function (res) {
       state.busy = false;
       var sc = structured(res);
       if (res && res.isError) { showMessage(resultText(res) || "That didn't work.", true); return null; }
@@ -250,9 +265,11 @@ const SCRIPT = `
       showMessage(okText || resultText(res), false);
       return res;
     }, function (err) {
+      /* The host refused the call: ask the assistant to make the same change. */
       state.busy = false;
-      showMessage((err && err.message) || "That didn't work.", true);
-      return null;
+      var ask = (prompt || "Please make this InvoicePro change") + ": call " + name + " with " + JSON.stringify(full) + ".";
+      return handOff(ask, "Sent to the chat \u2014 the assistant will make the change.",
+        (err && err.message) || "That didn't work.").then(function () { return null; });
     });
   }
 
@@ -492,17 +509,22 @@ const SCRIPT = `
       h("div", { class: "actions" }, [
         h("button", { disabled: !products.length, onclick: function () {
           var p = products[0]; d.items.push({ product_id: p.product_id, description: null, name: p.name, quantity: 1, unit_price: p.price }); render();
-        } }, [state.products === null ? "Loading products…" : products.length ? "+ Product" : "No products yet"]),
+        } }, [state.products === null ? "Loading products…" : products.length ? "+ Product" : state.productsError ? "Products unavailable" : "No products yet"]),
         h("button", { onclick: function () { d.items.push({ product_id: null, description: "", name: "", quantity: 1, unit_price: 0 }); render(); } }, ["+ One-off item"])
       ]),
       state.productsError || state.customersError ? h("div", { class: "msg error" }, [
-        (state.productsError ? "Products: " + state.productsError + " " : "") +
-        (state.customersError ? "Customers: " + state.customersError + " " : ""),
-        h("button", { onclick: function () {
-          if (state.productsError) { state.products = null; }
-          if (state.customersError) { state.customers = null; }
-          loadLists(); render();
-        } }, ["Retry"])
+        h("div", null, ["Couldn't load the " + (state.productsError && state.customersError ? "products and customers" : state.productsError ? "products" : "customers") + " here. Ask in the chat to reopen the editor with them loaded, or retry."]),
+        h("div", { class: "row", style: "margin-top:8px" }, [
+          h("button", { onclick: function () {
+            handOff("Show InvoicePro invoice " + inv.invoice_id + " in edit mode (get_invoice with mode: 'edit').",
+              "Asked the chat to reopen the editor.", "Couldn't reach the chat.");
+          } }, ["Ask in chat"]),
+          h("button", { onclick: function () {
+            if (state.productsError) { state.products = null; }
+            if (state.customersError) { state.customers = null; }
+            loadLists(); render();
+          } }, ["Retry"])
+        ])
       ]) : null,
       h("table", { id: "ip-totals", style: "margin-top:10px" }, [h("tbody", null, totalsRows(t, 1))]),
       h("div", { class: "actions" }, [

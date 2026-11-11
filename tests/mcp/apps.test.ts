@@ -384,6 +384,49 @@ describe("invoice card in an MCP Apps host", () => {
     ).not.toBeNull();
   });
 
+  it("uses the lists sent with the invoice and hands a refused save to the chat", async () => {
+    const card = mountCard((msg) =>
+      msg.method === "tools/call"
+        ? { rpcError: "Editing from this preview is not connected" }
+        : {},
+    );
+    card.deliver({
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: {
+        structuredContent: cardData({
+          mode: "edit",
+          products: [{ product_id: "p2", name: "Sand", price: 69 }],
+          customers: [
+            {
+              customer_id: "c1",
+              name: "Acme Corp",
+              email: "billing@acme.test",
+            },
+          ],
+        }),
+      },
+    });
+    await card.flush();
+    expect(toolCalls(card.sent)).toEqual([]);
+    card.click("+ Product");
+    const doc = card.window.document;
+    expect(
+      (
+        doc.querySelector(
+          '[aria-label="Unit price for line 3"]',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("69");
+    card.click("Save");
+    for (let i = 0; i < 3; i++) await card.flush();
+    const ask = card.sent.find((m) => m.method === "ui/message");
+    const text = JSON.stringify(ask?.params);
+    expect(text).toContain("update_invoice");
+    expect(text).toContain("p2");
+    expect(card.text()).toContain("Sent to the chat");
+  });
+
   it("explains a failed product load and retries it", async () => {
     let fail = true;
     const card = mountCard((msg) => {
@@ -409,11 +452,11 @@ describe("invoice card in an MCP Apps host", () => {
       params: { structuredContent: cardData({ mode: "edit" }) },
     });
     for (let i = 0; i < 3; i++) await card.flush();
-    expect(card.text()).toContain("Products: Choose an organization.");
+    expect(card.text()).toContain("Couldn't load the products here.");
     fail = false;
     card.click("Retry");
     for (let i = 0; i < 3; i++) await card.flush();
-    expect(card.text()).not.toContain("Products:");
+    expect(card.text()).not.toContain("Couldn't load");
     expect(card.text()).toContain("+ Product");
   });
 

@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   updateInvoiceDal: vi.fn(),
   updateInvoiceStatusDal: vi.fn(),
   getProductByIdDal: vi.fn(),
+  getProducts: vi.fn(),
+  getCustomers: vi.fn(),
   createCustomerDal: vi.fn(),
   revalidateTag: vi.fn(),
 }));
@@ -29,9 +31,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/dal/invoices", () => mocks);
 vi.mock("@/dal/products", () => ({
   getProductByIdDal: mocks.getProductByIdDal,
+  getProducts: mocks.getProducts,
 }));
 vi.mock("@/dal/customers", () => ({
   createCustomerDal: mocks.createCustomerDal,
+  getCustomers: mocks.getCustomers,
 }));
 vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 
@@ -56,6 +60,14 @@ const found = (overrides: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   mocks.getInvoiceById.mockResolvedValue(found());
   mocks.getProductByIdDal.mockResolvedValue({ data: product, error: null });
+  const page = (data: unknown[]) => ({
+    data: { data, currentPage: 1, totalPages: 1, totalCount: data.length },
+    error: null,
+  });
+  mocks.getProducts.mockResolvedValue(
+    page([product, { ...product, id: "gone", status: "disabled" }]),
+  );
+  mocks.getCustomers.mockResolvedValue(page([customer]));
 });
 
 describe("invoiceView", () => {
@@ -200,6 +212,28 @@ describe("get_invoice", () => {
       mode: "edit",
     });
     expect(edit.data).toMatchObject({ mode: "edit", can_send: false });
+    expect(edit.data.products).toEqual([
+      {
+        product_id: product.id,
+        name: product.name,
+        price: Number(product.price),
+      },
+    ]);
+    expect(edit.data.customers).toEqual([
+      { customer_id: customer.id, name: customer.name, email: customer.email },
+    ]);
+  });
+
+  it("opens the edit card without lists it couldn't read", async () => {
+    mocks.getProducts.mockResolvedValue({ data: null, error: "No org" });
+    mocks.getCustomers.mockResolvedValue({ data: null, error: "No org" });
+    const edit = await getInvoiceTool(ctx, {
+      invoice_id: INVOICE,
+      mode: "edit",
+    });
+    expect(edit.data.mode).toBe("edit");
+    expect(edit.data).not.toHaveProperty("products");
+    expect(edit.data).not.toHaveProperty("customers");
   });
 
   it("passes a missing invoice on", async () => {
