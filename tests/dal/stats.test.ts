@@ -1,11 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ protect: vi.fn(), getStatsDb: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  protect: vi.fn(),
+  getStatsDb: vi.fn(),
+  getOverdueStatsDb: vi.fn(),
+}));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: { protect: mocks.protect } }));
-vi.mock("@/db/stats", () => ({ getStatsDb: mocks.getStatsDb }));
+vi.mock("@/db/stats", () => ({
+  getStatsDb: mocks.getStatsDb,
+  getOverdueStatsDb: mocks.getOverdueStatsDb,
+}));
 
-import { getStatsDal } from "@/dal/stats";
+import { getOverdueStatsDal, getStatsDal } from "@/dal/stats";
 
 function signIn(features: string[], orgId: string | null = "org_1") {
   mocks.protect.mockResolvedValue({
@@ -54,6 +61,46 @@ describe("getStatsDal", () => {
     await expect(getStatsDal()).resolves.toEqual({
       data: null,
       error: "Failed to fetch stats.",
+    });
+  });
+});
+
+describe("getOverdueStatsDal", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("returns the org's overdue count and total", async () => {
+    signIn(["stats"]);
+    mocks.getOverdueStatsDb.mockResolvedValue({ count: 2, total: 80 });
+
+    await expect(getOverdueStatsDal()).resolves.toEqual({
+      data: { count: 2, total: 80 },
+      error: null,
+    });
+    expect(mocks.getOverdueStatsDb).toHaveBeenCalledWith("org_1");
+  });
+
+  it("refuses a caller with no org or without the stats feature", async () => {
+    signIn(["stats"], null);
+    await expect(getOverdueStatsDal()).resolves.toEqual({
+      data: null,
+      error: "Not authorized",
+    });
+    signIn([]);
+    await expect(getOverdueStatsDal()).resolves.toEqual({
+      data: null,
+      error: "Missing feature: stats",
+    });
+    expect(mocks.getOverdueStatsDb).not.toHaveBeenCalled();
+  });
+
+  it("reports a database failure", async () => {
+    signIn(["stats"]);
+    mocks.getOverdueStatsDb.mockRejectedValue(new Error("down"));
+    await expect(getOverdueStatsDal()).resolves.toEqual({
+      data: null,
+      error: "Failed to fetch overdue stats.",
     });
   });
 });

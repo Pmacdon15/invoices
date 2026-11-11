@@ -57,3 +57,34 @@ export async function getStatsDb(orgId: string) {
     owing: Number(row.owing),
   }));
 }
+
+/**
+ * What's overdue right now, across all months: sent invoices whose due date
+ * has passed (see src/lib/overdue.ts). Nothing invalidates this when a due
+ * date passes, so the "hours" cache life bounds how stale it gets (an hour).
+ */
+export async function getOverdueStatsDb(
+  orgId: string,
+): Promise<{ count: number; total: number }> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`stats-${orgId}`);
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Config Error");
+  }
+
+  const sql = neon(process.env.DATABASE_URL);
+
+  const [row] = await sql`
+    SELECT
+      COUNT(*) AS count,
+      COALESCE(SUM(total), 0) AS total
+    FROM invoices
+    WHERE org_id = ${orgId}
+      AND status = 'sent'
+      AND due_date IS NOT NULL
+      AND due_date < CURRENT_DATE
+  `;
+
+  return { count: Number(row.count), total: Number(row.total) };
+}

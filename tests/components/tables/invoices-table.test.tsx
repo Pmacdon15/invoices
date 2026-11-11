@@ -82,6 +82,27 @@ describe("InvoicesTable", () => {
     expect(screen.getAllByText("Page 2 of 4")).toHaveLength(2);
   });
 
+  it("shows an overdue sent invoice as overdue", () => {
+    render(
+      <InvoicesTable
+        data={[
+          invoice({ status: "sent", overdue: true }),
+          invoice({ id: "44444444-0000", status: "sent", overdue: false }),
+        ]}
+        totalPages={1}
+        currentPage={1}
+        totalCount={2}
+        setOptimistic={vi.fn()}
+      />,
+    );
+    const badge = screen.getByText("overdue");
+    expect(badge).toHaveAttribute("data-variant", "destructive");
+    expect(screen.getByText("sent")).toHaveAttribute(
+      "data-variant",
+      "secondary",
+    );
+  });
+
   it("marks an optimistic invoice as saving", () => {
     render(
       <InvoicesTable

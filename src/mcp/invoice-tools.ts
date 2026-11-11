@@ -12,6 +12,7 @@ import {
 import { getProductByIdDal } from "@/dal/products";
 import type { CreateInvoiceInput, FullInvoice, Invoice } from "@/dal/types";
 import { calculateInvoiceTotals, lineItemName } from "@/lib/invoice-totals";
+import { isOverdue } from "@/lib/overdue";
 import type { CallerContext } from "@/mcp/caller";
 import {
   createCustomer,
@@ -119,12 +120,15 @@ export function invoiceView(invoice: FullInvoice) {
     computed_total: totals.total,
     total_override: override,
     total: Number(invoice.total),
+    // Sent and past its due date; status stays "sent".
+    overdue: isOverdue(invoice),
     app_url: `${APP_ORIGIN}/invoices/${invoice.id}`,
   };
 }
 
 function oneLine(invoice: ReturnType<typeof invoiceView>) {
-  return `${money.format(invoice.total)} to ${invoice.customer.name} (${invoice.status})`;
+  const status = invoice.overdue ? "overdue" : invoice.status;
+  return `${money.format(invoice.total)} to ${invoice.customer.name} (${status})`;
 }
 
 /** The whole invoice for the card, read fresh after any change. */
@@ -221,7 +225,9 @@ export const listInvoicesInputSchema = z.object({
   status: z
     .enum(STATUSES)
     .optional()
-    .describe("Only invoices with this status, e.g. 'sent' for unpaid ones."),
+    .describe(
+      "Only invoices with this status, e.g. 'sent' for unpaid ones (overdue invoices are sent ones with overdue: true).",
+    ),
   page: z
     .number()
     .int()
@@ -248,6 +254,7 @@ export async function listInvoicesTool(
     customer_email: invoice.customer?.email ?? null,
     status: invoice.status,
     total: Number(invoice.total),
+    overdue: isOverdue(invoice),
     created_at: new Date(invoice.created_at).toISOString(),
   }));
   return {

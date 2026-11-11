@@ -55,6 +55,7 @@ h2 { font-size: 12px; margin: 16px 0 6px; font-weight: 600; color: var(--ip-mute
 .pill.draft { color: var(--ip-muted); }
 .pill.sent { color: var(--ip-warn); border-color: currentColor; }
 .pill.paid { color: var(--ip-ok); border-color: currentColor; }
+.pill.overdue { color: var(--ip-danger); border-color: currentColor; }
 .box { background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: var(--ip-radius); padding: 10px 12px; }
 .total { font-size: 24px; font-weight: 800; color: var(--ip-accent); }
 table { width: 100%; border-collapse: collapse; }
@@ -222,7 +223,7 @@ const SCRIPT = `
       h("header", null, [
         h("div", null, [
           h("div", { class: "muted small" }, [data.organization ? data.organization.name : ""]),
-          h("h1", null, ["Invoice ", h("span", { class: "pill " + inv.status }, [inv.status])]),
+          h("h1", null, ["Invoice ", h("span", { class: "pill " + (inv.overdue ? "overdue" : inv.status) }, [inv.overdue ? "overdue" : inv.status])]),
           h("div", { class: "mono muted" }, [inv.invoice_id]),
           h("div", { class: "muted small" }, [dateText(inv.created_at)])
         ]),

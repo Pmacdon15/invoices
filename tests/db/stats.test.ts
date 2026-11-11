@@ -13,7 +13,7 @@ vi.mock("next/cache", () => ({
   cacheLife: mocks.cacheLife,
 }));
 
-import { getStatsDb } from "@/db/stats";
+import { getOverdueStatsDb, getStatsDb } from "@/db/stats";
 
 const sql = createSqlMock();
 
@@ -59,5 +59,31 @@ describe("getStatsDb", () => {
   it("fails without a database URL", async () => {
     vi.stubEnv("DATABASE_URL", "");
     await expect(getStatsDb("org_1")).rejects.toThrow("Config Error");
+  });
+});
+
+describe("getOverdueStatsDb", () => {
+  it("counts and sums the org's sent invoices past their due date", async () => {
+    sql.respond(() => [{ count: "3", total: "450.25" }]);
+
+    await expect(getOverdueStatsDb("org_1")).resolves.toEqual({
+      count: 3,
+      total: 450.25,
+    });
+    expect(mocks.cacheLife).toHaveBeenCalledWith("hours");
+    expect(mocks.cacheTag).toHaveBeenCalledWith("stats-org_1");
+    const [query] = sql.calls;
+    expect(query.values).toEqual(["org_1"]);
+    expect(query.text).toContain("WHERE org_id = ?");
+    expect(query.text).toContain("AND status = 'sent'");
+    expect(query.text).toContain("AND due_date IS NOT NULL");
+    expect(query.text).toContain("AND due_date < CURRENT_DATE");
+    // A point-in-time figure, not grouped by month.
+    expect(query.text).not.toContain("GROUP BY");
+  });
+
+  it("fails without a database URL", async () => {
+    vi.stubEnv("DATABASE_URL", "");
+    await expect(getOverdueStatsDb("org_1")).rejects.toThrow("Config Error");
   });
 });

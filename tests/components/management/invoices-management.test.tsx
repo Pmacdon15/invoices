@@ -138,6 +138,20 @@ describe("InvoicesManagement", () => {
     ]);
   });
 
+  it("filters the table to overdue invoices, which are still sent", async () => {
+    const user = userEvent.setup();
+    const late = invoice({ id: "inv-late", status: "sent", overdue: true });
+    await renderIt(ok(page([draft, sent, late, paid])));
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Overdue" }));
+    expect(rows()).toEqual(["inv-late:sent"]);
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Sent" }));
+    expect(rows()).toEqual(["inv-sent:sent", "inv-late:sent"]);
+  });
+
   it("adds a new invoice to the top optimistically", async () => {
     await renderIt(ok(page([draft])));
     await applyOptimistic((i: Invoice) => captured.add?.(i), sent);

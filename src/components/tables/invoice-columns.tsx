@@ -7,8 +7,30 @@ import { ViewTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Invoice } from "@/dal/types";
+import { displayStatus } from "@/lib/overdue";
 import { cn } from "@/lib/utils";
 import DeleteInvoiceButton from "../buttons/delete-invoice-button";
+
+const STATUS_VARIANTS = {
+  draft: "secondary",
+  sent: "secondary",
+  paid: "default",
+  overdue: "destructive",
+} as const;
+
+/** The invoice's status, shown as "Overdue" once a sent invoice is past due. */
+export function InvoiceStatusBadge({
+  invoice,
+}: {
+  invoice: Pick<Invoice, "status" | "overdue">;
+}) {
+  const status = displayStatus(invoice);
+  return (
+    <Badge variant={STATUS_VARIANTS[status]} className="capitalize">
+      {status}
+    </Badge>
+  );
+}
 
 // Define the arguments needed for the columns
 interface GetColumnProps {
@@ -83,14 +105,7 @@ export const getInvoicesColumns = ({
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <Badge
-        variant={row.original.status === "paid" ? "default" : "secondary"}
-        className="capitalize"
-      >
-        {row.original.status}
-      </Badge>
-    ),
+    cell: ({ row }) => <InvoiceStatusBadge invoice={row.original} />,
   },
   {
     id: "actions",
