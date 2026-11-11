@@ -12,7 +12,7 @@ The rules below are sent to every assistant automatically when it connects (the 
 
 ### Claude and ChatGPT
 
-Both register themselves with InvoicePro's sign-in (Clerk) and need only the URL. In both, invoices show up as an **invoice card** you can view, download as a PDF or open in InvoicePro. To change an invoice (customer, line items, tax, status, a manual total) or email it, ask the assistant; it asks you to confirm before sending.
+Both register themselves with InvoicePro's sign-in (Clerk) and need only the URL. In both, invoices show up as an **invoice card** to look at. For the PDF or a link to open it in InvoicePro, ask the assistant. To change an invoice (customer, line items, tax, status, a manual total) or email it, ask the assistant; it asks you to confirm before sending.
 
 ### Gemini
 

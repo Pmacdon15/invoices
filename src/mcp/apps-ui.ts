@@ -2,9 +2,8 @@
  * The HTML for the invoice card (MCP Apps, SEP-1865, and the OpenAI Apps
  * SDK). The page is fully self-contained: inline CSS and JS, no network
  * requests, nothing loaded from outside. It talks only to the host it is
- * embedded in. It only shows the invoice: changes are made by the assistant
- * with the MCP tools (update_invoice, send_invoice, ...), not from the card.
- * Its one call, get_invoice_pdf, falls back to opening the app.
+ * embedded in. It only displays the invoice and calls no tools: changes, the
+ * PDF and the link to the app all come from the assistant in the chat.
  *
  * The client script below is plain ES2019 kept in a string; it must not use
  * template literals (backticks), since it lives inside one.
@@ -63,15 +62,6 @@ th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--
 td { padding: 6px 4px; border-bottom: 1px solid var(--ip-border); vertical-align: top; }
 td.num, th.num { text-align: right; white-space: nowrap; }
 tfoot td { border-bottom: none; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-button {
-  font: inherit; color: inherit; background: var(--ip-bg);
-  border: 1px solid var(--ip-border); border-radius: 8px; padding: 6px 10px;
-}
-button { cursor: pointer; }
-button.primary { background: var(--ip-accent); color: var(--ip-accent-text); border-color: var(--ip-accent); font-weight: 600; }
-button.danger { color: var(--ip-danger); }
-button:disabled { opacity: .55; cursor: default; }
 .msg { margin-top: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--ip-border); }
 .msg.error { color: var(--ip-danger); border-color: currentColor; }
 .msg.ok { color: var(--ip-ok); border-color: currentColor; }
@@ -84,7 +74,7 @@ const SCRIPT = `
   "use strict";
   var root = document.getElementById("app");
   var state = {
-    data: null, busy: false, msg: null
+    data: null, msg: null
   };
 
   /* ---------- host bridge: MCP Apps (postMessage JSON-RPC) or OpenAI Apps SDK ---------- */
@@ -103,31 +93,10 @@ const SCRIPT = `
     });
   }
   function notify(method, params) { post({ jsonrpc: "2.0", method: method, params: params || {} }); }
-  function callTool(name, args) {
-    if (openai && typeof openai.callTool === "function") return openai.callTool(name, args);
-    return request("tools/call", { name: name, arguments: args });
-  }
-  function openLink(url) {
-    if (openai && typeof openai.openExternal === "function") { openai.openExternal({ href: url }); return; }
-    request("ui/open-link", { url: url }).catch(function () { window.open(url, "_blank", "noopener"); });
-  }
   function resultText(res) {
     var c = res && res.content;
     if (c && c.length && c[0] && typeof c[0].text === "string") return c[0].text;
     return "";
-  }
-  function structured(res) {
-    if (!res) return null;
-    var sc = res.structuredContent || res.structured_content;
-    if (sc) return sc;
-    /* Some hosts drop structuredContent on app-initiated calls; the same data is the JSON text block. */
-    var c = res.content || [];
-    for (var i = 0; i < c.length; i++) {
-      if (c[i] && c[i].type === "text" && typeof c[i].text === "string" && c[i].text.charAt(0) === "{") {
-        try { return JSON.parse(c[i].text); } catch (e) { /* not JSON */ }
-      }
-    }
-    return null;
   }
   function applyTheme(theme) {
     if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
@@ -216,8 +185,6 @@ const SCRIPT = `
     var d = new Date(iso);
     return isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
-  function orgArg() { return state.data && state.data.organization ? { org_id: state.data.organization.org_id } : {}; }
-  function withOrg(args) { var o = orgArg(); Object.keys(args).forEach(function (k) { o[k] = args[k]; }); return o; }
   function showMessage(text, isError) { state.msg = { text: text, error: !!isError }; render(); }
 
   function setData(data) {
@@ -225,40 +192,12 @@ const SCRIPT = `
     render();
   }
 
-  /* ---------- actions ---------- */
-  function downloadPdf() {
-    state.busy = true; state.msg = null; render();
-    callTool("get_invoice_pdf", withOrg({ invoice_id: state.data.invoice.invoice_id })).then(function (res) {
-      state.busy = false;
-      if (!res || res.isError) { showMessage(resultText(res) || "Couldn't make the PDF.", true); return; }
-      var blob = null, name = "invoice.pdf";
-      (res.content || []).forEach(function (c) {
-        if (c && c.type === "resource" && c.resource && c.resource.blob) blob = c.resource.blob;
-      });
-      var sc = structured(res);
-      if (sc && sc.filename) name = sc.filename;
-      if (!blob) { openLink(state.data.invoice.app_url); showMessage("Opened the invoice in InvoicePro to download the PDF.", false); return; }
-      try {
-        var a = h("a", { href: "data:application/pdf;base64," + blob, download: name });
-        document.body.appendChild(a); a.click(); a.remove();
-        showMessage("Downloading " + name + ". If nothing happens, use Open in InvoicePro.", false);
-      } catch (e) {
-        openLink(state.data.invoice.app_url);
-      }
-    }, function () {
-      /* The host refused the call (e.g. a preview that can't reach the server): use the app's own download. */
-      state.busy = false;
-      openLink(state.data.invoice.app_url);
-      showMessage("Opened the invoice in InvoicePro \u2014 use Download PDF there.", false);
-    });
-  }
-
   /* ---------- rendering ---------- */
   function render() {
     root.textContent = "";
     var data = state.data;
     if (!data || !data.invoice) {
-      root.appendChild(h("main", null, [h("div", { class: "empty" }, ["Loading invoice…"])]));
+      root.appendChild(h("main", null, [state.msg ? messageEl() : h("div", { class: "empty" }, ["Loading invoice…"])]));
       return;
     }
     root.appendChild(renderView(data));
@@ -309,11 +248,7 @@ const SCRIPT = `
         h("tfoot", null, totalsRows(inv, 3))
       ]),
       data.status === "needs_confirmation" ? h("div", { class: "confirm" }, ["Confirm in the chat to email this invoice to " + c.email + "."]) : null,
-      h("div", { class: "actions" }, [
-        h("button", { disabled: state.busy, onclick: downloadPdf }, ["PDF"]),
-        h("button", { onclick: function () { openLink(inv.app_url); } }, ["Open in InvoicePro"])
-      ]),
-      h("div", { class: "muted small", style: "margin-top:8px" }, ["To change this invoice, ask in the chat."]),
+      h("div", { class: "muted small", style: "margin-top:12px" }, ["To change this invoice, get its PDF or a link to it, ask in the chat."]),
       messageEl()
     ]);
   }
