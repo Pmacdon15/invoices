@@ -23,9 +23,6 @@ export type OrgSummary = {
   role: string;
 };
 
-/** The feature every signed-in page of the app requires (see src/proxy.ts). */
-export const APP_ACCESS_FEATURE = "stats";
-
 /** The verified caller from the request's auth, or null when there isn't one. */
 export function callerFrom(
   authInfo: AuthInfo | undefined,
@@ -117,11 +114,7 @@ export type ContextResult =
   | { ok: true; ctx: CallerContext }
   | {
       ok: false;
-      status:
-        | "no_organizations"
-        | "multiple_organizations"
-        | "not_found"
-        | "no_app_access";
+      status: "no_organizations" | "multiple_organizations" | "not_found";
       message: string;
       organizations: OrgSummary[];
     };
@@ -148,15 +141,9 @@ export async function contextFor(
     };
   }
 
+  // No plan gate here: the plan's features still set what the org may do
+  // (customer, product and invoice limits, emailing), as in the app.
   const features = await orgPlanFeatures(picked.org.org_id);
-  if (!features.has(APP_ACCESS_FEATURE)) {
-    return {
-      ok: false,
-      status: "no_app_access",
-      message: `${picked.org.name}'s plan doesn't include InvoicePro access. Choose a plan in the app (Plans page) first.`,
-      organizations: [picked.org],
-    };
-  }
 
   return {
     ok: true,
